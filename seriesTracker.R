@@ -106,7 +106,8 @@ getEpisodes <- function(series, token, page = 1)
                            Authorization = str_c("Bearer ", token))) %>%
     content -> content
 
-  content$data -> data
+  content$data %>%
+    discard(~ .x$episodeName %>% is.null)-> data
 
   tibble(id = data %>% map_int("id"),
          season = data %>% map_int("airedSeason"),
