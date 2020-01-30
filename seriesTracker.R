@@ -278,7 +278,7 @@ toWatch <- function(db)
   openDb() -> db
 
   db %>% toWatch
-  db %>% upNext
+  db %>% upNext %>% print(n = Inf)
 
   db %>%
     watch(db %>% toWatch %>% pull(id)) %>%
