@@ -1,0 +1,18 @@
+[[file:seriesTracker.R][Series Tracker]]
+* Tasks
+** TODO elisp rewrite
+** TODO Impure interface
+- [ ] initialise db
+  - [ ] conf file
+- [ ] search series
+- [ ] add series
+- [ ] watch
+- [ ] watch till
+- [ ] watch all
+- [ ] to watch
+- [ ] up next
+** TODO Optimise
+- [ ] only keep last episode seen for each series
+- [ ] only retrieve new episodes ?
+- [ ] cache query results
+** TODO Remote db
