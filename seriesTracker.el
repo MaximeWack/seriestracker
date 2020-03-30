@@ -172,10 +172,7 @@ series-list
 (setq episodes
       (series/episodes token "121361"))
 
-(mapcar 'names episodes)
-(aselect episodes)
+(names (car episodes))
 
 (provide 'seriesTracker)
 ;;; seriesTracker.el ends here
-
-(mapcar 'names episodes)
