@@ -29,6 +29,13 @@
           fields
           :initial-value nil))
 
+;;;;; names
+
+(defun names (alist)
+  "Return the names of the ALIST."
+
+  (mapcar 'car alist))
+
 ;;;;; login
 
 (defun login (username apikey userkey)
@@ -164,9 +171,6 @@ series-list
 
 (setq episodes
       (series/episodes token "121361"))
-
-(defun names (alist)
-  (mapcar 'car alist))
 
 (mapcar 'names episodes)
 (aselect episodes)
