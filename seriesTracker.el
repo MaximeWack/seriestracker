@@ -36,6 +36,20 @@
 
   (mapcar 'car alist))
 
+;;;;; epoch-to-datestring
+
+(defun epoch-to-datestring (epoch)
+  "Convert EPOCH to a datestring."
+
+  (format-time-string "%Y-%m-%d %H:%M:%S" (time-add 0 epoch)))
+
+;;;;; datestring-to-epoch
+
+(defun datestring-to-epoch (datestring)
+  "Convert DATESTRING to an epoch."
+
+  (format-time-string "%s" (date-to-time datestring)))
+
 ;;;;; login
 
 (defun login (username apikey userkey)
@@ -153,6 +167,18 @@ Needs a TOKEN to work.  The TOKEN can be obtained using the LOGIN function."
                      (let ((params (concat "series/" id "/episodes")))
                        (tvdb token params)))))
 
+;;;;; update
+
+(defun update (token fromTime)
+  "Return an array of series that have changed since FROMTIME.
+Needs a TOKEN to work.  The TOKEN can be obtained using the LOGIN function."
+
+  (mapcar (lambda (update)
+            (setf (alist-get 'lastUpdated update) (epoch-to-datestring (alist-get 'lastUpdated update)))
+            update)
+          (alist-get 'data
+                     (let ((params (concat "updated/query?fromTime=" (datestring-to-epoch fromTime))))
+                       (tvdb token params)))))
 ;;;;  Tests
 
 (setq token (login ""
@@ -172,7 +198,7 @@ series-list
 (setq episodes
       (series/episodes token "121361"))
 
-(names (car episodes))
+(update token "2020-03-30 00:00:00")
 
 (provide 'seriesTracker)
 ;;; seriesTracker.el ends here
