@@ -1,0 +1,686 @@
+#+title: seriesTracker
+#+author: Maxime Wack
+#+property: session *seriesTracker*
+
+
+
+* Preamble
+
+#+begin_src elisp
+;;; package --- Summary
+;;; Commentary:
+;;; Code:
+#+end_src
+
+#+RESULTS:
+
+* Requirements
+
+We will need ~url~ to connect to the API and ~json~ to parse the response.
+
+#+begin_src elisp
+(require 'url)
+(require 'json)
+#+end_src
+
+#+RESULTS:
+: json
+
+* API
+
+Create an API layer to communicate with theTVdbAPI.
+This is mainly a /GET/ API, with a /POST/ method for authentication.
+The results are returned in *JSON*, almost everytime in the ~'data~ element.
+
+** getJSON
+
+TheTVdbAPI answers in JSON.
+This function parses the JSON in the url-buffer response to a list.
+
+#+begin_src elisp
+(defun getJSON (url-buffer)
+  "Parse the JSON in the URL-BUFFER returned by url."
+
+  (with-current-buffer url-buffer
+    (goto-char (point-max))
+    (move-beginning-of-line 1)
+    (json-read-object)))
+#+end_src
+
+#+RESULTS:
+: getJSON
+
+** login
+
+Let's login first. As this is the only /POST/ call in the API, we can make it here directly, and the token is needed for all other operations.
+The login needs a ~username~, and ~apikey~, and a ~userkey~.
+We parse the response using ~getJSON~, and extract the *token*.
+
+#+begin_src elisp
+  (defun login (username apikey userkey)
+    "Login using USERNAME, APIKEY and USERKEY.
+  Return the token"
+
+    (alist-get 'token
+               (getJSON
+                (let ((url-request-method "POST")
+                      (url-request-extra-headers '(("Content-Type" . "application/json")
+                                                   ("Accept" . "application/json")))
+                      (url-request-data (concat "{\"apikey\": \"" apikey "\", \"userkey\": \"" userkey "\", \"username\": \"" username "\" }"))
+                      (url-show-status nil))
+                  (url-retrieve-synchronously "https://api.thetvdb.com/login" t)))))
+#+end_src
+
+#+RESULTS:
+: login
+
+The token is saved in a declared variable
+
+#+begin_src elisp
+  (defvar tvdb--token
+    nil
+    "Auth token")
+#+end_src
+
+#+RESULTS:
+: tvdb--token
+
+For example:
+
+#+begin_src elisp
+  (setq tvdb--token (login ""
+                           ""
+                           ""))
+#+end_src
+
+** tvdb
+
+We the create a wrapper to call theTVdbAPI using the login token and parameters, as all these queries are /GET/ queries.
+The only call that doesn't require parameters, and doesn't return its result in the ~'data~ element, is to ~refreshToken~.
+We will thus make the default call to ~tvdb~ act as ~refreshToken~, or return the ~'data~ element of the queries in the /PARAMS/.
+
+#+begin_src elisp
+  (defun _tvdb (token params)
+    (getJSON
+     (let* ((url-request-method "GET")
+            (bearer (concat "Bearer " token))
+            (url-request-extra-headers `(("Accept" . "application/json")
+                                         ("Authorization" . ,bearer)))
+            (url-show-status nil))
+       (url-retrieve-synchronously (concat "https://api.thetvdb.com" params)))))
+#+end_src
+
+#+RESULTS:
+: _tvdb
+
+#+begin_src elisp
+  (defun tvdb (token &rest params)
+    "Generic function to query tvdbapi.
+
+  Needs a TOKEN to work.  The TOKEN can be obtained using the LOGIN function.
+  If no PARAMS are given, call refresh_token, else concatenate all params and call the API.
+  Returns the 'data element of the parsed JSON response."
+
+    (if params
+        (alist-get 'data
+                   (_tvdb token (apply 'concat params)))
+      (alist-get 'token
+                 (_tvdb token "/refresh_token"))))
+#+end_src
+
+#+RESULTS:
+: tvdb
+
+Let's refresh the token as an example:
+
+#+begin_src elisp
+(tvdb tvdb--token)
+#+end_src
+
+** Queries
+
+We then define elisp functions to call API endpoints.
+
+We want to be able to
+- search for series
+- get the episode list, with airing times
+- get updates
+
+*** Helpers
+
+First we define some helper functions to work with alists and vectors of alists, as well as dates.
+
+**** alist-select
+
+Select a list of items from an alist.
+The ~'data~ element is a vector of alists.
+
+#+begin_src elisp
+(defun alist-select (fields alist)
+  "Keep only FIELDS in ALIST."
+
+  (seq-reduce (lambda (list item)
+                (acons item (alist-get item alist) list))
+              (reverse fields)
+              nil))
+#+end_src
+
+#+RESULTS:
+: alist-select
+
+For example:
+
+#+begin_src elisp
+  (alist-select
+   '(a c)
+   '((a . 1)
+     (b . "b")
+     (c . c)))
+#+end_src
+
+#+RESULTS:
+: ((a . 1) (c . c))
+
+**** vector-select
+
+Select a list of items from each alist of a list or vector.
+
+#+begin_src elisp
+  (defun vector-select (fields vector)
+    "Keep only FIELDS in every alist in the VECTOR.
+
+  Return a list of alists instead of a vector."
+
+    (seq-map (lambda (item)
+               (alist-select fields item))
+             vector))
+
+#+end_src
+
+#+RESULTS:
+: vector-select
+
+For example:
+
+#+begin_src elisp
+  (vector-select '(a c)
+                 [((a . 1) (b . "b") (c . c))
+                  ((a . 3) (b . "a") (c . d))])
+#+end_src
+
+#+RESULTS:
+| (a . 1) | (c . c) |
+| (a . 3) | (c . d) |
+
+**** vector-pull
+
+Extract a column from a vector.
+
+#+begin_src elisp
+  (defun vector-pull (field vector)
+    "Keep only FIELD in every alist in the VECTOR and flatten."
+
+    (seq-map (lambda (item)
+               (alist-get field item))
+             vector))
+#+end_src
+
+#+RESULTS:
+: vector-pull
+
+Example:
+
+#+begin_src elisp
+  (vector-pull 'a
+               [((a . 1) (b . 2)) ((a . 3) (b . 4))])
+
+#+end_src
+
+#+RESULTS:
+| 1 | 3 |
+
+**** vector-map
+
+Apply a function to all elements of a vector.
+
+#+begin_src elisp
+  (defun vector-mutate (fun elem vector)
+    (seq-map (lambda (item)
+               (setf (alist-get elem item)
+                     (eval `(,fun ,(alist-get elem item))))
+               item)
+             vector))
+#+end_src
+
+#+RESULTS:
+: vector-mutate
+
+**** epoch-to-datestring
+
+Later we will need to convert between *epochs* and *datestrings*.
+
+#+begin_src elisp
+(defun epoch-to-datestring (epoch)
+  "Convert EPOCH to a datestring."
+
+  (format-time-string "%Y-%m-%d %H:%M:%S" (time-add 0 epoch)))
+#+end_src
+
+#+RESULTS:
+: epoch-to-datestring
+
+**** datestring-to-epoch
+
+#+begin_src elisp
+(defun datestring-to-epoch (datestring)
+  "Convert DATESTRING to an epoch."
+
+  (format-time-string "%s" (date-to-time datestring)))
+#+end_src
+
+#+RESULTS:
+: datestring-to-epoch
+
+*** search
+
+Search for a series by name.
+For each returned series we keep:
+- id :: unique id
+- seriesName :: series name
+- firstAired :: date first aired
+- status :: Ended | Continuing | Upcoming
+- network :: network
+- overview :: description
+
+#+begin_src elisp
+  (defun search (token seriesName)
+    "Search for SERIESNAME.
+  Needs a TOKEN to work.  The TOKEN can be obtained using the LOGIN function."
+
+    (vector-select '(id
+                     seriesName
+                     firstAired
+                     status
+                     network
+                     overview)
+                   (tvdb token "/search/series?name=" seriesName)))
+#+end_src
+
+#+RESULTS:
+: search
+
+For example:
+
+#+begin_src elisp
+(setq series-list
+      (search tvdb--token "Game of Thrones"))
+#+end_src
+
+#+RESULTS:
+| (id . 311939) | (seriesName . Game of Thrones: Cartoon Parody) | (firstAired . 2011-5-7)  | (status . Ended)      | (network . YouTube)         | (overview . A spoof/parody Based on HBO's hit series "A Game of Thrones" and George RR Martin's A Song of Ice and Fire)                                                                                                                                                                                                                                    |
+| (id . 293887) | (seriesName . Game of Thrones Talk)            | (firstAired . 2015-4-13) | (status . Ended)      | (network . Sky Deutschland) | (overview)                                                                                                                                                                                                                                                                                                                                                 |
+| (id . 121361) | (seriesName . Game of Thrones)                 | (firstAired . 2010-12-5) | (status . Ended)      | (network . HBO)             | (overview . Seven noble families fight for control of the mythical land of Westeros. Friction between the houses leads to full-scale war. All while a very ancient evil awakens in the farthest north. Amidst the war, a neglected military order of misfits, the Night's Watch, is all that stands between the realms of men and the icy horrors beyond.) |
+| (id . 382905) | (seriesName . AutÃ³psia Game of Thrones)       | (firstAired . 2020-4-14) | (status . Continuing) | (network . #0)              | (overview)                                                                                                                                                                                                                                                                                                                                                 |
+| (id . 371572) | (seriesName . House of the Dragon )            | (firstAired)             | (status . Upcoming)   | (network)                   | (overview . The story of House Targaryen, 300 years before the events of Game of Thrones.)                                                                                                                                                                                                                                                                 |
+| (id . 321282) | (seriesName . Tribe of Hip Hop)                | (firstAired . 2016-4-1)  | (status . Ended)      | (network . jTBC)            | (overview . Tribe of Hip Hop (Hangul: íí©ì ë¯¼ì¡±) is a hip hop competition program where celebrities with little-to-no background in hip hop are teamed up with professional hip hop music producers.)                                                                                                                                |
+
+*** series
+
+We can then get information about a *series* with its *id*.
+
+We select the following elements:
+- id :: unique id
+- seriesName :: series name
+- firstAired :: date first aired
+- season :: number of seasons
+- status :: Ended | Continuing | Upcoming
+- genre :: vector of genres
+- network :: network
+- siteRating :: rating for the whole series
+- siteRatingCount :: total number of votes
+- overview :: description
+
+#+begin_src elisp
+  (defun series (token id)
+    "Get informations about a specific series ID.
+  Needs a TOKEN to work.  The TOKEN can be obtained using the LOGIN function."
+
+    (alist-select '(id
+                    seriesName
+                    firstAired
+                    season
+                    status
+                    genre
+                    network
+                    siteRating
+                    siteRatingCount
+                    overview)
+                  (tvdb token "/series/" id)))
+#+end_src
+
+#+RESULTS:
+: series
+
+For example:
+
+#+begin_src elisp
+  (setq serie (series tvdb--token "121361"))
+#+end_src
+
+#+RESULTS:
+: ((id . 121361) (seriesName . Game of Thrones) (firstAired . 2010-12-05) (season . 8) (status . Ended) (genre . [Adventure Drama Fantasy]) (network . HBO) (siteRating . 9.5) (siteRatingCount . 47297) (overview . Seven noble families fight for control of the mythical land of Westeros. Friction between the houses leads to full-scale war. All while a very ancient evil awakens in the farthest north. Amidst the war, a neglected military order of misfits, the Night's Watch, is all that stands between the realms of men and the icy horrors beyond.))
+
+*** series/episodes
+
+We might want to get all episodes for a *series*.
+
+For each episode, we want:
+- id :: episode id
+- absoluteNumber :: total number
+- airedSeason :: season number
+- airedEpisodeNumber :: episode number
+- episodeName :: name of the episode
+- firstAired :: date of airing
+- seriesId :: series from which this episode belongs
+- siteRating :: rating for this episode
+- siteRatingCount :: votes for this episode
+
+
+The episode list is paginated, and contains /special episodes/ with airedSeason = 0.
+We need to call ~_tvdb~ multiple times to get paginated results, and filter out entries with airedSeason == 0.
+
+Let's first define a recursive function to get all pages
+
+#+begin_src elisp
+  (defun series/episodesPage (token id page acc)
+    (let* ((query (_tvdb token (concat "/series/" id "/episodes?page=" page)))
+           (links (alist-get 'links query))
+           (next (alist-get 'next links))
+           (data (vector-select '(id
+                                  absoluteNumber
+                                  airedSeason
+                                  airedEpisodeNumber
+                                  episodeName
+                                  firstAired
+                                  seriesId)
+                                (alist-get 'data query))))
+      (if next
+          (series/episodesPage token id (int-to-string next) (append acc data))
+        (append acc data))))
+#+end_src
+
+#+RESULTS:
+: series/episodesPage
+
+Then we create a wrapper function and filter out special episodes.
+
+#+begin_src elisp
+  (defun series/episodes (token id)
+    "Get all episodes for a specific series ID.
+  Needs a TOKEN to work.  The TOKEN can be obtained using the LOGIN function."
+
+    (seq-sort-by '(lambda (episode)
+                    (alist-get 'absoluteNumber episode))
+                 #'<
+                 (seq-filter (lambda (x) (> (alist-get 'airedSeason x) 0))
+                                 (series/episodesPage token id "1" nil))))
+#+end_src
+
+#+RESULTS:
+: series/episodes
+
+For example, all episodes from Game of Thrones:
+
+#+begin_src elisp
+(setq episodes
+      (series/episodes tvdb--token "121361"))
+#+end_src
+
+#+RESULTS:
+| (id . 3254641) | (absoluteNumber . 1)  | (airedSeason . 1) | (airedEpisodeNumber . 1)  | (episodeName . Winter Is Coming)                      | (firstAired . 2011-04-17) | (seriesId . 121361) |
+| (id . 3436411) | (absoluteNumber . 2)  | (airedSeason . 1) | (airedEpisodeNumber . 2)  | (episodeName . The Kingsroad)                         | (firstAired . 2011-04-24) | (seriesId . 121361) |
+| (id . 3436421) | (absoluteNumber . 3)  | (airedSeason . 1) | (airedEpisodeNumber . 3)  | (episodeName . Lord Snow)                             | (firstAired . 2011-05-01) | (seriesId . 121361) |
+| (id . 3436431) | (absoluteNumber . 4)  | (airedSeason . 1) | (airedEpisodeNumber . 4)  | (episodeName . Cripples, Bastards, and Broken Things) | (firstAired . 2011-05-08) | (seriesId . 121361) |
+| (id . 3436441) | (absoluteNumber . 5)  | (airedSeason . 1) | (airedEpisodeNumber . 5)  | (episodeName . The Wolf and the Lion)                 | (firstAired . 2011-05-15) | (seriesId . 121361) |
+| (id . 3436451) | (absoluteNumber . 6)  | (airedSeason . 1) | (airedEpisodeNumber . 6)  | (episodeName . A Golden Crown)                        | (firstAired . 2011-05-22) | (seriesId . 121361) |
+| (id . 3436461) | (absoluteNumber . 7)  | (airedSeason . 1) | (airedEpisodeNumber . 7)  | (episodeName . You Win or You Die)                    | (firstAired . 2011-05-29) | (seriesId . 121361) |
+| (id . 3360391) | (absoluteNumber . 8)  | (airedSeason . 1) | (airedEpisodeNumber . 8)  | (episodeName . The Pointy End)                        | (firstAired . 2011-06-05) | (seriesId . 121361) |
+| (id . 4063481) | (absoluteNumber . 9)  | (airedSeason . 1) | (airedEpisodeNumber . 9)  | (episodeName . Baelor)                                | (firstAired . 2011-06-12) | (seriesId . 121361) |
+| (id . 4063491) | (absoluteNumber . 10) | (airedSeason . 1) | (airedEpisodeNumber . 10) | (episodeName . Fire and Blood)                        | (firstAired . 2011-06-19) | (seriesId . 121361) |
+| (id . 4161693) | (absoluteNumber . 11) | (airedSeason . 2) | (airedEpisodeNumber . 1)  | (episodeName . The North Remembers)                   | (firstAired . 2012-04-01) | (seriesId . 121361) |
+| (id . 4245771) | (absoluteNumber . 12) | (airedSeason . 2) | (airedEpisodeNumber . 2)  | (episodeName . The Night Lands)                       | (firstAired . 2012-04-08) | (seriesId . 121361) |
+| (id . 4245772) | (absoluteNumber . 13) | (airedSeason . 2) | (airedEpisodeNumber . 3)  | (episodeName . What is Dead May Never Die)            | (firstAired . 2012-04-15) | (seriesId . 121361) |
+| (id . 4245773) | (absoluteNumber . 14) | (airedSeason . 2) | (airedEpisodeNumber . 4)  | (episodeName . Garden of Bones)                       | (firstAired . 2012-04-22) | (seriesId . 121361) |
+| (id . 4245774) | (absoluteNumber . 15) | (airedSeason . 2) | (airedEpisodeNumber . 5)  | (episodeName . The Ghost of Harrenhal)                | (firstAired . 2012-04-29) | (seriesId . 121361) |
+| (id . 4245775) | (absoluteNumber . 16) | (airedSeason . 2) | (airedEpisodeNumber . 6)  | (episodeName . The Old Gods and the New)              | (firstAired . 2012-05-06) | (seriesId . 121361) |
+| (id . 4245776) | (absoluteNumber . 17) | (airedSeason . 2) | (airedEpisodeNumber . 7)  | (episodeName . A Man Without Honor)                   | (firstAired . 2012-05-13) | (seriesId . 121361) |
+| (id . 4245777) | (absoluteNumber . 18) | (airedSeason . 2) | (airedEpisodeNumber . 8)  | (episodeName . The Prince of Winterfell)              | (firstAired . 2012-05-20) | (seriesId . 121361) |
+| (id . 4245778) | (absoluteNumber . 19) | (airedSeason . 2) | (airedEpisodeNumber . 9)  | (episodeName . Blackwater)                            | (firstAired . 2012-05-27) | (seriesId . 121361) |
+| (id . 4245779) | (absoluteNumber . 20) | (airedSeason . 2) | (airedEpisodeNumber . 10) | (episodeName . Valar Morghulis)                       | (firstAired . 2012-06-03) | (seriesId . 121361) |
+| (id . 4293685) | (absoluteNumber . 21) | (airedSeason . 3) | (airedEpisodeNumber . 1)  | (episodeName . Valar Dohaeris)                        | (firstAired . 2013-03-31) | (seriesId . 121361) |
+| (id . 4517458) | (absoluteNumber . 22) | (airedSeason . 3) | (airedEpisodeNumber . 2)  | (episodeName . Dark Wings, Dark Words)                | (firstAired . 2013-04-07) | (seriesId . 121361) |
+| (id . 4517459) | (absoluteNumber . 23) | (airedSeason . 3) | (airedEpisodeNumber . 3)  | (episodeName . Walk of Punishment)                    | (firstAired . 2013-04-14) | (seriesId . 121361) |
+| (id . 4517460) | (absoluteNumber . 24) | (airedSeason . 3) | (airedEpisodeNumber . 4)  | (episodeName . And Now His Watch Is Ended)            | (firstAired . 2013-04-21) | (seriesId . 121361) |
+| (id . 4517461) | (absoluteNumber . 25) | (airedSeason . 3) | (airedEpisodeNumber . 5)  | (episodeName . Kissed by Fire)                        | (firstAired . 2013-04-28) | (seriesId . 121361) |
+| (id . 4517462) | (absoluteNumber . 26) | (airedSeason . 3) | (airedEpisodeNumber . 6)  | (episodeName . The Climb)                             | (firstAired . 2013-05-05) | (seriesId . 121361) |
+| (id . 4517463) | (absoluteNumber . 27) | (airedSeason . 3) | (airedEpisodeNumber . 7)  | (episodeName . The Bear and the Maiden Fair)          | (firstAired . 2013-05-12) | (seriesId . 121361) |
+| (id . 4517464) | (absoluteNumber . 28) | (airedSeason . 3) | (airedEpisodeNumber . 8)  | (episodeName . Second Sons)                           | (firstAired . 2013-05-19) | (seriesId . 121361) |
+| (id . 4517465) | (absoluteNumber . 29) | (airedSeason . 3) | (airedEpisodeNumber . 9)  | (episodeName . The Rains of Castamere)                | (firstAired . 2013-06-02) | (seriesId . 121361) |
+| (id . 4517466) | (absoluteNumber . 30) | (airedSeason . 3) | (airedEpisodeNumber . 10) | (episodeName . Mhysa)                                 | (firstAired . 2013-06-09) | (seriesId . 121361) |
+| (id . 4721938) | (absoluteNumber . 31) | (airedSeason . 4) | (airedEpisodeNumber . 1)  | (episodeName . Two Swords)                            | (firstAired . 2014-04-06) | (seriesId . 121361) |
+| (id . 4801602) | (absoluteNumber . 32) | (airedSeason . 4) | (airedEpisodeNumber . 2)  | (episodeName . The Lion and the Rose)                 | (firstAired . 2014-04-13) | (seriesId . 121361) |
+| (id . 4801603) | (absoluteNumber . 33) | (airedSeason . 4) | (airedEpisodeNumber . 3)  | (episodeName . Breaker of Chains)                     | (firstAired . 2014-04-20) | (seriesId . 121361) |
+| (id . 4801604) | (absoluteNumber . 34) | (airedSeason . 4) | (airedEpisodeNumber . 4)  | (episodeName . Oathkeeper)                            | (firstAired . 2014-04-27) | (seriesId . 121361) |
+| (id . 4801605) | (absoluteNumber . 35) | (airedSeason . 4) | (airedEpisodeNumber . 5)  | (episodeName . First of His Name)                     | (firstAired . 2014-05-04) | (seriesId . 121361) |
+| (id . 4801606) | (absoluteNumber . 36) | (airedSeason . 4) | (airedEpisodeNumber . 6)  | (episodeName . The Laws of Gods and Men)              | (firstAired . 2014-05-11) | (seriesId . 121361) |
+| (id . 4801607) | (absoluteNumber . 37) | (airedSeason . 4) | (airedEpisodeNumber . 7)  | (episodeName . Mockingbird)                           | (firstAired . 2014-05-18) | (seriesId . 121361) |
+| (id . 4801608) | (absoluteNumber . 38) | (airedSeason . 4) | (airedEpisodeNumber . 8)  | (episodeName . The Mountain and the Viper)            | (firstAired . 2014-06-01) | (seriesId . 121361) |
+| (id . 4801609) | (absoluteNumber . 39) | (airedSeason . 4) | (airedEpisodeNumber . 9)  | (episodeName . The Watchers on the Wall)              | (firstAired . 2014-06-08) | (seriesId . 121361) |
+| (id . 4801610) | (absoluteNumber . 40) | (airedSeason . 4) | (airedEpisodeNumber . 10) | (episodeName . The Children)                          | (firstAired . 2014-06-15) | (seriesId . 121361) |
+| (id . 5083694) | (absoluteNumber . 41) | (airedSeason . 5) | (airedEpisodeNumber . 1)  | (episodeName . The Wars to Come)                      | (firstAired . 2015-04-12) | (seriesId . 121361) |
+| (id . 5150174) | (absoluteNumber . 42) | (airedSeason . 5) | (airedEpisodeNumber . 2)  | (episodeName . The House of Black and White)          | (firstAired . 2015-04-19) | (seriesId . 121361) |
+| (id . 5150175) | (absoluteNumber . 43) | (airedSeason . 5) | (airedEpisodeNumber . 3)  | (episodeName . High Sparrow)                          | (firstAired . 2015-04-26) | (seriesId . 121361) |
+| (id . 5150183) | (absoluteNumber . 44) | (airedSeason . 5) | (airedEpisodeNumber . 4)  | (episodeName . Sons of the Harpy)                     | (firstAired . 2015-05-03) | (seriesId . 121361) |
+| (id . 5171022) | (absoluteNumber . 45) | (airedSeason . 5) | (airedEpisodeNumber . 5)  | (episodeName . Kill the Boy)                          | (firstAired . 2015-05-10) | (seriesId . 121361) |
+| (id . 5171023) | (absoluteNumber . 46) | (airedSeason . 5) | (airedEpisodeNumber . 6)  | (episodeName . Unbowed, Unbent, Unbroken)             | (firstAired . 2015-05-17) | (seriesId . 121361) |
+| (id . 5171024) | (absoluteNumber . 47) | (airedSeason . 5) | (airedEpisodeNumber . 7)  | (episodeName . The Gift)                              | (firstAired . 2015-05-24) | (seriesId . 121361) |
+| (id . 5194184) | (absoluteNumber . 48) | (airedSeason . 5) | (airedEpisodeNumber . 8)  | (episodeName . Hardhome)                              | (firstAired . 2015-05-31) | (seriesId . 121361) |
+| (id . 5194187) | (absoluteNumber . 49) | (airedSeason . 5) | (airedEpisodeNumber . 9)  | (episodeName . The Dance of Dragons)                  | (firstAired . 2015-06-07) | (seriesId . 121361) |
+| (id . 5194188) | (absoluteNumber . 50) | (airedSeason . 5) | (airedEpisodeNumber . 10) | (episodeName . Mother's Mercy)                        | (firstAired . 2015-06-14) | (seriesId . 121361) |
+| (id . 5469015) | (absoluteNumber . 51) | (airedSeason . 6) | (airedEpisodeNumber . 1)  | (episodeName . The Red Woman)                         | (firstAired . 2016-04-24) | (seriesId . 121361) |
+| (id . 5579002) | (absoluteNumber . 52) | (airedSeason . 6) | (airedEpisodeNumber . 2)  | (episodeName . Home)                                  | (firstAired . 2016-05-01) | (seriesId . 121361) |
+| (id . 5579003) | (absoluteNumber . 53) | (airedSeason . 6) | (airedEpisodeNumber . 3)  | (episodeName . Oathbreaker)                           | (firstAired . 2016-05-08) | (seriesId . 121361) |
+| (id . 5599364) | (absoluteNumber . 54) | (airedSeason . 6) | (airedEpisodeNumber . 4)  | (episodeName . Book of the Stranger)                  | (firstAired . 2016-05-15) | (seriesId . 121361) |
+| (id . 5600132) | (absoluteNumber . 55) | (airedSeason . 6) | (airedEpisodeNumber . 5)  | (episodeName . The Door)                              | (firstAired . 2016-05-22) | (seriesId . 121361) |
+| (id . 5615733) | (absoluteNumber . 56) | (airedSeason . 6) | (airedEpisodeNumber . 6)  | (episodeName . Blood of My Blood)                     | (firstAired . 2016-05-29) | (seriesId . 121361) |
+| (id . 5615734) | (absoluteNumber . 57) | (airedSeason . 6) | (airedEpisodeNumber . 7)  | (episodeName . The Broken Man)                        | (firstAired . 2016-06-05) | (seriesId . 121361) |
+| (id . 5624259) | (absoluteNumber . 58) | (airedSeason . 6) | (airedEpisodeNumber . 8)  | (episodeName . No One)                                | (firstAired . 2016-06-12) | (seriesId . 121361) |
+| (id . 5624260) | (absoluteNumber . 59) | (airedSeason . 6) | (airedEpisodeNumber . 9)  | (episodeName . Battle of the Bastards)                | (firstAired . 2016-06-19) | (seriesId . 121361) |
+| (id . 5624261) | (absoluteNumber . 60) | (airedSeason . 6) | (airedEpisodeNumber . 10) | (episodeName . The Winds of Winter)                   | (firstAired . 2016-06-26) | (seriesId . 121361) |
+| (id . 6185708) | (absoluteNumber . 61) | (airedSeason . 7) | (airedEpisodeNumber . 1)  | (episodeName . Dragonstone)                           | (firstAired . 2017-07-16) | (seriesId . 121361) |
+| (id . 6132445) | (absoluteNumber . 62) | (airedSeason . 7) | (airedEpisodeNumber . 2)  | (episodeName . Stormborn)                             | (firstAired . 2017-07-23) | (seriesId . 121361) |
+| (id . 6132453) | (absoluteNumber . 63) | (airedSeason . 7) | (airedEpisodeNumber . 3)  | (episodeName . The Queen's Justice)                   | (firstAired . 2017-07-30) | (seriesId . 121361) |
+| (id . 6235145) | (absoluteNumber . 64) | (airedSeason . 7) | (airedEpisodeNumber . 4)  | (episodeName . The Spoils of War)                     | (firstAired . 2017-08-06) | (seriesId . 121361) |
+| (id . 6132455) | (absoluteNumber . 65) | (airedSeason . 7) | (airedEpisodeNumber . 5)  | (episodeName . Eastwatch)                             | (firstAired . 2017-08-13) | (seriesId . 121361) |
+| (id . 6132456) | (absoluteNumber . 66) | (airedSeason . 7) | (airedEpisodeNumber . 6)  | (episodeName . Beyond the Wall)                       | (firstAired . 2017-08-20) | (seriesId . 121361) |
+| (id . 6275142) | (absoluteNumber . 67) | (airedSeason . 7) | (airedEpisodeNumber . 7)  | (episodeName . The Dragon and the Wolf)               | (firstAired . 2017-08-27) | (seriesId . 121361) |
+| (id . 7117386) | (absoluteNumber . 68) | (airedSeason . 8) | (airedEpisodeNumber . 1)  | (episodeName . Winterfell)                            | (firstAired . 2019-04-14) | (seriesId . 121361) |
+| (id . 7121401) | (absoluteNumber . 69) | (airedSeason . 8) | (airedEpisodeNumber . 2)  | (episodeName . A Knight of the Seven Kingdoms)        | (firstAired . 2019-04-21) | (seriesId . 121361) |
+| (id . 7121402) | (absoluteNumber . 70) | (airedSeason . 8) | (airedEpisodeNumber . 3)  | (episodeName . The Long Night)                        | (firstAired . 2019-04-28) | (seriesId . 121361) |
+| (id . 7121403) | (absoluteNumber . 71) | (airedSeason . 8) | (airedEpisodeNumber . 4)  | (episodeName . The Last of the Starks)                | (firstAired . 2019-05-05) | (seriesId . 121361) |
+| (id . 7121404) | (absoluteNumber . 72) | (airedSeason . 8) | (airedEpisodeNumber . 5)  | (episodeName . The Bells)                             | (firstAired . 2019-05-12) | (seriesId . 121361) |
+| (id . 7121405) | (absoluteNumber . 73) | (airedSeason . 8) | (airedEpisodeNumber . 6)  | (episodeName . The Iron Throne)                       | (firstAired . 2019-05-19) | (seriesId . 121361) |
+
+*** update
+
+Lastly we want to get the list of latest updated shows.
+The API only returns data for a period of *one week* after /fromTime/, so we will need to call it multiple times.
+
+Let's first create a function to query one week of update.
+
+#+begin_src elisp
+  (defun _update (token fromTime)
+    "Return an array of series that have changed in the week after FROMTIME.
+  Needs a TOKEN to work.  The TOKEN can be obtained using the LOGIN function."
+
+    (vector-mutate 'epoch-to-datestring
+                   'lastUpdated
+                   (tvdb token "/updated/query?fromTime=" fromTime)))
+#+end_src
+
+#+RESULTS:
+: _update
+
+Then we create the function that will call _update multiple times, by creating a sequence of dates every week from /fromTime/ to /current-time/.
+
+#+begin_src elisp
+  (defun update (token fromTime)
+    "Return an array of series that have changed since FROMTIME.
+  Needs a TOKEN to work.  The TOKEN can be obtained using the LOGIN function."
+
+    (seq-reduce 'append
+     (seq-map '(lambda (fromTime) (_update token fromTime))
+              (seq-map 'int-to-string
+                       (number-sequence
+                        (string-to-number (format-time-string "%s" (date-to-time fromTime)))
+                        (string-to-number (format-time-string "%s" (current-time)))
+                        (* 3600 24 7))))
+     nil))
+#+end_src
+
+#+RESULTS:
+: update
+
+For example, the updates in the last hour:
+
+#+begin_src elisp
+  (setq updates
+        (update tvdb--token (format-time-string "%Y-%m-%d %H:00" (current-time))))
+#+end_src
+
+#+RESULTS:
+| (id . 365961) | (lastUpdated . 2020-05-24 06:07:19) |
+| (id . 366263) | (lastUpdated . 2020-05-24 06:07:19) |
+| (id . 382113) | (lastUpdated . 2020-05-24 06:08:34) |
+| (id . 326311) | (lastUpdated . 2020-05-24 06:11:31) |
+| (id . 342716) | (lastUpdated . 2020-05-24 06:13:52) |
+| (id . 339822) | (lastUpdated . 2020-05-24 06:14:08) |
+| (id . 382506) | (lastUpdated . 2020-05-24 06:14:20) |
+| (id . 309726) | (lastUpdated . 2020-05-24 06:14:59) |
+| (id . 244331) | (lastUpdated . 2020-05-24 06:16:34) |
+| (id . 90331)  | (lastUpdated . 2020-05-24 06:20:06) |
+| (id . 370465) | (lastUpdated . 2020-05-24 06:20:57) |
+| (id . 71361)  | (lastUpdated . 2020-05-24 06:23:20) |
+| (id . 71750)  | (lastUpdated . 2020-05-24 06:23:21) |
+| (id . 145211) | (lastUpdated . 2020-05-24 06:23:22) |
+| (id . 78500)  | (lastUpdated . 2020-05-24 06:23:23) |
+| (id . 202241) | (lastUpdated . 2020-05-24 06:23:24) |
+| (id . 268196) | (lastUpdated . 2020-05-24 06:23:25) |
+| (id . 79445)  | (lastUpdated . 2020-05-24 06:23:26) |
+| (id . 87871)  | (lastUpdated . 2020-05-24 06:23:26) |
+| (id . 71536)  | (lastUpdated . 2020-05-24 06:23:27) |
+| (id . 75796)  | (lastUpdated . 2020-05-24 06:23:28) |
+| (id . 79449)  | (lastUpdated . 2020-05-24 06:23:28) |
+| (id . 81797)  | (lastUpdated . 2020-05-24 06:23:29) |
+| (id . 72241)  | (lastUpdated . 2020-05-24 06:23:30) |
+| (id . 75414)  | (lastUpdated . 2020-05-24 06:23:31) |
+| (id . 264534) | (lastUpdated . 2020-05-24 06:23:31) |
+| (id . 380653) | (lastUpdated . 2020-05-24 06:23:32) |
+| (id . 266786) | (lastUpdated . 2020-05-24 06:23:35) |
+| (id . 380350) | (lastUpdated . 2020-05-24 06:27:17) |
+| (id . 272427) | (lastUpdated . 2020-05-24 06:29:21) |
+| (id . 382917) | (lastUpdated . 2020-05-24 06:29:32) |
+| (id . 80117)  | (lastUpdated . 2020-05-24 06:34:13) |
+| (id . 321364) | (lastUpdated . 2020-05-24 06:34:33) |
+| (id . 79660)  | (lastUpdated . 2020-05-24 06:35:04) |
+| (id . 109241) | (lastUpdated . 2020-05-24 06:35:09) |
+| (id . 263005) | (lastUpdated . 2020-05-24 06:39:24) |
+| (id . 286188) | (lastUpdated . 2020-05-24 06:40:25) |
+| (id . 311902) | (lastUpdated . 2020-05-24 06:43:00) |
+| (id . 95441)  | (lastUpdated . 2020-05-24 06:43:01) |
+| (id . 281630) | (lastUpdated . 2020-05-24 06:43:02) |
+| (id . 362829) | (lastUpdated . 2020-05-24 06:43:27) |
+| (id . 345738) | (lastUpdated . 2020-05-24 06:48:42) |
+| (id . 381976) | (lastUpdated . 2020-05-24 06:50:09) |
+
+* Internal API
+
+We want to be able to:
+- add series to list of watched series
+- remove series from list of watched series
+- show list of watched series
+- show all episodes of a series in the list
+- mark the latest seen episode for any watched series
+- query updates for new episodes
+- show a list of episodes to watch
+- show a list of upcoming episodes
+
+** Data model
+
+We need to keep track of which series are being watched.
+For each series we need to remember the number of the last seen episodes.
+
+#+begin_src elisp
+  (defvar tvdb--list
+    nil
+    "Internal list of last seen episodes.
+
+  Of the form :
+
+  '(((id . 121361) (lastSeen . 73))
+    ((id . 511362) (lastSeen . 49)))")
+#+end_src
+
+We need to keep track of the lastUpdated time.
+
+#+begin_src elisp
+  (defvar tvdb--lastUpdated
+    nil
+    "The date of the last update.")
+#+end_src
+
+And we need to keep a cache of all known series
+
+#+begin_src elisp
+  (defvar tvdb--series-cache
+    nil
+    "Cache of known series.
+
+  Of the same form as a call to series")
+#+end_src
+
+and all known episodes.
+
+#+begin_src elisp
+  (defvar tvdb--episodes-cache
+    nil
+    "Cache of known episodes.
+
+    Of the form:
+
+  '(((id . 121361) (episodes .  (((absoluteNumber . 1)
+                                  (airedSeason . 1)
+                                  (airedEpisodeNumber . 1)
+                                  (firstAired . date)))))
+     (id ...))")
+    #+end_src
+
+    #+RESULTS:
+    : tvdb--episodes-cache
+
+** Methods
+
+*** add series to list
+
+#+begin_src elisp
+  (defun tvdb-add (id))
+
+#+end_src
+
+* Postamble
+
+#+begin_src elisp
+(provide 'seriesTracker)
+
+;;; seriesTracker.el ends here
+#+end_src
