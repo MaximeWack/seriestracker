@@ -2,8 +2,6 @@
 #+author: Maxime Wack
 #+property: session *seriesTracker*
 
-
-
 * Preamble
 
 #+begin_src elisp
@@ -28,14 +26,16 @@ We will need ~url~ to connect to the API and ~json~ to parse the response.
 
 * API
 
-Create an API layer to communicate with theTVdbAPI.
-This is mainly a /GET/ API, with a /POST/ method for authentication.
-The results are returned in *JSON*, almost everytime in the ~'data~ element.
+API layer to communicate with theTVdbAPI.
+This is mainly a /GET/ API, with one /POST/ method for authentication.
+The results are returned in JSON, almost everytime in the ~data~ element.
+Large queries require pagination with information in the ~links~ element.
+~/refresh_token~ returns the token in the ~token~ element.
 
 ** getJSON
 
 TheTVdbAPI answers in JSON.
-This function parses the JSON in the url-buffer response to a list.
+Parse the JSON in the url-buffer response with ~json-read-object~.
 
 #+begin_src elisp
 (defun getJSON (url-buffer)
@@ -52,9 +52,10 @@ This function parses the JSON in the url-buffer response to a list.
 
 ** login
 
-Let's login first. As this is the only /POST/ call in the API, we can make it here directly, and the token is needed for all other operations.
-The login needs a ~username~, and ~apikey~, and a ~userkey~.
-We parse the response using ~getJSON~, and extract the *token*.
+TheTVdbAPI requires login to access.
+This is the only /POST/ call in the API and it provides the token needed for all other operations.
+The login needs a ~username~, an ~apikey~, and a ~userkey~.
+Parse the response using ~getJSON~, and return the ~token~ element.
 
 #+begin_src elisp
   (defun login (username apikey userkey)
@@ -74,7 +75,7 @@ We parse the response using ~getJSON~, and extract the *token*.
 #+RESULTS:
 : login
 
-The token is saved in a declared variable
+Save the token in a declared variable
 
 #+begin_src elisp
   (defvar tvdb--token
@@ -93,11 +94,24 @@ For example:
                            ""))
 #+end_src
 
-** tvdb
+** Queries
 
-We the create a wrapper to call theTVdbAPI using the login token and parameters, as all these queries are /GET/ queries.
-The only call that doesn't require parameters, and doesn't return its result in the ~'data~ element, is to ~refreshToken~.
-We will thus make the default call to ~tvdb~ act as ~refreshToken~, or return the ~'data~ element of the queries in the /PARAMS/.
+elisp functions to call API endpoints.
+
+Requirements:
+- search series
+- get episode list with airing times
+- get updated series
+
+*** Helpers
+
+Helper functions to work with the queries and their results.
+
+**** tvdb
+
+All calls to theTVdbAPI are /GET/ calls using the token and parameters.
+Call the API /GET/ endpoints with the Authorization ~token~ and the ~params~ as a string.
+Return the whole JSON response.
 
 #+begin_src elisp
   (defun _tvdb (token params)
@@ -113,13 +127,17 @@ We will thus make the default call to ~tvdb~ act as ~refreshToken~, or return th
 #+RESULTS:
 : _tvdb
 
+~refresh_token~ is the only call that doesn't require parameters nor return its result in the ~data~ element.
+Make the default call to ~tvdb~ when ~params~ is /nil/ to ~refresh_token~, return the ~data~ element otherwise.
+~params~ is concatenated as a string.
+
 #+begin_src elisp
   (defun tvdb (token &rest params)
     "Generic function to query tvdbapi.
 
   Needs a TOKEN to work.  The TOKEN can be obtained using the LOGIN function.
   If no PARAMS are given, call refresh_token, else concatenate all params and call the API.
-  Returns the 'data element of the parsed JSON response."
+  Returns the data element of the parsed JSON response."
 
     (if params
         (alist-get 'data
@@ -131,29 +149,16 @@ We will thus make the default call to ~tvdb~ act as ~refreshToken~, or return th
 #+RESULTS:
 : tvdb
 
-Let's refresh the token as an example:
+For example, refreshing the token:
 
 #+begin_src elisp
 (tvdb tvdb--token)
 #+end_src
 
-** Queries
-
-We then define elisp functions to call API endpoints.
-
-We want to be able to
-- search for series
-- get the episode list, with airing times
-- get updates
-
-*** Helpers
-
-First we define some helper functions to work with alists and vectors of alists, as well as dates.
-
 **** alist-select
 
-Select a list of items from an alist.
-The ~'data~ element is a vector of alists.
+Each series and episode is represented as an alist.
+Select a list of elements from an alist.
 
 #+begin_src elisp
 (defun alist-select (fields alist)
@@ -183,7 +188,8 @@ For example:
 
 **** vector-select
 
-Select a list of items from each alist of a list or vector.
+Series lists and episodes are represented as vectors of alists.
+Select a list of elements from each alist in a vector.
 
 #+begin_src elisp
   (defun vector-select (fields vector)
@@ -214,6 +220,7 @@ For example:
 
 **** vector-pull
 
+Same elements in each alist in a vector consitute a column.
 Extract a column from a vector.
 
 #+begin_src elisp
@@ -239,9 +246,9 @@ Example:
 #+RESULTS:
 | 1 | 3 |
 
-**** vector-map
+**** vector-mutate
 
-Apply a function to all elements of a vector.
+Apply a function to all values of a column in a vector.
 
 #+begin_src elisp
   (defun vector-mutate (fun elem vector)
@@ -255,9 +262,9 @@ Apply a function to all elements of a vector.
 #+RESULTS:
 : vector-mutate
 
-**** epoch-to-datestring
+**** epoch/datestring
 
-Later we will need to convert between *epochs* and *datestrings*.
+Convert between epochs and datestrings.
 
 #+begin_src elisp
 (defun epoch-to-datestring (epoch)
@@ -268,8 +275,6 @@ Later we will need to convert between *epochs* and *datestrings*.
 
 #+RESULTS:
 : epoch-to-datestring
-
-**** datestring-to-epoch
 
 #+begin_src elisp
 (defun datestring-to-epoch (datestring)
@@ -284,7 +289,8 @@ Later we will need to convert between *epochs* and *datestrings*.
 *** search
 
 Search for a series by name.
-For each returned series we keep:
+
+Keep elements:
 - id :: unique id
 - seriesName :: series name
 - firstAired :: date first aired
@@ -295,7 +301,7 @@ For each returned series we keep:
 #+begin_src elisp
   (defun search (token seriesName)
     "Search for SERIESNAME.
-  Needs a TOKEN to work.  The TOKEN can be obtained using the LOGIN function."
+  Needs a TOKEN to work. The TOKEN can be obtained using the LOGIN function."
 
     (vector-select '(id
                      seriesName
@@ -326,9 +332,9 @@ For example:
 
 *** series
 
-We can then get information about a *series* with its *id*.
+Get a series detailed information.
 
-We select the following elements:
+Keep elements:
 - id :: unique id
 - seriesName :: series name
 - firstAired :: date first aired
@@ -372,9 +378,9 @@ For example:
 
 *** series/episodes
 
-We might want to get all episodes for a *series*.
+Get all episodes of a series.
 
-For each episode, we want:
+Keep elements:
 - id :: episode id
 - absoluteNumber :: total number
 - airedSeason :: season number
@@ -386,10 +392,8 @@ For each episode, we want:
 - siteRatingCount :: votes for this episode
 
 
-The episode list is paginated, and contains /special episodes/ with airedSeason = 0.
-We need to call ~_tvdb~ multiple times to get paginated results, and filter out entries with airedSeason == 0.
-
-Let's first define a recursive function to get all pages
+The episode list is paginated.
+Recursively append the results in the ~next~ page.
 
 #+begin_src elisp
   (defun series/episodesPage (token id page acc)
@@ -402,7 +406,9 @@ Let's first define a recursive function to get all pages
                                   airedEpisodeNumber
                                   episodeName
                                   firstAired
-                                  seriesId)
+                                  seriesId
+                                  siteRating
+                                  siteRatingCount)
                                 (alist-get 'data query))))
       (if next
           (series/episodesPage token id (int-to-string next) (append acc data))
@@ -412,7 +418,8 @@ Let's first define a recursive function to get all pages
 #+RESULTS:
 : series/episodesPage
 
-Then we create a wrapper function and filter out special episodes.
+The results contain special episodes and are unsorted.
+Filter out episodes with ~airedSeason~ = 0, and sort according to ~absoluteNumber~.
 
 #+begin_src elisp
   (defun series/episodes (token id)
@@ -513,10 +520,11 @@ For example, all episodes from Game of Thrones:
 
 *** update
 
-Lastly we want to get the list of latest updated shows.
-The API only returns data for a period of *one week* after /fromTime/, so we will need to call it multiple times.
+Get a list of updated series.
+The API only returns data for a period of *one week* after ~fromTime~.
+~lastUpdated~ is given as an epoch.
 
-Let's first create a function to query one week of update.
+Query one week of updates and convert ~lastUpdated~ to a datestring.
 
 #+begin_src elisp
   (defun _update (token fromTime)
@@ -531,7 +539,7 @@ Let's first create a function to query one week of update.
 #+RESULTS:
 : _update
 
-Then we create the function that will call _update multiple times, by creating a sequence of dates every week from /fromTime/ to /current-time/.
+Call ~_update~ for every week from ~fromTime~ to ~(current-time)~.
 
 #+begin_src elisp
   (defun update (token fromTime)
@@ -605,7 +613,7 @@ For example, the updates in the last hour:
 
 * Internal API
 
-We want to be able to:
+Requirements:
 - add series to list of watched series
 - remove series from list of watched series
 - show list of watched series
@@ -617,8 +625,7 @@ We want to be able to:
 
 ** Data model
 
-We need to keep track of which series are being watched.
-For each series we need to remember the number of the last seen episodes.
+Keep track of watched series and last seen episode.
 
 #+begin_src elisp
   (defvar tvdb--list
@@ -631,7 +638,7 @@ For each series we need to remember the number of the last seen episodes.
     ((id . 511362) (lastSeen . 49)))")
 #+end_src
 
-We need to keep track of the lastUpdated time.
+Keep track of last time the db was updated.
 
 #+begin_src elisp
   (defvar tvdb--lastUpdated
@@ -639,20 +646,20 @@ We need to keep track of the lastUpdated time.
     "The date of the last update.")
 #+end_src
 
-And we need to keep a cache of all known series
+Keep a db of series informations
 
 #+begin_src elisp
-  (defvar tvdb--series-cache
+  (defvar tvdb--series-db
     nil
     "Cache of known series.
 
   Of the same form as a call to series")
 #+end_src
 
-and all known episodes.
+and episodes details.
 
 #+begin_src elisp
-  (defvar tvdb--episodes-cache
+  (defvar tvdb--episodes-db
     nil
     "Cache of known episodes.
 
