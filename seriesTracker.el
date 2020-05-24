@@ -18,9 +18,9 @@
     (move-beginning-of-line 1)
     (json-read-object)))
 
-;;;;; aselect
+;;;;; alist-select
 
-(defun aselect (alist fields)
+(defun alist-select (alist fields)
   "Keep only FIELDS in ALIST."
 
   (reduce (lambda (list item)
@@ -97,7 +97,7 @@ Returns the result as a parsed JSON object"
 Needs a TOKEN to work.  The TOKEN can be obtained using the LOGIN function."
 
   (mapcar (lambda (serie)
-            (aselect serie (reverse '(id
+            (alist-select serie (reverse '(id
                                       seriesName
                                       firstAired
                                       status
@@ -117,7 +117,7 @@ Needs a TOKEN to work.  The TOKEN can be obtained using the LOGIN function."
   "Get informations about a specific episode ID.
 Needs a TOKEN to work.  The TOKEN can be obtained using the LOGIN function."
 
-  (aselect
+  (alist-select
    (alist-get 'data
               (let ((params (concat "episodes/" id)))
                 (tvdb token params)))
@@ -132,7 +132,7 @@ Needs a TOKEN to work.  The TOKEN can be obtained using the LOGIN function."
   "Get informations about a specific series ID.
 Needs a TOKEN to work.  The TOKEN can be obtained using the LOGIN function."
 
-  (aselect
+  (alist-select
    (alist-get 'data
               (let ((params (concat "series/" id)))
                 (tvdb token params)))
@@ -154,7 +154,7 @@ Needs a TOKEN to work.  The TOKEN can be obtained using the LOGIN function."
 Needs a TOKEN to work.  The TOKEN can be obtained using the LOGIN function."
 
   (mapcar (lambda (episode)
-            (aselect episode
+            (alist-select episode
                      (reverse '(id
                                 airedSeason
                                 airedEpisodeNumber
