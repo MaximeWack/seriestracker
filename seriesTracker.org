@@ -54,9 +54,9 @@ The login needs a ~username~, an ~apikey~, and a ~userkey~.
 Parse the response using ~getJSON~, and return the ~token~ element.
 
 #+begin_src elisp
-  (defun login (username apikey userkey)
-    "Login using USERNAME, APIKEY and USERKEY.
-  Return the token"
+(defun login (username apikey userkey)
+  "Login using USERNAME, APIKEY and USERKEY.
+Return the token"
 
   (->> (let ((url-request-method "POST")
             (url-request-extra-headers '(("Content-Type" . "application/json")
@@ -71,17 +71,17 @@ Parse the response using ~getJSON~, and return the ~token~ element.
 Save the token in a declared variable
 
 #+begin_src elisp
-  (defvar tvdb--token
-    nil
-    "Auth token")
+(defvar tvdb--token
+  nil
+  "Auth token")
 #+end_src
 
 For example:
 
 #+begin_src elisp
-  (setq tvdb--token (login ""
-                           ""
-                           ""))
+(setq tvdb--token (login ""
+                        ""
+                        ""))
 #+end_src
 
 ** Queries
@@ -104,14 +104,14 @@ Call the API /GET/ endpoints with the Authorization ~token~ and the ~params~ as 
 Return the whole JSON response.
 
 #+begin_src elisp
-  (defun _tvdb (token params)
-    (getJSON
-     (let* ((url-request-method "GET")
-            (bearer (concat "Bearer " token))
-            (url-request-extra-headers `(("Accept" . "application/json")
-                                         ("Authorization" . ,bearer)))
-            (url-show-status nil))
-       (url-retrieve-synchronously (concat "https://api.thetvdb.com" params)))))
+(defun _tvdb (token params)
+  (getJSON
+   (let* ((url-request-method "GET")
+          (bearer (concat "Bearer " token))
+          (url-request-extra-headers `(("Accept" . "application/json")
+                                       ("Authorization" . ,bearer)))
+          (url-show-status nil))
+     (url-retrieve-synchronously (concat "https://api.thetvdb.com" params)))))
 #+end_src
 
 ~refresh_token~ is the only call that doesn't require parameters nor return its result in the ~data~ element.
@@ -119,18 +119,18 @@ Make the default call to ~tvdb~ when ~params~ is /nil/ to ~refresh_token~, retur
 ~params~ is concatenated as a string.
 
 #+begin_src elisp
-  (defun tvdb (token &rest params)
-    "Generic function to query tvdbapi.
+(defun tvdb (token &rest params)
+  "Generic function to query tvdbapi.
 
-  Needs a TOKEN to work. The TOKEN can be obtained using the LOGIN function.
-  If no PARAMS are given, call refresh_token, else concatenate all params and call the API.
-  Returns the data element of the parsed JSON response."
+Needs a TOKEN to work. The TOKEN can be obtained using the LOGIN function.
+If no PARAMS are given, call refresh_token, else concatenate all params and call the API.
+Returns the data element of the parsed JSON response."
 
-    (if params
-        (alist-get 'data
-                   (_tvdb token (apply 'concat params)))
-      (alist-get 'token
-                 (_tvdb token "/refresh_token"))))
+  (if params
+      (alist-get 'data
+                 (_tvdb token (apply 'concat params)))
+    (alist-get 'token
+               (_tvdb token "/refresh_token"))))
 #+end_src
 
 For example, refreshing the token:
@@ -146,7 +146,7 @@ Select a list of elements from an alist.
 
 #+begin_src elisp
 (defun alist-select (fields alist)
-  "Keep only FIELDS in ALIST."
+  "Keep only FIELDS in ALIST by constructing a new alist containing only these elements."
 
   (->> fields
        reverse
@@ -157,11 +157,11 @@ Select a list of elements from an alist.
 For example:
 
 #+begin_src elisp
-  (alist-select
-   '(a c)
-   '((a . 1)
-     (b . "b")
-     (c . c)))
+(alist-select
+ '(a c)
+ '((a . 1)
+   (b . "b")
+   (c . c)))
 #+end_src
 
 **** array-select
@@ -170,9 +170,8 @@ Series and episodes lists are represented as arrays of alists.
 Select a list of elements from each alist in an array.
 
 #+begin_src elisp
-  (defun array-select (fields array)
-    "Keep only FIELDS in every alist in the ARRAY. "
-
+(defun array-select (fields array)
+  "Keep only FIELDS in every alist in the ARRAY. "
 
   (--map (alist-select fields it) array))
 #+end_src
@@ -180,9 +179,9 @@ Select a list of elements from each alist in an array.
 For example:
 
 #+begin_src elisp
-  (array-select '(a c)
-                 [((a . 1) (b . "b") (c . c))
-                  ((a . 3) (b . "a") (c . d))])
+(array-select '(a c)
+              '(((a . 1) (b . "b") (c . c))
+                ((a . 3) (b . "a") (c . d))))
 #+end_src
 
 **** array-pull
@@ -191,8 +190,8 @@ Same elements in each alist in a array consitute a column.
 Extract a column from an array.
 
 #+begin_src elisp
-  (defun array-pull (field array)
-    "Keep only FIELD in every alist in the ARRAY and flatten."
+(defun array-pull (field array)
+  "Keep only FIELD in every alist in the ARRAY and flatten."
 
   (--map (alist-get field it) array))
 #+end_src
@@ -200,9 +199,8 @@ Extract a column from an array.
 Example:
 
 #+begin_src elisp
-  (array-pull 'a
-               [((a . 1) (b . 2)) ((a . 3) (b . 4))])
-
+(array-pull 'a
+            '(((a . 1) (b . 2)) ((a . 3) (b . 4))))
 #+end_src
 
 **** array-mutate
@@ -210,8 +208,8 @@ Example:
 Apply a function to all values of a column in an array.
 
 #+begin_src elisp
-  (defun array-mutate (fun elem array)
-    "Execute FUN on ELEM of all the alists in ARRAY"
+(defun array-mutate (fun elem array)
+  "Execute FUN on ELEM of all the alists in ARRAY"
 
   (-map (lambda (item)
           (setf (alist-get elem item)
@@ -254,9 +252,9 @@ Keep elements:
 - overview :: description
 
 #+begin_src elisp
-  (defun search (token seriesName)
-    "Search for SERIESNAME.
-  Needs a TOKEN to work. The TOKEN can be obtained using the LOGIN function."
+(defun search (token seriesName)
+  "Search for SERIESNAME.
+Needs a TOKEN to work. The TOKEN can be obtained using the LOGIN function."
 
   (->> seriesName
       (tvdb token "/search/series?name=")
@@ -271,8 +269,7 @@ Keep elements:
 For example:
 
 #+begin_src elisp
-(setq series-list
-      (search tvdb--token "Game of Thrones"))
+(setq series-list (search tvdb--token "Game of Thrones"))
 #+end_src
 
 *** series
@@ -285,9 +282,9 @@ Keep elements:
 - status :: Ended | Continuing | Upcoming
 
 #+begin_src elisp
-  (defun series (token id)
-    "Get informations about a specific series ID.
-  Needs a TOKEN to work. The TOKEN can be obtained using the LOGIN function."
+(defun series (token id)
+  "Get informations about a specific series ID.
+Needs a TOKEN to work. The TOKEN can be obtained using the LOGIN function."
 
   (->> id
       int-to-string
@@ -300,7 +297,7 @@ Keep elements:
 For example:
 
 #+begin_src elisp
-  (setq serie (series tvdb--token 121361))
+(setq serie (series tvdb--token 121361))
 #+end_src
 
 *** series/episodes
@@ -322,51 +319,49 @@ The episode list is paginated.
 Recursively append the results in the ~next~ page.
 
 #+begin_src elisp
-  (defun series/episodesPage (token id page acc)
-    "Get the whole episode list of show ID recursively.
+(defun series/episodesPage (token id page acc)
+  "Get the whole episode list of show ID recursively.
 
 Needs a TOKEN to work. The TOKEN can be obtained using the LOGIN function.
 PAGE is the current queried page and ACC the accumulator."
 
-    (let* ((query (_tvdb token (concat "/series/" (int-to-string id) "/episodes?page=" (int-to-string page))))
-           (links (alist-get 'links query))
-           (next (alist-get 'next links))
-           (data (array-select '(id
-                                  absoluteNumber
-                                  airedSeason
-                                  airedEpisodeNumber
-                                  episodeName
-                                  firstAired
-                                  siteRating
-                                  siteRatingCount)
-                                (alist-get 'data query))))
-      (if next
-          (series/episodesPage token id next (append acc data))
-        (append acc data))))
+  (let* ((query (_tvdb token (concat "/series/" (int-to-string id) "/episodes?page=" (int-to-string page))))
+         (links (alist-get 'links query))
+         (next (alist-get 'next links))
+         (data (array-select '(id
+                               absoluteNumber
+                               airedSeason
+                               airedEpisodeNumber
+                               episodeName
+                               firstAired
+                               siteRating
+                               siteRatingCount)
+                             (alist-get 'data query))))
+    (if next
+        (series/episodesPage token id next (append acc data))
+      (append acc data))))
 #+end_src
 
 The results contain special episodes and are unsorted.
 Filter out episodes with ~airedSeason~ = 0, and sort according to ~absoluteNumber~.
 
 #+begin_src elisp
-  (defun series/episodes (token id)
-    "Get all episodes for a specific series ID.
-  Needs a TOKEN to work. The TOKEN can be obtained using the LOGIN function."
+(defun series/episodes (token id)
+  "Get all episodes for a specific series ID.
+Needs a TOKEN to work. The TOKEN can be obtained using the LOGIN function."
 
-    (seq-sort-by '(lambda (episode)
-                    (alist-get 'absoluteNumber episode))
-                 #'<
-                 (seq-filter (lambda (x) (> (alist-get 'airedSeason x) 0))
-                                 (series/episodesPage token id 1 nil))))
+  (seq-sort-by '(lambda (episode)
+                  (alist-get 'absoluteNumber episode))
+               #'<
+               (seq-filter (lambda (x) (> (alist-get 'airedSeason x) 0))
+                           (series/episodesPage token id 1 nil))))
 #+end_src
 
 For example, all episodes from Game of Thrones:
 
 #+begin_src elisp
-(setq episodes
-           (series/episodes tvdb--token 121361))
+(setq episodes (series/episodes tvdb--token 121361))
 #+end_src
-
 
 *** update
 
@@ -377,37 +372,37 @@ The API only returns data for a period of *one week* after ~fromTime~.
 Query one week of updates and convert ~lastUpdated~ to a datestring.
 
 #+begin_src elisp
-  (defun _update (token fromTime)
-    "Return an array of series that have changed in the week after FROMTIME.
-  Needs a TOKEN to work. The TOKEN can be obtained using the LOGIN function."
+(defun _update (token fromTime)
+  "Return an array of series that have changed in the week after FROMTIME.
+Needs a TOKEN to work. The TOKEN can be obtained using the LOGIN function."
 
-    (array-mutate 'epoch-to-datestring
-                   'lastUpdated
-                   (tvdb token "/updated/query?fromTime=" fromTime)))
+  (array-mutate 'epoch-to-datestring
+                'lastUpdated
+                (tvdb token "/updated/query?fromTime=" fromTime)))
 #+end_src
 
 Call ~_update~ for every week from ~fromTime~ to ~(current-time)~.
 
 #+begin_src elisp
-  (defun update (token fromTime)
-    "Return an array of series that have changed since FROMTIME.
-  Needs a TOKEN to work.  The TOKEN can be obtained using the LOGIN function."
+(defun update (token fromTime)
+  "Return an array of series that have changed since FROMTIME.
+Needs a TOKEN to work.  The TOKEN can be obtained using the LOGIN function."
 
-    (seq-reduce 'append
-     (seq-map '(lambda (fromTime) (_update token fromTime))
-              (seq-map 'int-to-string
-                       (number-sequence
-                        (string-to-number (format-time-string "%s" (date-to-time fromTime)))
-                        (string-to-number (format-time-string "%s" (current-time)))
-                        (* 3600 24 7))))
-     nil))
+  (seq-reduce 'append
+              (seq-map '(lambda (fromTime) (_update token fromTime))
+                       (seq-map 'int-to-string
+                                (number-sequence
+                                 (string-to-number (format-time-string "%s" (date-to-time fromTime)))
+                                 (string-to-number (format-time-string "%s" (current-time)))
+                                 (* 3600 24 7))))
+              nil))
 #+end_src
 
 For example, the updates in the last hour:
 
 #+begin_src elisp
-  (setq updates
-        (update tvdb--token (format-time-string "%Y-%m-%d %H:00" (current-time))))
+(setq updates
+      (update tvdb--token (format-time-string "%Y-%m-%d %H:00" (current-time))))
 #+end_src
 
 * Internal API
@@ -435,16 +430,16 @@ Each series alist also contains an ~episodes~ key with a list of episodes alists
 Each episode alist also contains a ~watched~ key.
 
 #+begin_src elisp
-  (defvar tvdb--data
-    nil
-    "Internal data containing followed series and episode.
+(defvar tvdb--data
+  nil
+  "Internal data containing followed series and episode.
 
-  Of the form :
+Of the form :
 
-  '(((id . seriesId) (props . value) (…) (episodes ((id . episodeId) (watched . t) (props.value) (…))
-                                                   ((id . episodeId) (watched . nil) (props.value) (…))))
-    ((id . seriesId) (…) (episodes ((id . episodeId) (…))
-                                   ((id . episodeId) (…)))))")
+'(((id . seriesId) (props . value) (…) (episodes ((id . episodeId) (watched . t) (props.value) (…))
+                                                 ((id . episodeId) (watched . nil) (props.value) (…))))
+  ((id . seriesId) (…) (episodes ((id . episodeId) (…))
+                                 ((id . episodeId) (…)))))")
 #+end_src
 
 ** Methods
@@ -458,11 +453,11 @@ It should reconnect if token is invalid, and throw an error message if no valid 
 The token should be renewed prior to any query (or after a certain timeout?)
 
 #+begin_src elisp
-  (defun tvdb-renew-token ()
-    "Renew the token in tvdb--token."
+(defun tvdb-renew-token ()
+  "Renew the token in tvdb--token."
 
-    (setq tvdb--token (tvdb tvdb--token))
-    nil)
+  (setq tvdb--token (tvdb tvdb--token))
+  nil)
 #+end_src
 
 *** search a series
@@ -470,10 +465,10 @@ The token should be renewed prior to any query (or after a certain timeout?)
 Search a series by name.
 
 #+begin_src elisp
-  (defun tvdb-search (seriesName)
-    "Search SERIESNAME."
+(defun tvdb-search (seriesName)
+  "Search SERIESNAME."
 
-    (search tvdb--token seriesName))
+  (search tvdb--token seriesName))
 #+end_src
 
 *** add series to list
@@ -482,24 +477,24 @@ Add a series to ~tvdb--data~, with its list of episodes.
 Adding an already existing list resets the list (ie. all episodes are unwatched).
 
 #+begin_src elisp
-  (defun tvdb-add (id)
-    "Add series with ID to tvdb--data.
+(defun tvdb-add (id)
+  "Add series with ID to tvdb--data.
 Adding an already existing series resets it."
 
+  (setq tvdb--data
+        (seq-remove (lambda (series)
+                      (equal id (alist-get 'id series)))
+                    tvdb--data))
+  (let ((series (series tvdb--token id))
+        (episodes (series/episodes tvdb--token id)))
     (setq tvdb--data
-          (seq-remove (lambda (series)
-                        (equal id (alist-get 'id series)))
-                      tvdb--data))
-    (let ((series (series tvdb--token id))
-          (episodes (series/episodes tvdb--token id)))
-      (setq tvdb--data
-            (cons (setf (alist-get 'episodes series) episodes)
-                  tvdb--data)))
-    nil)
+          (cons (setf (alist-get 'episodes series) episodes)
+                tvdb--data)))
+  nil)
 #+end_src
 
 #+begin_src elisp
-  (tvdb-add 121361)
+(tvdb-add 121361)
 #+end_src
 
 *** remove series from list
@@ -507,18 +502,18 @@ Adding an already existing series resets it."
 Remove a series from ~tvdb--data~.
 
 #+begin_src elisp
-  (defun tvdb-remove (id)
-    "Remove series with ID from tvdb--data."
+(defun tvdb-remove (id)
+  "Remove series with ID from tvdb--data."
 
-    (setq tvdb--data
-          (seq-remove (lambda (series)
-                        (equal id (alist-get 'id series)))
-                      tvdb--data))
-    nil)
+  (setq tvdb--data
+        (seq-remove (lambda (series)
+                      (equal id (alist-get 'id series)))
+                    tvdb--data))
+  nil)
 #+end_src
 
 #+begin_src elisp
-  (tvdb-remove 121361)
+(tvdb-remove 121361)
 #+end_src
 
 *** get list of followed series
@@ -526,15 +521,15 @@ Remove a series from ~tvdb--data~.
 Get the list of series in ~tvdb--data~ without episodes.
 
 #+begin_src elisp
-  (defun tvdb-get-series ()
-    "Get followed series."
+(defun tvdb-get-series ()
+  "Get followed series."
 
-    (array-select '(id seriesName) tvdb--data))
+  (array-select '(id seriesName) tvdb--data))
 
 #+end_src
 
 #+begin_src elisp
-  (tvdb-get-series)
+(tvdb-get-series)
 #+end_src
 
 *** get all episodes of a followed series
@@ -542,18 +537,18 @@ Get the list of series in ~tvdb--data~ without episodes.
 Get all episodes of a series in ~tvdb--data~.
 
 #+begin_src elisp
-  (defun tvdb-get-episodes (id)
-    "Get episodes of series with ID."
+(defun tvdb-get-episodes (id)
+  "Get episodes of series with ID."
 
-    (alist-get 'episodes
-               (seq-find (lambda (series)
-                             (equal id (alist-get 'id series)))
-                           tvdb--data)))
+  (alist-get 'episodes
+             (seq-find (lambda (series)
+                         (equal id (alist-get 'id series)))
+                       tvdb--data)))
 
 #+end_src
 
 #+begin_src elisp
-  (tvdb-get-episodes 121361)
+(tvdb-get-episodes 121361)
 #+end_src
 
 *** watch an episode from a series
@@ -561,25 +556,25 @@ Get all episodes of a series in ~tvdb--data~.
 Set an episode as watched.
 
 #+begin_src elisp
-  (defun tvdb-watch (seriesId epsiodeId)
-    "Watch episode EPISODEID in series SERIESID."
+(defun tvdb-watch (seriesId epsiodeId)
+  "Watch episode EPISODEID in series SERIESID."
 
-    )
+  )
 
-  (setq list '(((id . 1) (episodes ((id . 1) (watched . t))
-                                   ((id . 2))
-                                   ((id . 3))))
-               ((id . 2) (episodes ((id . 1) (watched . t))
-                                   ((id . 2) (watched . t))))))
+(setq list '(((id . 1) (episodes ((id . 1) (watched . t))
+                                 ((id . 2))
+                                 ((id . 3))))
+             ((id . 2) (episodes ((id . 1) (watched . t))
+                                 ((id . 2) (watched . t))))))
 
-  (seq-remove (lambda (series)
-                (equal '(nil) (alist-get 'episodes series)))
-              (seq-map (lambda (series)
-                         `((id . ,(alist-get 'id series))
-                           (episodes ,(seq-filter (lambda (episode)
-                                                    (equal nil (alist-get 'watched episode)))
-                                                  (alist-get 'episodes series)))))
-                       list))
+(seq-remove (lambda (series)
+              (equal '(nil) (alist-get 'episodes series)))
+            (seq-map (lambda (series)
+                       `((id . ,(alist-get 'id series))
+                         (episodes ,(seq-filter (lambda (episode)
+                                                  (equal nil (alist-get 'watched episode)))
+                                                (alist-get 'episodes series)))))
+                     list))
 #+end_src
 
 *** get list of upcoming episodes
@@ -587,18 +582,18 @@ Set an episode as watched.
 Get list of all unwatched episodes.
 
 #+begin_src elisp
-  (defun tvdb-upcoming ()
-    "List upcoming episodes."
+(defun tvdb-upcoming ()
+  "List upcoming episodes."
 
-    (seq-remove (lambda (series)
-                  (equal '(nil) (alist-get 'episodes series)))
-                (seq-map (lambda (series)
-                           `((id . ,(alist-get 'id series))
-                             (seriesName . ,(alist-get 'seriesName series))
-                             (episodes ,(seq-filter (lambda (episode)
-                                                      (equal nil (alist-get 'watched episode)))
-                                                    (alist-get 'episodes series)))))
-                         tvdb--data)))
+  (seq-remove (lambda (series)
+                (equal '(nil) (alist-get 'episodes series)))
+              (seq-map (lambda (series)
+                         `((id . ,(alist-get 'id series))
+                           (seriesName . ,(alist-get 'seriesName series))
+                           (episodes ,(seq-filter (lambda (episode)
+                                                    (equal nil (alist-get 'watched episode)))
+                                                  (alist-get 'episodes series)))))
+                       tvdb--data)))
 #+end_src
 
 *** get list of episodes to watch
@@ -606,18 +601,17 @@ Get list of all unwatched episodes.
 Get list of all unwatched episodes that have already aired.
 
 #+begin_src elisp
-  (defun tvdb-to-watch ()
-    "List of episodes to watch."
+(defun tvdb-to-watch ()
+  "List of episodes to watch."
 
-    (let ((upcoming (tvdb-upcoming)))
-      (seq-map (lambda (series)
-                 `((id . ,(alist-get 'id series))
-                   (seriesName . ,(alist-get 'seriesName series))
-                   (episodes ,(seq-remove (lambda (episode)
-                                            (< (alist-get 'firstAired episode) (current-time)))
-                                          (alist-get 'episodes series)))))
-               upcoming)))
-
+  (let ((upcoming (tvdb-upcoming)))
+    (seq-map (lambda (series)
+               `((id . ,(alist-get 'id series))
+                 (seriesName . ,(alist-get 'seriesName series))
+                 (episodes ,(seq-remove (lambda (episode)
+                                          (< (alist-get 'firstAired episode) (current-time)))
+                                        (alist-get 'episodes series)))))
+             upcoming)))
 #+end_src
 
 * Postamble
