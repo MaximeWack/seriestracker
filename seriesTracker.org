@@ -617,59 +617,38 @@ Requirements:
 Keep track of watched series and last seen episode.
 
 #+begin_src elisp
-  (defvar tvdb--list
+  (defvar tvdb--data
     nil
-    "Internal list of last seen episodes.
+    "Internal data containing followed series and episode.
 
   Of the form :
 
-  '(((id . 121361) (lastSeen . 73))
-    ((id . 511362) (lastSeen . 49)))")
+  '(((id . seriesId) (props . value) (…) (episodes ((id . episodeId) (watched . t) (props.value) (…))
+                                                   ((id . episodeId) (watched . nil) (props.value) (…))))
+    ((id . seriesId) (…) (episodes ((id . episodeId) (…))
+                                   ((id . episodeId) (…)))))")
 #+end_src
 
-Keep track of last time the db was updated.
+#+RESULTS:
+: tvdb--data
 
 #+begin_src elisp
-  (defvar tvdb--lastUpdated
-    nil
-    "The date of the last update.")
 #+end_src
 
-Keep a db of series informations
 
 #+begin_src elisp
-  (defvar tvdb--series-db
-    nil
-    "Cache of known series.
 
-  Of the same form as a call to series")
 #+end_src
 
-and episodes details.
 
 #+begin_src elisp
-  (defvar tvdb--episodes-db
-    nil
-    "Cache of known episodes.
 
-    Of the form:
 
-  '(((id . 121361) (episodes .  (((absoluteNumber . 1)
-                                  (airedSeason . 1)
-                                  (airedEpisodeNumber . 1)
-                                  (firstAired . date)))))
-     (id ...))")
-    #+end_src
 
-    #+RESULTS:
-    : tvdb--episodes-cache
 
-** Methods
 
-*** add series to list
 
 #+begin_src elisp
-  (defun tvdb-add (id))
 
 #+end_src
 
