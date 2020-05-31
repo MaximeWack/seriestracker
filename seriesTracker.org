@@ -869,6 +869,29 @@ Get list of all unwatched episodes.
 
 #+RESULTS:
 : tvdb-upcoming
+
+*** get list of episodes to watch
+
+Get list of all unwatched episodes that have already aired.
+
+#+begin_src elisp
+  (defun tvdb-to-watch ()
+    "List of episodes to watch."
+
+    (let ((upcoming (tvdb-upcoming)))
+      (seq-map (lambda (series)
+                 `((id . ,(alist-get 'id series))
+                   (seriesName . ,(alist-get 'seriesName series))
+                   (episodes ,(seq-remove (lambda (episode)
+                                            (< (alist-get 'firstAired episode) (current-time)))
+                                          (alist-get 'episodes series)))))
+               upcoming)))
+
+#+end_src
+
+#+RESULTS:
+: tvdb-to-watch
+
 * Postamble
 
 #+begin_src elisp
