@@ -218,13 +218,47 @@ Apply a function to all values of a column in an array.
         array))
 #+end_src
 
-**** epoch/datestring
-
-Convert between epochs and datestrings.
+Example:
 
 #+begin_src elisp
-(defun epoch-to-datestring (epoch)
-  "Convert EPOCH to a datestring."
+(array-mutate '1+ 'a
+              '(((a . 1) (b . 2)) ((a . 3) (b . 4))))
+#+end_src
+
+**** epoch/datestring
+Convert between epochs and datestrings.
+fromTime in ~update~ needs to be in epoch format.
+~update~ returns lastUpdated as epoch.
+However, firstAired for series and episodes is a date.
+
+#+begin_src elisp
+(defun epoch-to-date (epoch)
+  "Convert EPOCH to a date."
+
+  (->> epoch
+      (time-add 0)
+      (format-time-string "%Y-%m-%d")))
+#+end_src
+
+#+begin_src elisp
+(defun epoch-to-datetime (epoch)
+  "Convert EPOCH to a datetime."
+
+  (->> epoch
+      (time-add 0)
+      (format-time-string "%Y-%m-%d %H:%M:%S")))
+#+end_src
+
+Example:
+
+#+begin_src elisp
+(epoch-to-date 1577833200)
+(epoch-to-datetime 1577833200)
+#+end_src
+
+#+begin_src elisp
+(defun datetime-to-epoch (datetime)
+  "Convert DATETIME to an epoch."
 
   (->> datetime
       date-to-time
@@ -232,11 +266,18 @@ Convert between epochs and datestrings.
 #+end_src
 
 #+begin_src elisp
-(defun datestring-to-epoch (datestring)
-  "Convert DATESTRING to an epoch."
+(defun date-to-epoch (date)
+  "Convert DATE to an epoch."
 
   (->> (concat date " 00:00:00")
        datetime-to-epoch))
+#+end_src
+
+Example:
+
+#+begin_src elisp
+(date-to-epoch "2020-01-01")
+(datetime-to-epoch "2020-01-01 00:00")
 #+end_src
 
 *** search
