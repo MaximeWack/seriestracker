@@ -660,6 +660,20 @@ The token should be renewed prior to any query (or after a certain timeout?)
 
 #+RESULTS:
 : tvdb-renew-token
+
+*** search a series
+
+Search a series by name.
+
+#+begin_src elisp
+  (defun tvdb-search (seriesName)
+    "Search SERIESNAME."
+
+    (search tvdb--token seriesName))
+#+end_src
+
+#+RESULTS:
+: tvdb-search
 #+begin_src elisp
 #+end_src
 
