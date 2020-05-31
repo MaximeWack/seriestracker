@@ -346,8 +346,8 @@ Keep elements:
 
     (alist-select '(id
                     seriesName
-                  (tvdb token "/series/" id)))
                     status)
+                  (tvdb token "/series/" (int-to-string id))))
 #+end_src
 
 #+RESULTS:
@@ -356,7 +356,7 @@ Keep elements:
 For example:
 
 #+begin_src elisp
-  (setq serie (series tvdb--token "121361"))
+  (setq serie (series tvdb--token 121361))
 #+end_src
 
 #+RESULTS:
@@ -382,7 +382,7 @@ Recursively append the results in the ~next~ page.
 
 #+begin_src elisp
   (defun series/episodesPage (token id page acc)
-    (let* ((query (_tvdb token (concat "/series/" id "/episodes?page=" page)))
+    (let* ((query (_tvdb token (concat "/series/" (int-to-string id) "/episodes?page=" (int-to-string page))))
            (links (alist-get 'links query))
            (next (alist-get 'next links))
            (data (array-select '(id
@@ -395,7 +395,7 @@ Recursively append the results in the ~next~ page.
                                   siteRatingCount)
                                 (alist-get 'data query))))
       (if next
-          (series/episodesPage token id (int-to-string next) (append acc data))
+          (series/episodesPage token id next (append acc data))
         (append acc data))))
 #+end_src
 
@@ -414,7 +414,7 @@ Filter out episodes with ~airedSeason~ = 0, and sort according to ~absoluteNumbe
                     (alist-get 'absoluteNumber episode))
                  #'<
                  (seq-filter (lambda (x) (> (alist-get 'airedSeason x) 0))
-                                 (series/episodesPage token id "1" nil))))
+                                 (series/episodesPage token id 1 nil))))
 #+end_src
 
 #+RESULTS:
@@ -424,9 +424,6 @@ For example, all episodes from Game of Thrones:
 
 #+begin_src elisp
 (setq episodes
-      (series/episodes tvdb--token "121361"))
-#+end_src
-
 #+RESULTS:
 | (id . 3254641) | (absoluteNumber . 1)  | (airedSeason . 1) | (airedEpisodeNumber . 1)  | (episodeName . Winter Is Coming)                      | (firstAired . 2011-04-17) | (seriesId . 121361) |
 | (id . 3436411) | (absoluteNumber . 2)  | (airedSeason . 1) | (airedEpisodeNumber . 2)  | (episodeName . The Kingsroad)                         | (firstAired . 2011-04-24) | (seriesId . 121361) |
@@ -501,6 +498,9 @@ For example, all episodes from Game of Thrones:
 | (id . 7121403) | (absoluteNumber . 71) | (airedSeason . 8) | (airedEpisodeNumber . 4)  | (episodeName . The Last of the Starks)                | (firstAired . 2019-05-05) | (seriesId . 121361) |
 | (id . 7121404) | (absoluteNumber . 72) | (airedSeason . 8) | (airedEpisodeNumber . 5)  | (episodeName . The Bells)                             | (firstAired . 2019-05-12) | (seriesId . 121361) |
 | (id . 7121405) | (absoluteNumber . 73) | (airedSeason . 8) | (airedEpisodeNumber . 6)  | (episodeName . The Iron Throne)                       | (firstAired . 2019-05-19) | (seriesId . 121361) |
+      (series/episodes tvdb--token 121361))
+#+end_src
+
 
 *** update
 
