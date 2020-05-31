@@ -1,6 +1,5 @@
 #+title: seriesTracker
 #+author: Maxime Wack
-#+property: header-args :session *seriesTracker*
 #+property: header-args :results silent
 
 * Preamble
