@@ -337,14 +337,7 @@ Get a series detailed information.
 Keep elements:
 - id :: unique id
 - seriesName :: series name
-- firstAired :: date first aired
-- season :: number of seasons
 - status :: Ended | Continuing | Upcoming
-- genre :: vector of genres
-- network :: network
-- siteRating :: rating for the whole series
-- siteRatingCount :: total number of votes
-- overview :: description
 
 #+begin_src elisp
   (defun series (token id)
@@ -353,15 +346,8 @@ Keep elements:
 
     (alist-select '(id
                     seriesName
-                    firstAired
-                    season
-                    status
-                    genre
-                    network
-                    siteRating
-                    siteRatingCount
-                    overview)
                   (tvdb token "/series/" id)))
+                    status)
 #+end_src
 
 #+RESULTS:
@@ -387,7 +373,6 @@ Keep elements:
 - airedEpisodeNumber :: episode number
 - episodeName :: name of the episode
 - firstAired :: date of airing
-- seriesId :: series from which this episode belongs
 - siteRating :: rating for this episode
 - siteRatingCount :: votes for this episode
 
@@ -406,7 +391,6 @@ Recursively append the results in the ~next~ page.
                                   airedEpisodeNumber
                                   episodeName
                                   firstAired
-                                  seriesId
                                   siteRating
                                   siteRatingCount)
                                 (alist-get 'data query))))
