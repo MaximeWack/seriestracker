@@ -640,6 +640,26 @@ Each episode alist also contains a ~watched~ key.
 #+RESULTS:
 : tvdb--data
 
+** Methods
+*** renew token
+:PROPERTIES:
+:ID:       fa55a6fc-d66b-4c84-ae5f-1dc03fa802d3
+:END:
+
+Renew the token.
+It should reconnect if token is invalid, and throw an error message if no valid credentials are given.
+The token should be renewed prior to any query (or after a certain timeout?)
+
+#+begin_src elisp
+  (defun tvdb-renew-token ()
+    "Renew the token in tvdb--token."
+
+    (setq tvdb--token (tvdb tvdb--token))
+    nil)
+#+end_src
+
+#+RESULTS:
+: tvdb-renew-token
 #+begin_src elisp
 #+end_src
 
