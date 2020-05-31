@@ -186,30 +186,28 @@ For example:
 #+RESULTS:
 : ((a . 1) (c . c))
 
-**** vector-select
+**** array-select
 
-Series lists and episodes are represented as vectors of alists.
-Select a list of elements from each alist in a vector.
+Series and episodes lists are represented as arrays of alists.
+Select a list of elements from each alist in an array.
 
 #+begin_src elisp
-  (defun vector-select (fields vector)
-    "Keep only FIELDS in every alist in the VECTOR.
-
-  Return a list of alists instead of a vector."
+  (defun array-select (fields array)
+    "Keep only FIELDS in every alist in the ARRAY. "
 
     (seq-map (lambda (item)
                (alist-select fields item))
-             vector))
+             array))
 
 #+end_src
 
 #+RESULTS:
-: vector-select
+: array-select
 
 For example:
 
 #+begin_src elisp
-  (vector-select '(a c)
+  (array-select '(a c)
                  [((a . 1) (b . "b") (c . c))
                   ((a . 3) (b . "a") (c . d))])
 #+end_src
@@ -218,27 +216,27 @@ For example:
 | (a . 1) | (c . c) |
 | (a . 3) | (c . d) |
 
-**** vector-pull
+**** array-pull
 
-Same elements in each alist in a vector consitute a column.
-Extract a column from a vector.
+Same elements in each alist in a array consitute a column.
+Extract a column from an array.
 
 #+begin_src elisp
-  (defun vector-pull (field vector)
-    "Keep only FIELD in every alist in the VECTOR and flatten."
+  (defun array-pull (field array)
+    "Keep only FIELD in every alist in the ARRAY and flatten."
 
     (seq-map (lambda (item)
                (alist-get field item))
-             vector))
+             array))
 #+end_src
 
 #+RESULTS:
-: vector-pull
+: array-pull
 
 Example:
 
 #+begin_src elisp
-  (vector-pull 'a
+  (array-pull 'a
                [((a . 1) (b . 2)) ((a . 3) (b . 4))])
 
 #+end_src
@@ -246,21 +244,23 @@ Example:
 #+RESULTS:
 | 1 | 3 |
 
-**** vector-mutate
+**** array-mutate
 
-Apply a function to all values of a column in a vector.
+Apply a function to all values of a column in an array.
 
 #+begin_src elisp
-  (defun vector-mutate (fun elem vector)
+  (defun array-mutate (fun elem array)
+    "Execute FUN on ELEM of all the alists in ARRAY"
+
     (seq-map (lambda (item)
                (setf (alist-get elem item)
                      (eval `(,fun ,(alist-get elem item))))
                item)
-             vector))
+             array))
 #+end_src
 
 #+RESULTS:
-: vector-mutate
+: array-mutate
 
 **** epoch/datestring
 
@@ -303,7 +303,7 @@ Keep elements:
     "Search for SERIESNAME.
   Needs a TOKEN to work. The TOKEN can be obtained using the LOGIN function."
 
-    (vector-select '(id
+    (array-select '(id
                      seriesName
                      firstAired
                      status
@@ -400,7 +400,7 @@ Recursively append the results in the ~next~ page.
     (let* ((query (_tvdb token (concat "/series/" id "/episodes?page=" page)))
            (links (alist-get 'links query))
            (next (alist-get 'next links))
-           (data (vector-select '(id
+           (data (array-select '(id
                                   absoluteNumber
                                   airedSeason
                                   airedEpisodeNumber
@@ -531,7 +531,7 @@ Query one week of updates and convert ~lastUpdated~ to a datestring.
     "Return an array of series that have changed in the week after FROMTIME.
   Needs a TOKEN to work. The TOKEN can be obtained using the LOGIN function."
 
-    (vector-mutate 'epoch-to-datestring
+    (array-mutate 'epoch-to-datestring
                    'lastUpdated
                    (tvdb token "/updated/query?fromTime=" fromTime)))
 #+end_src
