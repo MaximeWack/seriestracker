@@ -704,14 +704,29 @@ Adding an already existing series resets it."
 #+end_src
 
 #+RESULTS:
+*** remove series from list
+
+Remove a series from ~tvdb--data~.
 
 #+begin_src elisp
+  (defun tvdb-remove (id)
+    "Remove series with ID from tvdb--data."
 
+    (setq tvdb--data
+          (seq-remove (lambda (series)
+                        (equal id (alist-get 'id series)))
+                      tvdb--data))
+    nil)
 #+end_src
 
+#+RESULTS:
+: tvdb-remove
 
 #+begin_src elisp
+  (tvdb-remove 121361)
+#+end_src
 
+#+RESULTS:
 
 
 
