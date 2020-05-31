@@ -847,8 +847,28 @@ Get all episodes of a series in ~tvdb--data~.
 | (id . 7121404) | (absoluteNumber . 72) | (airedSeason . 8) | (airedEpisodeNumber . 5)  | (episodeName . The Bells)                             | (firstAired . 2019-05-12) | (siteRating . 8.9) | (siteRatingCount . 377)   |
 | (id . 7121405) | (absoluteNumber . 73) | (airedSeason . 8) | (airedEpisodeNumber . 6)  | (episodeName . The Iron Throne)                       | (firstAired . 2019-05-19) | (siteRating . 7.7) | (siteRatingCount . 405)   |
 
+
+*** get list of upcoming episodes
+
+Get list of all unwatched episodes.
+
+#+begin_src elisp
+  (defun tvdb-upcoming ()
+    "List upcoming episodes."
+
+    (seq-remove (lambda (series)
+                  (equal '(nil) (alist-get 'episodes series)))
+                (seq-map (lambda (series)
+                           `((id . ,(alist-get 'id series))
+                             (seriesName . ,(alist-get 'seriesName series))
+                             (episodes ,(seq-filter (lambda (episode)
+                                                      (equal nil (alist-get 'watched episode)))
+                                                    (alist-get 'episodes series)))))
+                         tvdb--data)))
 #+end_src
 
+#+RESULTS:
+: tvdb-upcoming
 * Postamble
 
 #+begin_src elisp
