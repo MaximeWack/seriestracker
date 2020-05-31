@@ -7,17 +7,21 @@
 
 #+begin_src elisp
 ;;; package --- Summary
+;; Package-Requires: ((dash "2.12.1"))
 ;;; Commentary:
 ;;; Code:
 #+end_src
 
 * Requirements
 
-We will need ~url~ to connect to the API and ~json~ to parse the response.
+~url~ is needed to connect to the API and ~json~ to parse the response.
+~dash~ is used to simplify writing.
+
 
 #+begin_src elisp
 (require 'url)
 (require 'json)
+(require 'dash)
 #+end_src
 
 * tvdb API
@@ -55,14 +59,14 @@ Parse the response using ~getJSON~, and return the ~token~ element.
     "Login using USERNAME, APIKEY and USERKEY.
   Return the token"
 
-    (alist-get 'token
-               (getJSON
-                (let ((url-request-method "POST")
-                      (url-request-extra-headers '(("Content-Type" . "application/json")
-                                                   ("Accept" . "application/json")))
-                      (url-request-data (concat "{\"apikey\": \"" apikey "\", \"userkey\": \"" userkey "\", \"username\": \"" username "\" }"))
-                      (url-show-status nil))
-                  (url-retrieve-synchronously "https://api.thetvdb.com/login" t)))))
+  (->> (let ((url-request-method "POST")
+            (url-request-extra-headers '(("Content-Type" . "application/json")
+                                         ("Accept" . "application/json")))
+            (url-request-data (concat "{\"apikey\": \"" apikey "\", \"userkey\": \"" userkey "\", \"username\": \"" username "\" }"))
+            (url-show-status nil))
+        (url-retrieve-synchronously "https://api.thetvdb.com/login" t))
+      getJSON
+      (alist-get 'token)))
 #+end_src
 
 Save the token in a declared variable
@@ -145,10 +149,10 @@ Select a list of elements from an alist.
 (defun alist-select (fields alist)
   "Keep only FIELDS in ALIST."
 
-  (seq-reduce (lambda (list item)
-                (acons item (alist-get item alist) list))
-              (reverse fields)
-              nil))
+  (->> fields
+       reverse
+       (--reduce-from (acons it (alist-get it alist) acc)
+                     nil)))
 #+end_src
 
 For example:
@@ -170,10 +174,8 @@ Select a list of elements from each alist in an array.
   (defun array-select (fields array)
     "Keep only FIELDS in every alist in the ARRAY. "
 
-    (seq-map (lambda (item)
-               (alist-select fields item))
-             array))
 
+  (--map (alist-select fields it) array))
 #+end_src
 
 For example:
@@ -193,9 +195,7 @@ Extract a column from an array.
   (defun array-pull (field array)
     "Keep only FIELD in every alist in the ARRAY and flatten."
 
-    (seq-map (lambda (item)
-               (alist-get field item))
-             array))
+  (--map (alist-get field it) array))
 #+end_src
 
 Example:
@@ -214,11 +214,11 @@ Apply a function to all values of a column in an array.
   (defun array-mutate (fun elem array)
     "Execute FUN on ELEM of all the alists in ARRAY"
 
-    (seq-map (lambda (item)
-               (setf (alist-get elem item)
-                     (eval `(,fun ,(alist-get elem item))))
-               item)
-             array))
+  (-map (lambda (item)
+          (setf (alist-get elem item)
+                (eval `(,fun ,(alist-get elem item))))
+          item)
+        array))
 #+end_src
 
 **** epoch/datestring
@@ -229,14 +229,17 @@ Convert between epochs and datestrings.
 (defun epoch-to-datestring (epoch)
   "Convert EPOCH to a datestring."
 
-  (format-time-string "%Y-%m-%d %H:%M:%S" (time-add 0 epoch)))
+  (->> datetime
+      date-to-time
+      (format-time-string "%s")))
 #+end_src
 
 #+begin_src elisp
 (defun datestring-to-epoch (datestring)
   "Convert DATESTRING to an epoch."
 
-  (format-time-string "%s" (date-to-time datestring)))
+  (->> (concat date " 00:00:00")
+       datetime-to-epoch))
 #+end_src
 
 *** search
@@ -256,13 +259,14 @@ Keep elements:
     "Search for SERIESNAME.
   Needs a TOKEN to work. The TOKEN can be obtained using the LOGIN function."
 
-    (array-select '(id
-                     seriesName
-                     firstAired
-                     status
-                     network
-                     overview)
-                   (tvdb token "/search/series?name=" seriesName)))
+  (->> seriesName
+      (tvdb token "/search/series?name=")
+      (array-select '(id
+                      seriesName
+                      firstAired
+                      status
+                      network
+                      overview))))
 #+end_src
 
 For example:
@@ -286,10 +290,12 @@ Keep elements:
     "Get informations about a specific series ID.
   Needs a TOKEN to work. The TOKEN can be obtained using the LOGIN function."
 
-    (alist-select '(id
-                    seriesName
-                    status)
-                  (tvdb token "/series/" (int-to-string id))))
+  (->> id
+      int-to-string
+      (tvdb token "/series/")
+      (alist-select '(id
+                      seriesName
+                      status))))
 #+end_src
 
 For example:
