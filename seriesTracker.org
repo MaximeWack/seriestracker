@@ -1,6 +1,7 @@
 #+title: seriesTracker
 #+author: Maxime Wack
-#+property: session *seriesTracker*
+#+property: header-args :session *seriesTracker*
+#+property: header-args :results silent
 
 * Preamble
 
@@ -10,8 +11,6 @@
 ;;; Code:
 #+end_src
 
-#+RESULTS:
-
 * Requirements
 
 We will need ~url~ to connect to the API and ~json~ to parse the response.
@@ -20,9 +19,6 @@ We will need ~url~ to connect to the API and ~json~ to parse the response.
 (require 'url)
 (require 'json)
 #+end_src
-
-#+RESULTS:
-: json
 
 * tvdb API
 
@@ -47,9 +43,6 @@ Parse the JSON in the url-buffer response with ~json-read-object~.
     (json-read-object)))
 #+end_src
 
-#+RESULTS:
-: getJSON
-
 ** login
 
 TheTVdbAPI requires login to access.
@@ -72,9 +65,6 @@ Parse the response using ~getJSON~, and return the ~token~ element.
                   (url-retrieve-synchronously "https://api.thetvdb.com/login" t)))))
 #+end_src
 
-#+RESULTS:
-: login
-
 Save the token in a declared variable
 
 #+begin_src elisp
@@ -82,9 +72,6 @@ Save the token in a declared variable
     nil
     "Auth token")
 #+end_src
-
-#+RESULTS:
-: tvdb--token
 
 For example:
 
@@ -124,9 +111,6 @@ Return the whole JSON response.
        (url-retrieve-synchronously (concat "https://api.thetvdb.com" params)))))
 #+end_src
 
-#+RESULTS:
-: _tvdb
-
 ~refresh_token~ is the only call that doesn't require parameters nor return its result in the ~data~ element.
 Make the default call to ~tvdb~ when ~params~ is /nil/ to ~refresh_token~, return the ~data~ element otherwise.
 ~params~ is concatenated as a string.
@@ -145,9 +129,6 @@ Make the default call to ~tvdb~ when ~params~ is /nil/ to ~refresh_token~, retur
       (alist-get 'token
                  (_tvdb token "/refresh_token"))))
 #+end_src
-
-#+RESULTS:
-: tvdb
 
 For example, refreshing the token:
 
@@ -170,9 +151,6 @@ Select a list of elements from an alist.
               nil))
 #+end_src
 
-#+RESULTS:
-: alist-select
-
 For example:
 
 #+begin_src elisp
@@ -182,9 +160,6 @@ For example:
      (b . "b")
      (c . c)))
 #+end_src
-
-#+RESULTS:
-: ((a . 1) (c . c))
 
 **** array-select
 
@@ -201,9 +176,6 @@ Select a list of elements from each alist in an array.
 
 #+end_src
 
-#+RESULTS:
-: array-select
-
 For example:
 
 #+begin_src elisp
@@ -211,10 +183,6 @@ For example:
                  [((a . 1) (b . "b") (c . c))
                   ((a . 3) (b . "a") (c . d))])
 #+end_src
-
-#+RESULTS:
-| (a . 1) | (c . c) |
-| (a . 3) | (c . d) |
 
 **** array-pull
 
@@ -230,9 +198,6 @@ Extract a column from an array.
              array))
 #+end_src
 
-#+RESULTS:
-: array-pull
-
 Example:
 
 #+begin_src elisp
@@ -240,9 +205,6 @@ Example:
                [((a . 1) (b . 2)) ((a . 3) (b . 4))])
 
 #+end_src
-
-#+RESULTS:
-| 1 | 3 |
 
 **** array-mutate
 
@@ -259,9 +221,6 @@ Apply a function to all values of a column in an array.
              array))
 #+end_src
 
-#+RESULTS:
-: array-mutate
-
 **** epoch/datestring
 
 Convert between epochs and datestrings.
@@ -273,18 +232,12 @@ Convert between epochs and datestrings.
   (format-time-string "%Y-%m-%d %H:%M:%S" (time-add 0 epoch)))
 #+end_src
 
-#+RESULTS:
-: epoch-to-datestring
-
 #+begin_src elisp
 (defun datestring-to-epoch (datestring)
   "Convert DATESTRING to an epoch."
 
   (format-time-string "%s" (date-to-time datestring)))
 #+end_src
-
-#+RESULTS:
-: datestring-to-epoch
 
 *** search
 
@@ -312,23 +265,12 @@ Keep elements:
                    (tvdb token "/search/series?name=" seriesName)))
 #+end_src
 
-#+RESULTS:
-: search
-
 For example:
 
 #+begin_src elisp
 (setq series-list
       (search tvdb--token "Game of Thrones"))
 #+end_src
-
-#+RESULTS:
-| (id . 311939) | (seriesName . Game of Thrones: Cartoon Parody) | (firstAired . 2011-5-7)  | (status . Ended)      | (network . YouTube)         | (overview . A spoof/parody Based on HBO's hit series "A Game of Thrones" and George RR Martin's A Song of Ice and Fire)                                                                                                                                                                                                                                    |
-| (id . 293887) | (seriesName . Game of Thrones Talk)            | (firstAired . 2015-4-13) | (status . Ended)      | (network . Sky Deutschland) | (overview)                                                                                                                                                                                                                                                                                                                                                 |
-| (id . 121361) | (seriesName . Game of Thrones)                 | (firstAired . 2010-12-5) | (status . Ended)      | (network . HBO)             | (overview . Seven noble families fight for control of the mythical land of Westeros. Friction between the houses leads to full-scale war. All while a very ancient evil awakens in the farthest north. Amidst the war, a neglected military order of misfits, the Night's Watch, is all that stands between the realms of men and the icy horrors beyond.) |
-| (id . 382905) | (seriesName . AutÃ³psia Game of Thrones)       | (firstAired . 2020-4-14) | (status . Continuing) | (network . #0)              | (overview)                                                                                                                                                                                                                                                                                                                                                 |
-| (id . 371572) | (seriesName . House of the Dragon )            | (firstAired)             | (status . Upcoming)   | (network)                   | (overview . The story of House Targaryen, 300 years before the events of Game of Thrones.)                                                                                                                                                                                                                                                                 |
-| (id . 321282) | (seriesName . Tribe of Hip Hop)                | (firstAired . 2016-4-1)  | (status . Ended)      | (network . jTBC)            | (overview . Tribe of Hip Hop (Hangul: íí©ì ë¯¼ì¡±) is a hip hop competition program where celebrities with little-to-no background in hip hop are teamed up with professional hip hop music producers.)                                                                                                                                |
 
 *** series
 
@@ -350,17 +292,11 @@ Keep elements:
                   (tvdb token "/series/" (int-to-string id))))
 #+end_src
 
-#+RESULTS:
-: series
-
 For example:
 
 #+begin_src elisp
   (setq serie (series tvdb--token 121361))
 #+end_src
-
-#+RESULTS:
-: ((id . 121361) (seriesName . Game of Thrones) (firstAired . 2010-12-05) (season . 8) (status . Ended) (genre . [Adventure Drama Fantasy]) (network . HBO) (siteRating . 9.5) (siteRatingCount . 47297) (overview . Seven noble families fight for control of the mythical land of Westeros. Friction between the houses leads to full-scale war. All while a very ancient evil awakens in the farthest north. Amidst the war, a neglected military order of misfits, the Night's Watch, is all that stands between the realms of men and the icy horrors beyond.))
 
 *** series/episodes
 
@@ -404,9 +340,6 @@ PAGE is the current queried page and ACC the accumulator."
         (append acc data))))
 #+end_src
 
-#+RESULTS:
-: series/episodesPage
-
 The results contain special episodes and are unsorted.
 Filter out episodes with ~airedSeason~ = 0, and sort according to ~absoluteNumber~.
 
@@ -422,88 +355,11 @@ Filter out episodes with ~airedSeason~ = 0, and sort according to ~absoluteNumbe
                                  (series/episodesPage token id 1 nil))))
 #+end_src
 
-#+RESULTS:
-: series/episodes
-
 For example, all episodes from Game of Thrones:
 
 #+begin_src elisp
 (setq episodes
-#+RESULTS:
-| (id . 3254641) | (absoluteNumber . 1)  | (airedSeason . 1) | (airedEpisodeNumber . 1)  | (episodeName . Winter Is Coming)                      | (firstAired . 2011-04-17) | (seriesId . 121361) |
-| (id . 3436411) | (absoluteNumber . 2)  | (airedSeason . 1) | (airedEpisodeNumber . 2)  | (episodeName . The Kingsroad)                         | (firstAired . 2011-04-24) | (seriesId . 121361) |
-| (id . 3436421) | (absoluteNumber . 3)  | (airedSeason . 1) | (airedEpisodeNumber . 3)  | (episodeName . Lord Snow)                             | (firstAired . 2011-05-01) | (seriesId . 121361) |
-| (id . 3436431) | (absoluteNumber . 4)  | (airedSeason . 1) | (airedEpisodeNumber . 4)  | (episodeName . Cripples, Bastards, and Broken Things) | (firstAired . 2011-05-08) | (seriesId . 121361) |
-| (id . 3436441) | (absoluteNumber . 5)  | (airedSeason . 1) | (airedEpisodeNumber . 5)  | (episodeName . The Wolf and the Lion)                 | (firstAired . 2011-05-15) | (seriesId . 121361) |
-| (id . 3436451) | (absoluteNumber . 6)  | (airedSeason . 1) | (airedEpisodeNumber . 6)  | (episodeName . A Golden Crown)                        | (firstAired . 2011-05-22) | (seriesId . 121361) |
-| (id . 3436461) | (absoluteNumber . 7)  | (airedSeason . 1) | (airedEpisodeNumber . 7)  | (episodeName . You Win or You Die)                    | (firstAired . 2011-05-29) | (seriesId . 121361) |
-| (id . 3360391) | (absoluteNumber . 8)  | (airedSeason . 1) | (airedEpisodeNumber . 8)  | (episodeName . The Pointy End)                        | (firstAired . 2011-06-05) | (seriesId . 121361) |
-| (id . 4063481) | (absoluteNumber . 9)  | (airedSeason . 1) | (airedEpisodeNumber . 9)  | (episodeName . Baelor)                                | (firstAired . 2011-06-12) | (seriesId . 121361) |
-| (id . 4063491) | (absoluteNumber . 10) | (airedSeason . 1) | (airedEpisodeNumber . 10) | (episodeName . Fire and Blood)                        | (firstAired . 2011-06-19) | (seriesId . 121361) |
-| (id . 4161693) | (absoluteNumber . 11) | (airedSeason . 2) | (airedEpisodeNumber . 1)  | (episodeName . The North Remembers)                   | (firstAired . 2012-04-01) | (seriesId . 121361) |
-| (id . 4245771) | (absoluteNumber . 12) | (airedSeason . 2) | (airedEpisodeNumber . 2)  | (episodeName . The Night Lands)                       | (firstAired . 2012-04-08) | (seriesId . 121361) |
-| (id . 4245772) | (absoluteNumber . 13) | (airedSeason . 2) | (airedEpisodeNumber . 3)  | (episodeName . What is Dead May Never Die)            | (firstAired . 2012-04-15) | (seriesId . 121361) |
-| (id . 4245773) | (absoluteNumber . 14) | (airedSeason . 2) | (airedEpisodeNumber . 4)  | (episodeName . Garden of Bones)                       | (firstAired . 2012-04-22) | (seriesId . 121361) |
-| (id . 4245774) | (absoluteNumber . 15) | (airedSeason . 2) | (airedEpisodeNumber . 5)  | (episodeName . The Ghost of Harrenhal)                | (firstAired . 2012-04-29) | (seriesId . 121361) |
-| (id . 4245775) | (absoluteNumber . 16) | (airedSeason . 2) | (airedEpisodeNumber . 6)  | (episodeName . The Old Gods and the New)              | (firstAired . 2012-05-06) | (seriesId . 121361) |
-| (id . 4245776) | (absoluteNumber . 17) | (airedSeason . 2) | (airedEpisodeNumber . 7)  | (episodeName . A Man Without Honor)                   | (firstAired . 2012-05-13) | (seriesId . 121361) |
-| (id . 4245777) | (absoluteNumber . 18) | (airedSeason . 2) | (airedEpisodeNumber . 8)  | (episodeName . The Prince of Winterfell)              | (firstAired . 2012-05-20) | (seriesId . 121361) |
-| (id . 4245778) | (absoluteNumber . 19) | (airedSeason . 2) | (airedEpisodeNumber . 9)  | (episodeName . Blackwater)                            | (firstAired . 2012-05-27) | (seriesId . 121361) |
-| (id . 4245779) | (absoluteNumber . 20) | (airedSeason . 2) | (airedEpisodeNumber . 10) | (episodeName . Valar Morghulis)                       | (firstAired . 2012-06-03) | (seriesId . 121361) |
-| (id . 4293685) | (absoluteNumber . 21) | (airedSeason . 3) | (airedEpisodeNumber . 1)  | (episodeName . Valar Dohaeris)                        | (firstAired . 2013-03-31) | (seriesId . 121361) |
-| (id . 4517458) | (absoluteNumber . 22) | (airedSeason . 3) | (airedEpisodeNumber . 2)  | (episodeName . Dark Wings, Dark Words)                | (firstAired . 2013-04-07) | (seriesId . 121361) |
-| (id . 4517459) | (absoluteNumber . 23) | (airedSeason . 3) | (airedEpisodeNumber . 3)  | (episodeName . Walk of Punishment)                    | (firstAired . 2013-04-14) | (seriesId . 121361) |
-| (id . 4517460) | (absoluteNumber . 24) | (airedSeason . 3) | (airedEpisodeNumber . 4)  | (episodeName . And Now His Watch Is Ended)            | (firstAired . 2013-04-21) | (seriesId . 121361) |
-| (id . 4517461) | (absoluteNumber . 25) | (airedSeason . 3) | (airedEpisodeNumber . 5)  | (episodeName . Kissed by Fire)                        | (firstAired . 2013-04-28) | (seriesId . 121361) |
-| (id . 4517462) | (absoluteNumber . 26) | (airedSeason . 3) | (airedEpisodeNumber . 6)  | (episodeName . The Climb)                             | (firstAired . 2013-05-05) | (seriesId . 121361) |
-| (id . 4517463) | (absoluteNumber . 27) | (airedSeason . 3) | (airedEpisodeNumber . 7)  | (episodeName . The Bear and the Maiden Fair)          | (firstAired . 2013-05-12) | (seriesId . 121361) |
-| (id . 4517464) | (absoluteNumber . 28) | (airedSeason . 3) | (airedEpisodeNumber . 8)  | (episodeName . Second Sons)                           | (firstAired . 2013-05-19) | (seriesId . 121361) |
-| (id . 4517465) | (absoluteNumber . 29) | (airedSeason . 3) | (airedEpisodeNumber . 9)  | (episodeName . The Rains of Castamere)                | (firstAired . 2013-06-02) | (seriesId . 121361) |
-| (id . 4517466) | (absoluteNumber . 30) | (airedSeason . 3) | (airedEpisodeNumber . 10) | (episodeName . Mhysa)                                 | (firstAired . 2013-06-09) | (seriesId . 121361) |
-| (id . 4721938) | (absoluteNumber . 31) | (airedSeason . 4) | (airedEpisodeNumber . 1)  | (episodeName . Two Swords)                            | (firstAired . 2014-04-06) | (seriesId . 121361) |
-| (id . 4801602) | (absoluteNumber . 32) | (airedSeason . 4) | (airedEpisodeNumber . 2)  | (episodeName . The Lion and the Rose)                 | (firstAired . 2014-04-13) | (seriesId . 121361) |
-| (id . 4801603) | (absoluteNumber . 33) | (airedSeason . 4) | (airedEpisodeNumber . 3)  | (episodeName . Breaker of Chains)                     | (firstAired . 2014-04-20) | (seriesId . 121361) |
-| (id . 4801604) | (absoluteNumber . 34) | (airedSeason . 4) | (airedEpisodeNumber . 4)  | (episodeName . Oathkeeper)                            | (firstAired . 2014-04-27) | (seriesId . 121361) |
-| (id . 4801605) | (absoluteNumber . 35) | (airedSeason . 4) | (airedEpisodeNumber . 5)  | (episodeName . First of His Name)                     | (firstAired . 2014-05-04) | (seriesId . 121361) |
-| (id . 4801606) | (absoluteNumber . 36) | (airedSeason . 4) | (airedEpisodeNumber . 6)  | (episodeName . The Laws of Gods and Men)              | (firstAired . 2014-05-11) | (seriesId . 121361) |
-| (id . 4801607) | (absoluteNumber . 37) | (airedSeason . 4) | (airedEpisodeNumber . 7)  | (episodeName . Mockingbird)                           | (firstAired . 2014-05-18) | (seriesId . 121361) |
-| (id . 4801608) | (absoluteNumber . 38) | (airedSeason . 4) | (airedEpisodeNumber . 8)  | (episodeName . The Mountain and the Viper)            | (firstAired . 2014-06-01) | (seriesId . 121361) |
-| (id . 4801609) | (absoluteNumber . 39) | (airedSeason . 4) | (airedEpisodeNumber . 9)  | (episodeName . The Watchers on the Wall)              | (firstAired . 2014-06-08) | (seriesId . 121361) |
-| (id . 4801610) | (absoluteNumber . 40) | (airedSeason . 4) | (airedEpisodeNumber . 10) | (episodeName . The Children)                          | (firstAired . 2014-06-15) | (seriesId . 121361) |
-| (id . 5083694) | (absoluteNumber . 41) | (airedSeason . 5) | (airedEpisodeNumber . 1)  | (episodeName . The Wars to Come)                      | (firstAired . 2015-04-12) | (seriesId . 121361) |
-| (id . 5150174) | (absoluteNumber . 42) | (airedSeason . 5) | (airedEpisodeNumber . 2)  | (episodeName . The House of Black and White)          | (firstAired . 2015-04-19) | (seriesId . 121361) |
-| (id . 5150175) | (absoluteNumber . 43) | (airedSeason . 5) | (airedEpisodeNumber . 3)  | (episodeName . High Sparrow)                          | (firstAired . 2015-04-26) | (seriesId . 121361) |
-| (id . 5150183) | (absoluteNumber . 44) | (airedSeason . 5) | (airedEpisodeNumber . 4)  | (episodeName . Sons of the Harpy)                     | (firstAired . 2015-05-03) | (seriesId . 121361) |
-| (id . 5171022) | (absoluteNumber . 45) | (airedSeason . 5) | (airedEpisodeNumber . 5)  | (episodeName . Kill the Boy)                          | (firstAired . 2015-05-10) | (seriesId . 121361) |
-| (id . 5171023) | (absoluteNumber . 46) | (airedSeason . 5) | (airedEpisodeNumber . 6)  | (episodeName . Unbowed, Unbent, Unbroken)             | (firstAired . 2015-05-17) | (seriesId . 121361) |
-| (id . 5171024) | (absoluteNumber . 47) | (airedSeason . 5) | (airedEpisodeNumber . 7)  | (episodeName . The Gift)                              | (firstAired . 2015-05-24) | (seriesId . 121361) |
-| (id . 5194184) | (absoluteNumber . 48) | (airedSeason . 5) | (airedEpisodeNumber . 8)  | (episodeName . Hardhome)                              | (firstAired . 2015-05-31) | (seriesId . 121361) |
-| (id . 5194187) | (absoluteNumber . 49) | (airedSeason . 5) | (airedEpisodeNumber . 9)  | (episodeName . The Dance of Dragons)                  | (firstAired . 2015-06-07) | (seriesId . 121361) |
-| (id . 5194188) | (absoluteNumber . 50) | (airedSeason . 5) | (airedEpisodeNumber . 10) | (episodeName . Mother's Mercy)                        | (firstAired . 2015-06-14) | (seriesId . 121361) |
-| (id . 5469015) | (absoluteNumber . 51) | (airedSeason . 6) | (airedEpisodeNumber . 1)  | (episodeName . The Red Woman)                         | (firstAired . 2016-04-24) | (seriesId . 121361) |
-| (id . 5579002) | (absoluteNumber . 52) | (airedSeason . 6) | (airedEpisodeNumber . 2)  | (episodeName . Home)                                  | (firstAired . 2016-05-01) | (seriesId . 121361) |
-| (id . 5579003) | (absoluteNumber . 53) | (airedSeason . 6) | (airedEpisodeNumber . 3)  | (episodeName . Oathbreaker)                           | (firstAired . 2016-05-08) | (seriesId . 121361) |
-| (id . 5599364) | (absoluteNumber . 54) | (airedSeason . 6) | (airedEpisodeNumber . 4)  | (episodeName . Book of the Stranger)                  | (firstAired . 2016-05-15) | (seriesId . 121361) |
-| (id . 5600132) | (absoluteNumber . 55) | (airedSeason . 6) | (airedEpisodeNumber . 5)  | (episodeName . The Door)                              | (firstAired . 2016-05-22) | (seriesId . 121361) |
-| (id . 5615733) | (absoluteNumber . 56) | (airedSeason . 6) | (airedEpisodeNumber . 6)  | (episodeName . Blood of My Blood)                     | (firstAired . 2016-05-29) | (seriesId . 121361) |
-| (id . 5615734) | (absoluteNumber . 57) | (airedSeason . 6) | (airedEpisodeNumber . 7)  | (episodeName . The Broken Man)                        | (firstAired . 2016-06-05) | (seriesId . 121361) |
-| (id . 5624259) | (absoluteNumber . 58) | (airedSeason . 6) | (airedEpisodeNumber . 8)  | (episodeName . No One)                                | (firstAired . 2016-06-12) | (seriesId . 121361) |
-| (id . 5624260) | (absoluteNumber . 59) | (airedSeason . 6) | (airedEpisodeNumber . 9)  | (episodeName . Battle of the Bastards)                | (firstAired . 2016-06-19) | (seriesId . 121361) |
-| (id . 5624261) | (absoluteNumber . 60) | (airedSeason . 6) | (airedEpisodeNumber . 10) | (episodeName . The Winds of Winter)                   | (firstAired . 2016-06-26) | (seriesId . 121361) |
-| (id . 6185708) | (absoluteNumber . 61) | (airedSeason . 7) | (airedEpisodeNumber . 1)  | (episodeName . Dragonstone)                           | (firstAired . 2017-07-16) | (seriesId . 121361) |
-| (id . 6132445) | (absoluteNumber . 62) | (airedSeason . 7) | (airedEpisodeNumber . 2)  | (episodeName . Stormborn)                             | (firstAired . 2017-07-23) | (seriesId . 121361) |
-| (id . 6132453) | (absoluteNumber . 63) | (airedSeason . 7) | (airedEpisodeNumber . 3)  | (episodeName . The Queen's Justice)                   | (firstAired . 2017-07-30) | (seriesId . 121361) |
-| (id . 6235145) | (absoluteNumber . 64) | (airedSeason . 7) | (airedEpisodeNumber . 4)  | (episodeName . The Spoils of War)                     | (firstAired . 2017-08-06) | (seriesId . 121361) |
-| (id . 6132455) | (absoluteNumber . 65) | (airedSeason . 7) | (airedEpisodeNumber . 5)  | (episodeName . Eastwatch)                             | (firstAired . 2017-08-13) | (seriesId . 121361) |
-| (id . 6132456) | (absoluteNumber . 66) | (airedSeason . 7) | (airedEpisodeNumber . 6)  | (episodeName . Beyond the Wall)                       | (firstAired . 2017-08-20) | (seriesId . 121361) |
-| (id . 6275142) | (absoluteNumber . 67) | (airedSeason . 7) | (airedEpisodeNumber . 7)  | (episodeName . The Dragon and the Wolf)               | (firstAired . 2017-08-27) | (seriesId . 121361) |
-| (id . 7117386) | (absoluteNumber . 68) | (airedSeason . 8) | (airedEpisodeNumber . 1)  | (episodeName . Winterfell)                            | (firstAired . 2019-04-14) | (seriesId . 121361) |
-| (id . 7121401) | (absoluteNumber . 69) | (airedSeason . 8) | (airedEpisodeNumber . 2)  | (episodeName . A Knight of the Seven Kingdoms)        | (firstAired . 2019-04-21) | (seriesId . 121361) |
-| (id . 7121402) | (absoluteNumber . 70) | (airedSeason . 8) | (airedEpisodeNumber . 3)  | (episodeName . The Long Night)                        | (firstAired . 2019-04-28) | (seriesId . 121361) |
-| (id . 7121403) | (absoluteNumber . 71) | (airedSeason . 8) | (airedEpisodeNumber . 4)  | (episodeName . The Last of the Starks)                | (firstAired . 2019-05-05) | (seriesId . 121361) |
-| (id . 7121404) | (absoluteNumber . 72) | (airedSeason . 8) | (airedEpisodeNumber . 5)  | (episodeName . The Bells)                             | (firstAired . 2019-05-12) | (seriesId . 121361) |
-| (id . 7121405) | (absoluteNumber . 73) | (airedSeason . 8) | (airedEpisodeNumber . 6)  | (episodeName . The Iron Throne)                       | (firstAired . 2019-05-19) | (seriesId . 121361) |
-      (series/episodes tvdb--token 121361))
+           (series/episodes tvdb--token 121361))
 #+end_src
 
 
@@ -525,9 +381,6 @@ Query one week of updates and convert ~lastUpdated~ to a datestring.
                    (tvdb token "/updated/query?fromTime=" fromTime)))
 #+end_src
 
-#+RESULTS:
-: _update
-
 Call ~_update~ for every week from ~fromTime~ to ~(current-time)~.
 
 #+begin_src elisp
@@ -545,60 +398,12 @@ Call ~_update~ for every week from ~fromTime~ to ~(current-time)~.
      nil))
 #+end_src
 
-#+RESULTS:
-: update
-
 For example, the updates in the last hour:
 
 #+begin_src elisp
   (setq updates
         (update tvdb--token (format-time-string "%Y-%m-%d %H:00" (current-time))))
 #+end_src
-
-#+RESULTS:
-| (id . 365961) | (lastUpdated . 2020-05-24 06:07:19) |
-| (id . 366263) | (lastUpdated . 2020-05-24 06:07:19) |
-| (id . 382113) | (lastUpdated . 2020-05-24 06:08:34) |
-| (id . 326311) | (lastUpdated . 2020-05-24 06:11:31) |
-| (id . 342716) | (lastUpdated . 2020-05-24 06:13:52) |
-| (id . 339822) | (lastUpdated . 2020-05-24 06:14:08) |
-| (id . 382506) | (lastUpdated . 2020-05-24 06:14:20) |
-| (id . 309726) | (lastUpdated . 2020-05-24 06:14:59) |
-| (id . 244331) | (lastUpdated . 2020-05-24 06:16:34) |
-| (id . 90331)  | (lastUpdated . 2020-05-24 06:20:06) |
-| (id . 370465) | (lastUpdated . 2020-05-24 06:20:57) |
-| (id . 71361)  | (lastUpdated . 2020-05-24 06:23:20) |
-| (id . 71750)  | (lastUpdated . 2020-05-24 06:23:21) |
-| (id . 145211) | (lastUpdated . 2020-05-24 06:23:22) |
-| (id . 78500)  | (lastUpdated . 2020-05-24 06:23:23) |
-| (id . 202241) | (lastUpdated . 2020-05-24 06:23:24) |
-| (id . 268196) | (lastUpdated . 2020-05-24 06:23:25) |
-| (id . 79445)  | (lastUpdated . 2020-05-24 06:23:26) |
-| (id . 87871)  | (lastUpdated . 2020-05-24 06:23:26) |
-| (id . 71536)  | (lastUpdated . 2020-05-24 06:23:27) |
-| (id . 75796)  | (lastUpdated . 2020-05-24 06:23:28) |
-| (id . 79449)  | (lastUpdated . 2020-05-24 06:23:28) |
-| (id . 81797)  | (lastUpdated . 2020-05-24 06:23:29) |
-| (id . 72241)  | (lastUpdated . 2020-05-24 06:23:30) |
-| (id . 75414)  | (lastUpdated . 2020-05-24 06:23:31) |
-| (id . 264534) | (lastUpdated . 2020-05-24 06:23:31) |
-| (id . 380653) | (lastUpdated . 2020-05-24 06:23:32) |
-| (id . 266786) | (lastUpdated . 2020-05-24 06:23:35) |
-| (id . 380350) | (lastUpdated . 2020-05-24 06:27:17) |
-| (id . 272427) | (lastUpdated . 2020-05-24 06:29:21) |
-| (id . 382917) | (lastUpdated . 2020-05-24 06:29:32) |
-| (id . 80117)  | (lastUpdated . 2020-05-24 06:34:13) |
-| (id . 321364) | (lastUpdated . 2020-05-24 06:34:33) |
-| (id . 79660)  | (lastUpdated . 2020-05-24 06:35:04) |
-| (id . 109241) | (lastUpdated . 2020-05-24 06:35:09) |
-| (id . 263005) | (lastUpdated . 2020-05-24 06:39:24) |
-| (id . 286188) | (lastUpdated . 2020-05-24 06:40:25) |
-| (id . 311902) | (lastUpdated . 2020-05-24 06:43:00) |
-| (id . 95441)  | (lastUpdated . 2020-05-24 06:43:01) |
-| (id . 281630) | (lastUpdated . 2020-05-24 06:43:02) |
-| (id . 362829) | (lastUpdated . 2020-05-24 06:43:27) |
-| (id . 345738) | (lastUpdated . 2020-05-24 06:48:42) |
-| (id . 381976) | (lastUpdated . 2020-05-24 06:50:09) |
 
 * Internal API
 
@@ -637,9 +442,6 @@ Each episode alist also contains a ~watched~ key.
                                    ((id . episodeId) (…)))))")
 #+end_src
 
-#+RESULTS:
-: tvdb--data
-
 ** Methods
 *** renew token
 :PROPERTIES:
@@ -658,9 +460,6 @@ The token should be renewed prior to any query (or after a certain timeout?)
     nil)
 #+end_src
 
-#+RESULTS:
-: tvdb-renew-token
-
 *** search a series
 
 Search a series by name.
@@ -672,8 +471,6 @@ Search a series by name.
     (search tvdb--token seriesName))
 #+end_src
 
-#+RESULTS:
-: tvdb-search
 *** add series to list
 
 Add a series to ~tvdb--data~, with its list of episodes.
@@ -696,14 +493,10 @@ Adding an already existing series resets it."
     nil)
 #+end_src
 
-#+RESULTS:
-: tvdb-add
-
 #+begin_src elisp
   (tvdb-add 121361)
 #+end_src
 
-#+RESULTS:
 *** remove series from list
 
 Remove a series from ~tvdb--data~.
@@ -719,14 +512,9 @@ Remove a series from ~tvdb--data~.
     nil)
 #+end_src
 
-#+RESULTS:
-: tvdb-remove
-
 #+begin_src elisp
   (tvdb-remove 121361)
 #+end_src
-
-#+RESULTS:
 
 *** get list of followed series
 
@@ -740,15 +528,9 @@ Get the list of series in ~tvdb--data~ without episodes.
 
 #+end_src
 
-#+RESULTS:
-: tvdb-get-series
-
 #+begin_src elisp
   (tvdb-get-series)
 #+end_src
-
-#+RESULTS:
-| (id . 121361) | (seriesName . Game of Thrones) |
 
 *** get all episodes of a followed series
 
@@ -765,88 +547,35 @@ Get all episodes of a series in ~tvdb--data~.
 
 #+end_src
 
-#+RESULTS:
-: tvdb-get-episodes
-
 #+begin_src elisp
   (tvdb-get-episodes 121361)
 #+end_src
 
-#+RESULTS:
-| (id . 3254641) | (absoluteNumber . 1)  | (airedSeason . 1) | (airedEpisodeNumber . 1)  | (episodeName . Winter Is Coming)                      | (firstAired . 2011-04-17) | (siteRating . 7.9) | (siteRatingCount . 18322) |
-| (id . 3436411) | (absoluteNumber . 2)  | (airedSeason . 1) | (airedEpisodeNumber . 2)  | (episodeName . The Kingsroad)                         | (firstAired . 2011-04-24) | (siteRating . 7.9) | (siteRatingCount . 16597) |
-| (id . 3436421) | (absoluteNumber . 3)  | (airedSeason . 1) | (airedEpisodeNumber . 3)  | (episodeName . Lord Snow)                             | (firstAired . 2011-05-01) | (siteRating . 7.9) | (siteRatingCount . 15223) |
-| (id . 3436431) | (absoluteNumber . 4)  | (airedSeason . 1) | (airedEpisodeNumber . 4)  | (episodeName . Cripples, Bastards, and Broken Things) | (firstAired . 2011-05-08) | (siteRating . 7.9) | (siteRatingCount . 14522) |
-| (id . 3436441) | (absoluteNumber . 5)  | (airedSeason . 1) | (airedEpisodeNumber . 5)  | (episodeName . The Wolf and the Lion)                 | (firstAired . 2011-05-15) | (siteRating . 8)   | (siteRatingCount . 14796) |
-| (id . 3436451) | (absoluteNumber . 6)  | (airedSeason . 1) | (airedEpisodeNumber . 6)  | (episodeName . A Golden Crown)                        | (firstAired . 2011-05-22) | (siteRating . 8.2) | (siteRatingCount . 14200) |
-| (id . 3436461) | (absoluteNumber . 7)  | (airedSeason . 1) | (airedEpisodeNumber . 7)  | (episodeName . You Win or You Die)                    | (firstAired . 2011-05-29) | (siteRating . 8.1) | (siteRatingCount . 15006) |
-| (id . 3360391) | (absoluteNumber . 8)  | (airedSeason . 1) | (airedEpisodeNumber . 8)  | (episodeName . The Pointy End)                        | (firstAired . 2011-06-05) | (siteRating . 8)   | (siteRatingCount . 13823) |
-| (id . 4063481) | (absoluteNumber . 9)  | (airedSeason . 1) | (airedEpisodeNumber . 9)  | (episodeName . Baelor)                                | (firstAired . 2011-06-12) | (siteRating . 8.2) | (siteRatingCount . 14091) |
-| (id . 4063491) | (absoluteNumber . 10) | (airedSeason . 1) | (airedEpisodeNumber . 10) | (episodeName . Fire and Blood)                        | (firstAired . 2011-06-19) | (siteRating . 8.4) | (siteRatingCount . 13873) |
-| (id . 4161693) | (absoluteNumber . 11) | (airedSeason . 2) | (airedEpisodeNumber . 1)  | (episodeName . The North Remembers)                   | (firstAired . 2012-04-01) | (siteRating . 7.9) | (siteRatingCount . 12147) |
-| (id . 4245771) | (absoluteNumber . 12) | (airedSeason . 2) | (airedEpisodeNumber . 2)  | (episodeName . The Night Lands)                       | (firstAired . 2012-04-08) | (siteRating . 7.9) | (siteRatingCount . 11830) |
-| (id . 4245772) | (absoluteNumber . 13) | (airedSeason . 2) | (airedEpisodeNumber . 3)  | (episodeName . What is Dead May Never Die)            | (firstAired . 2012-04-15) | (siteRating . 7.9) | (siteRatingCount . 11398) |
-| (id . 4245773) | (absoluteNumber . 14) | (airedSeason . 2) | (airedEpisodeNumber . 4)  | (episodeName . Garden of Bones)                       | (firstAired . 2012-04-22) | (siteRating . 7.9) | (siteRatingCount . 11507) |
-| (id . 4245774) | (absoluteNumber . 15) | (airedSeason . 2) | (airedEpisodeNumber . 5)  | (episodeName . The Ghost of Harrenhal)                | (firstAired . 2012-04-29) | (siteRating . 7.8) | (siteRatingCount . 11426) |
-| (id . 4245775) | (absoluteNumber . 16) | (airedSeason . 2) | (airedEpisodeNumber . 6)  | (episodeName . The Old Gods and the New)              | (firstAired . 2012-05-06) | (siteRating . 7.9) | (siteRatingCount . 11292) |
-| (id . 4245776) | (absoluteNumber . 17) | (airedSeason . 2) | (airedEpisodeNumber . 7)  | (episodeName . A Man Without Honor)                   | (firstAired . 2012-05-13) | (siteRating . 7.9) | (siteRatingCount . 11480) |
-| (id . 4245777) | (absoluteNumber . 18) | (airedSeason . 2) | (airedEpisodeNumber . 8)  | (episodeName . The Prince of Winterfell)              | (firstAired . 2012-05-20) | (siteRating . 7.9) | (siteRatingCount . 11073) |
-| (id . 4245778) | (absoluteNumber . 19) | (airedSeason . 2) | (airedEpisodeNumber . 9)  | (episodeName . Blackwater)                            | (firstAired . 2012-05-27) | (siteRating . 8.3) | (siteRatingCount . 11587) |
-| (id . 4245779) | (absoluteNumber . 20) | (airedSeason . 2) | (airedEpisodeNumber . 10) | (episodeName . Valar Morghulis)                       | (firstAired . 2012-06-03) | (siteRating . 8.3) | (siteRatingCount . 10537) |
-| (id . 4293685) | (absoluteNumber . 21) | (airedSeason . 3) | (airedEpisodeNumber . 1)  | (episodeName . Valar Dohaeris)                        | (firstAired . 2013-03-31) | (siteRating . 7.9) | (siteRatingCount . 9487)  |
-| (id . 4517458) | (absoluteNumber . 22) | (airedSeason . 3) | (airedEpisodeNumber . 2)  | (episodeName . Dark Wings, Dark Words)                | (firstAired . 2013-04-07) | (siteRating . 7.8) | (siteRatingCount . 9055)  |
-| (id . 4517459) | (absoluteNumber . 23) | (airedSeason . 3) | (airedEpisodeNumber . 3)  | (episodeName . Walk of Punishment)                    | (firstAired . 2013-04-14) | (siteRating . 7.8) | (siteRatingCount . 9027)  |
-| (id . 4517460) | (absoluteNumber . 24) | (airedSeason . 3) | (airedEpisodeNumber . 4)  | (episodeName . And Now His Watch Is Ended)            | (firstAired . 2013-04-21) | (siteRating . 8.3) | (siteRatingCount . 8918)  |
-| (id . 4517461) | (absoluteNumber . 25) | (airedSeason . 3) | (airedEpisodeNumber . 5)  | (episodeName . Kissed by Fire)                        | (firstAired . 2013-04-28) | (siteRating . 7.8) | (siteRatingCount . 8354)  |
-| (id . 4517462) | (absoluteNumber . 26) | (airedSeason . 3) | (airedEpisodeNumber . 6)  | (episodeName . The Climb)                             | (firstAired . 2013-05-05) | (siteRating . 7.8) | (siteRatingCount . 8141)  |
-| (id . 4517463) | (absoluteNumber . 27) | (airedSeason . 3) | (airedEpisodeNumber . 7)  | (episodeName . The Bear and the Maiden Fair)          | (firstAired . 2013-05-12) | (siteRating . 7.9) | (siteRatingCount . 8219)  |
-| (id . 4517464) | (absoluteNumber . 28) | (airedSeason . 3) | (airedEpisodeNumber . 8)  | (episodeName . Second Sons)                           | (firstAired . 2013-05-19) | (siteRating . 7.9) | (siteRatingCount . 7949)  |
-| (id . 4517465) | (absoluteNumber . 29) | (airedSeason . 3) | (airedEpisodeNumber . 9)  | (episodeName . The Rains of Castamere)                | (firstAired . 2013-06-02) | (siteRating . 8.2) | (siteRatingCount . 8217)  |
-| (id . 4517466) | (absoluteNumber . 30) | (airedSeason . 3) | (airedEpisodeNumber . 10) | (episodeName . Mhysa)                                 | (firstAired . 2013-06-09) | (siteRating . 8)   | (siteRatingCount . 7193)  |
-| (id . 4721938) | (absoluteNumber . 31) | (airedSeason . 4) | (airedEpisodeNumber . 1)  | (episodeName . Two Swords)                            | (firstAired . 2014-04-06) | (siteRating . 8)   | (siteRatingCount . 5659)  |
-| (id . 4801602) | (absoluteNumber . 32) | (airedSeason . 4) | (airedEpisodeNumber . 2)  | (episodeName . The Lion and the Rose)                 | (firstAired . 2014-04-13) | (siteRating . 8.3) | (siteRatingCount . 5793)  |
-| (id . 4801603) | (absoluteNumber . 33) | (airedSeason . 4) | (airedEpisodeNumber . 3)  | (episodeName . Breaker of Chains)                     | (firstAired . 2014-04-20) | (siteRating . 8)   | (siteRatingCount . 5336)  |
-| (id . 4801604) | (absoluteNumber . 34) | (airedSeason . 4) | (airedEpisodeNumber . 4)  | (episodeName . Oathkeeper)                            | (firstAired . 2014-04-27) | (siteRating . 7.8) | (siteRatingCount . 5282)  |
-| (id . 4801605) | (absoluteNumber . 35) | (airedSeason . 4) | (airedEpisodeNumber . 5)  | (episodeName . First of His Name)                     | (firstAired . 2014-05-04) | (siteRating . 7.7) | (siteRatingCount . 5577)  |
-| (id . 4801606) | (absoluteNumber . 36) | (airedSeason . 4) | (airedEpisodeNumber . 6)  | (episodeName . The Laws of Gods and Men)              | (firstAired . 2014-05-11) | (siteRating . 8)   | (siteRatingCount . 5605)  |
-| (id . 4801607) | (absoluteNumber . 37) | (airedSeason . 4) | (airedEpisodeNumber . 7)  | (episodeName . Mockingbird)                           | (firstAired . 2014-05-18) | (siteRating . 8)   | (siteRatingCount . 5122)  |
-| (id . 4801608) | (absoluteNumber . 38) | (airedSeason . 4) | (airedEpisodeNumber . 8)  | (episodeName . The Mountain and the Viper)            | (firstAired . 2014-06-01) | (siteRating . 8.1) | (siteRatingCount . 5043)  |
-| (id . 4801609) | (absoluteNumber . 39) | (airedSeason . 4) | (airedEpisodeNumber . 9)  | (episodeName . The Watchers on the Wall)              | (firstAired . 2014-06-08) | (siteRating . 8)   | (siteRatingCount . 5554)  |
-| (id . 4801610) | (absoluteNumber . 40) | (airedSeason . 4) | (airedEpisodeNumber . 10) | (episodeName . The Children)                          | (firstAired . 2014-06-15) | (siteRating . 8.2) | (siteRatingCount . 5230)  |
-| (id . 5083694) | (absoluteNumber . 41) | (airedSeason . 5) | (airedEpisodeNumber . 1)  | (episodeName . The Wars to Come)                      | (firstAired . 2015-04-12) | (siteRating . 7.8) | (siteRatingCount . 3312)  |
-| (id . 5150174) | (absoluteNumber . 42) | (airedSeason . 5) | (airedEpisodeNumber . 2)  | (episodeName . The House of Black and White)          | (firstAired . 2015-04-19) | (siteRating . 7.9) | (siteRatingCount . 3261)  |
-| (id . 5150175) | (absoluteNumber . 43) | (airedSeason . 5) | (airedEpisodeNumber . 3)  | (episodeName . High Sparrow)                          | (firstAired . 2015-04-26) | (siteRating . 7.9) | (siteRatingCount . 3313)  |
-| (id . 5150183) | (absoluteNumber . 44) | (airedSeason . 5) | (airedEpisodeNumber . 4)  | (episodeName . Sons of the Harpy)                     | (firstAired . 2015-05-03) | (siteRating . 7.8) | (siteRatingCount . 3447)  |
-| (id . 5171022) | (absoluteNumber . 45) | (airedSeason . 5) | (airedEpisodeNumber . 5)  | (episodeName . Kill the Boy)                          | (firstAired . 2015-05-10) | (siteRating . 7.9) | (siteRatingCount . 3045)  |
-| (id . 5171023) | (absoluteNumber . 46) | (airedSeason . 5) | (airedEpisodeNumber . 6)  | (episodeName . Unbowed, Unbent, Unbroken)             | (firstAired . 2015-05-17) | (siteRating . 7.8) | (siteRatingCount . 3017)  |
-| (id . 5171024) | (absoluteNumber . 47) | (airedSeason . 5) | (airedEpisodeNumber . 7)  | (episodeName . The Gift)                              | (firstAired . 2015-05-24) | (siteRating . 8)   | (siteRatingCount . 2883)  |
-| (id . 5194184) | (absoluteNumber . 48) | (airedSeason . 5) | (airedEpisodeNumber . 8)  | (episodeName . Hardhome)                              | (firstAired . 2015-05-31) | (siteRating . 8.5) | (siteRatingCount . 3208)  |
-| (id . 5194187) | (absoluteNumber . 49) | (airedSeason . 5) | (airedEpisodeNumber . 9)  | (episodeName . The Dance of Dragons)                  | (firstAired . 2015-06-07) | (siteRating . 8.2) | (siteRatingCount . 2937)  |
-| (id . 5194188) | (absoluteNumber . 50) | (airedSeason . 5) | (airedEpisodeNumber . 10) | (episodeName . Mother's Mercy)                        | (firstAired . 2015-06-14) | (siteRating . 8.2) | (siteRatingCount . 2640)  |
-| (id . 5469015) | (absoluteNumber . 51) | (airedSeason . 6) | (airedEpisodeNumber . 1)  | (episodeName . The Red Woman)                         | (firstAired . 2016-04-24) | (siteRating . 7.8) | (siteRatingCount . 2047)  |
-| (id . 5579002) | (absoluteNumber . 52) | (airedSeason . 6) | (airedEpisodeNumber . 2)  | (episodeName . Home)                                  | (firstAired . 2016-05-01) | (siteRating . 8)   | (siteRatingCount . 2074)  |
-| (id . 5579003) | (absoluteNumber . 53) | (airedSeason . 6) | (airedEpisodeNumber . 3)  | (episodeName . Oathbreaker)                           | (firstAired . 2016-05-08) | (siteRating . 7.7) | (siteRatingCount . 2102)  |
-| (id . 5599364) | (absoluteNumber . 54) | (airedSeason . 6) | (airedEpisodeNumber . 4)  | (episodeName . Book of the Stranger)                  | (firstAired . 2016-05-15) | (siteRating . 8.2) | (siteRatingCount . 2155)  |
-| (id . 5600132) | (absoluteNumber . 55) | (airedSeason . 6) | (airedEpisodeNumber . 5)  | (episodeName . The Door)                              | (firstAired . 2016-05-22) | (siteRating . 8.5) | (siteRatingCount . 2262)  |
-| (id . 5615733) | (absoluteNumber . 56) | (airedSeason . 6) | (airedEpisodeNumber . 6)  | (episodeName . Blood of My Blood)                     | (firstAired . 2016-05-29) | (siteRating . 7.9) | (siteRatingCount . 1993)  |
-| (id . 5615734) | (absoluteNumber . 57) | (airedSeason . 6) | (airedEpisodeNumber . 7)  | (episodeName . The Broken Man)                        | (firstAired . 2016-06-05) | (siteRating . 7.7) | (siteRatingCount . 2020)  |
-| (id . 5624259) | (absoluteNumber . 58) | (airedSeason . 6) | (airedEpisodeNumber . 8)  | (episodeName . No One)                                | (firstAired . 2016-06-12) | (siteRating . 7.7) | (siteRatingCount . 1776)  |
-| (id . 5624260) | (absoluteNumber . 59) | (airedSeason . 6) | (airedEpisodeNumber . 9)  | (episodeName . Battle of the Bastards)                | (firstAired . 2016-06-19) | (siteRating . 8.5) | (siteRatingCount . 2155)  |
-| (id . 5624261) | (absoluteNumber . 60) | (airedSeason . 6) | (airedEpisodeNumber . 10) | (episodeName . The Winds of Winter)                   | (firstAired . 2016-06-26) | (siteRating . 8.8) | (siteRatingCount . 2208)  |
-| (id . 6185708) | (absoluteNumber . 61) | (airedSeason . 7) | (airedEpisodeNumber . 1)  | (episodeName . Dragonstone)                           | (firstAired . 2017-07-16) | (siteRating . 8.2) | (siteRatingCount . 1212)  |
-| (id . 6132445) | (absoluteNumber . 62) | (airedSeason . 7) | (airedEpisodeNumber . 2)  | (episodeName . Stormborn)                             | (firstAired . 2017-07-23) | (siteRating . 8.2) | (siteRatingCount . 1374)  |
-| (id . 6132453) | (absoluteNumber . 63) | (airedSeason . 7) | (airedEpisodeNumber . 3)  | (episodeName . The Queen's Justice)                   | (firstAired . 2017-07-30) | (siteRating . 8.3) | (siteRatingCount . 1240)  |
-| (id . 6235145) | (absoluteNumber . 64) | (airedSeason . 7) | (airedEpisodeNumber . 4)  | (episodeName . The Spoils of War)                     | (firstAired . 2017-08-06) | (siteRating . 8.8) | (siteRatingCount . 1455)  |
-| (id . 6132455) | (absoluteNumber . 65) | (airedSeason . 7) | (airedEpisodeNumber . 5)  | (episodeName . Eastwatch)                             | (firstAired . 2017-08-13) | (siteRating . 8.1) | (siteRatingCount . 1212)  |
-| (id . 6132456) | (absoluteNumber . 66) | (airedSeason . 7) | (airedEpisodeNumber . 6)  | (episodeName . Beyond the Wall)                       | (firstAired . 2017-08-20) | (siteRating . 8.3) | (siteRatingCount . 1321)  |
-| (id . 6275142) | (absoluteNumber . 67) | (airedSeason . 7) | (airedEpisodeNumber . 7)  | (episodeName . The Dragon and the Wolf)               | (firstAired . 2017-08-27) | (siteRating . 8.6) | (siteRatingCount . 1159)  |
-| (id . 7117386) | (absoluteNumber . 68) | (airedSeason . 8) | (airedEpisodeNumber . 1)  | (episodeName . Winterfell)                            | (firstAired . 2019-04-14) | (siteRating . 8.5) | (siteRatingCount . 350)   |
-| (id . 7121401) | (absoluteNumber . 69) | (airedSeason . 8) | (airedEpisodeNumber . 2)  | (episodeName . A Knight of the Seven Kingdoms)        | (firstAired . 2019-04-21) | (siteRating . 8.2) | (siteRatingCount . 350)   |
-| (id . 7121402) | (absoluteNumber . 70) | (airedSeason . 8) | (airedEpisodeNumber . 3)  | (episodeName . The Long Night)                        | (firstAired . 2019-04-28) | (siteRating . 9)   | (siteRatingCount . 486)   |
-| (id . 7121403) | (absoluteNumber . 71) | (airedSeason . 8) | (airedEpisodeNumber . 4)  | (episodeName . The Last of the Starks)                | (firstAired . 2019-05-05) | (siteRating . 8.4) | (siteRatingCount . 297)   |
-| (id . 7121404) | (absoluteNumber . 72) | (airedSeason . 8) | (airedEpisodeNumber . 5)  | (episodeName . The Bells)                             | (firstAired . 2019-05-12) | (siteRating . 8.9) | (siteRatingCount . 377)   |
-| (id . 7121405) | (absoluteNumber . 73) | (airedSeason . 8) | (airedEpisodeNumber . 6)  | (episodeName . The Iron Throne)                       | (firstAired . 2019-05-19) | (siteRating . 7.7) | (siteRatingCount . 405)   |
+*** watch an episode from a series
 
+Set an episode as watched.
+
+#+begin_src elisp
+  (defun tvdb-watch (seriesId epsiodeId)
+    "Watch episode EPISODEID in series SERIESID."
+
+    )
+
+  (setq list '(((id . 1) (episodes ((id . 1) (watched . t))
+                                   ((id . 2))
+                                   ((id . 3))))
+               ((id . 2) (episodes ((id . 1) (watched . t))
+                                   ((id . 2) (watched . t))))))
+
+  (seq-remove (lambda (series)
+                (equal '(nil) (alist-get 'episodes series)))
+              (seq-map (lambda (series)
+                         `((id . ,(alist-get 'id series))
+                           (episodes ,(seq-filter (lambda (episode)
+                                                    (equal nil (alist-get 'watched episode)))
+                                                  (alist-get 'episodes series)))))
+                       list))
+#+end_src
 
 *** get list of upcoming episodes
 
@@ -867,9 +596,6 @@ Get list of all unwatched episodes.
                          tvdb--data)))
 #+end_src
 
-#+RESULTS:
-: tvdb-upcoming
-
 *** get list of episodes to watch
 
 Get list of all unwatched episodes that have already aired.
@@ -888,9 +614,6 @@ Get list of all unwatched episodes that have already aired.
                upcoming)))
 
 #+end_src
-
-#+RESULTS:
-: tvdb-to-watch
 
 * Postamble
 
