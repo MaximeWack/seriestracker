@@ -674,9 +674,36 @@ Search a series by name.
 
 #+RESULTS:
 : tvdb-search
+*** add series to list
+
+Add a series to ~tvdb--data~, with its list of episodes.
+Adding an already existing list resets the list (ie. all episodes are unwatched).
+
 #+begin_src elisp
+  (defun tvdb-add (id)
+    "Add series with ID to tvdb--data.
+Adding an already existing series resets it."
+
+    (setq tvdb--data
+          (seq-remove (lambda (series)
+                        (equal id (alist-get 'id series)))
+                      tvdb--data))
+    (let ((series (series tvdb--token id))
+          (episodes (series/episodes tvdb--token id)))
+      (setq tvdb--data
+            (cons (setf (alist-get 'episodes series) episodes)
+                  tvdb--data)))
+    nil)
 #+end_src
 
+#+RESULTS:
+: tvdb-add
+
+#+begin_src elisp
+  (tvdb-add 121361)
+#+end_src
+
+#+RESULTS:
 
 #+begin_src elisp
 
