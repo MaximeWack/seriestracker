@@ -135,7 +135,7 @@ Make the default call to ~tvdb~ when ~params~ is /nil/ to ~refresh_token~, retur
   (defun tvdb (token &rest params)
     "Generic function to query tvdbapi.
 
-  Needs a TOKEN to work.  The TOKEN can be obtained using the LOGIN function.
+  Needs a TOKEN to work. The TOKEN can be obtained using the LOGIN function.
   If no PARAMS are given, call refresh_token, else concatenate all params and call the API.
   Returns the data element of the parsed JSON response."
 
@@ -349,7 +349,7 @@ Keep elements:
 #+begin_src elisp
   (defun series (token id)
     "Get informations about a specific series ID.
-  Needs a TOKEN to work.  The TOKEN can be obtained using the LOGIN function."
+  Needs a TOKEN to work. The TOKEN can be obtained using the LOGIN function."
 
     (alist-select '(id
                     seriesName
@@ -424,7 +424,7 @@ Filter out episodes with ~airedSeason~ = 0, and sort according to ~absoluteNumbe
 #+begin_src elisp
   (defun series/episodes (token id)
     "Get all episodes for a specific series ID.
-  Needs a TOKEN to work.  The TOKEN can be obtained using the LOGIN function."
+  Needs a TOKEN to work. The TOKEN can be obtained using the LOGIN function."
 
     (seq-sort-by '(lambda (episode)
                     (alist-get 'absoluteNumber episode))
@@ -529,7 +529,7 @@ Query one week of updates and convert ~lastUpdated~ to a datestring.
 #+begin_src elisp
   (defun _update (token fromTime)
     "Return an array of series that have changed in the week after FROMTIME.
-  Needs a TOKEN to work.  The TOKEN can be obtained using the LOGIN function."
+  Needs a TOKEN to work. The TOKEN can be obtained using the LOGIN function."
 
     (vector-mutate 'epoch-to-datestring
                    'lastUpdated
