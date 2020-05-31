@@ -602,19 +602,27 @@ For example, the updates in the last hour:
 
 * Internal API
 
+API to manipulate the internal data representation.
+
 Requirements:
-- add series to list of watched series
-- remove series from list of watched series
-- show list of watched series
-- show all episodes of a series in the list
-- mark the latest seen episode for any watched series
-- query updates for new episodes
-- show a list of episodes to watch
-- show a list of upcoming episodes
+- [X] renew token
+- [X] search a series
+- [X] add series to list of followed series
+- [X] remove series from list of followed series
+- [X] show list of followed series
+- [X] show all episodes of a series in the list
+- [ ] mark any watched episode for any followed series
+- [ ] mark all episodes up to a given episodes as watched
+- [ ] query updates for new episodes
+- [X] show a list of upcoming episodes
+- [ ] show a list of available episodes to watch
 
 ** Data model
 
-Keep track of watched series and last seen episode.
+Keep track of followed series and watched episodes.
+The model is a list of series alists with keys ~id~, ~seriesName~, and ~status~.
+Each series alist also contains an ~episodes~ key with a list of episodes alists with keys ~id~, ~absoluteNumber~, ~airedSeason~, ~airedEpisodeNumber~, ~episodeName~, ~firstAired~, ~siteRating~, ~siteRatingCount~
+Each episode alist also contains a ~watched~ key.
 
 #+begin_src elisp
   (defvar tvdb--data
