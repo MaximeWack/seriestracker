@@ -24,7 +24,7 @@ We will need ~url~ to connect to the API and ~json~ to parse the response.
 #+RESULTS:
 : json
 
-* API
+* tvdb API
 
 API layer to communicate with theTVdbAPI.
 This is mainly a /GET/ API, with one /POST/ method for authentication.
@@ -382,6 +382,11 @@ Recursively append the results in the ~next~ page.
 
 #+begin_src elisp
   (defun series/episodesPage (token id page acc)
+    "Get the whole episode list of show ID recursively.
+
+Needs a TOKEN to work. The TOKEN can be obtained using the LOGIN function.
+PAGE is the current queried page and ACC the accumulator."
+
     (let* ((query (_tvdb token (concat "/series/" (int-to-string id) "/episodes?page=" (int-to-string page))))
            (links (alist-get 'links query))
            (next (alist-get 'next links))
