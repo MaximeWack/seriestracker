@@ -728,9 +728,27 @@ Remove a series from ~tvdb--data~.
 
 #+RESULTS:
 
+*** get list of followed series
 
+Get the list of series in ~tvdb--data~ without episodes.
 
+#+begin_src elisp
+  (defun tvdb-get-series ()
+    "Get followed series."
 
+    (array-select '(id seriesName) tvdb--data))
+
+#+end_src
+
+#+RESULTS:
+: tvdb-get-series
+
+#+begin_src elisp
+  (tvdb-get-series)
+#+end_src
+
+#+RESULTS:
+| (id . 121361) | (seriesName . Game of Thrones) |
 
 #+begin_src elisp
 
