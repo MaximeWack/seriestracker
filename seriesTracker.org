@@ -505,8 +505,11 @@ The token should be renewed prior to any query (or after a certain timeout?)
 (defun tvdb-renew-token ()
   "Renew the token in tvdb--token."
 
-  (setq tvdb--token (tvdb tvdb--token))
-  nil)
+  (setq tvdb--token (tvdb tvdb--token)))
+#+end_src
+
+#+begin_src elisp
+(tvdb-renew-token)
 #+end_src
 
 *** search a series
