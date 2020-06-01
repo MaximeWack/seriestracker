@@ -523,6 +523,10 @@ Search a series by name.
   (search tvdb--token seriesName))
 #+end_src
 
+#+begin_src elisp
+(tvdb-search "utopia")
+#+end_src
+
 *** add series to list
 
 Add a series to ~tvdb--data~, with its list of episodes.
@@ -542,6 +546,8 @@ Adding an already existing series resets it."
 
 #+begin_src elisp
 (tvdb-add 121361)
+(tvdb-add 264991)
+(tvdb-add 275274)
 #+end_src
 
 *** remove series from list
