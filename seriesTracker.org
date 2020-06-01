@@ -466,7 +466,8 @@ Requirements:
 - [X] show list of followed series
 - [X] show all episodes of a series in the list
 - [X] mark any watched episode for any followed series
-- [ ] mark all episodes up to a given episodes as watched
+- [X] mark all episodes of a series as watched
+- [X] mark all episodes up to a given episodes as watched
 - [ ] query updates for new episodes
 - [X] show a list of upcoming episodes
 - [X] show a list of available episodes to watch
