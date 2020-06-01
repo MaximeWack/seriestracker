@@ -605,28 +605,17 @@ Set an episode as watched.
 (defun tvdb-watch (seriesId episodeId)
   "Watch episode EPISODEID in series SERIESID."
 
-  (setq tvdb--data
-        (->> tvdb--data
-             (--map-when (= seriesId (alist-get 'id it))
-                        `((id         . ,(alist-get 'id it))
-                          (seriesName . ,(alist-get 'seriesName it))
-                          (episodes ,@(--map-when (= episodeId (alist-get 'id it))
-                                                 `((id                 . ,(alist-get 'id it))
-                                                   (absoluteNumber     . ,(alist-get 'absoluteNumber it))
-                                                   (airedSeason        . ,(alist-get 'airedSeason it))
-                                                   (airedEpisodeNumber . ,(alist-get 'airedEpisodeNumber it))
-                                                   (episodeName        . ,(alist-get 'episodeName it))
-                                                   (firstAired         . ,(alist-get 'firstAired it))
-                                                   (siteRating         . ,(alist-get 'siteRating it))
-                                                   (siteRatingCount    . ,(alist-get 'siteRatingCount it))
-                                                   (watched            . t))
-                                             (alist-get 'episodes it))))))))
-
-(setq list '(((id . 1) (episodes ((id . 1) (watched . t))
-                                 ((id . 2))
-                                 ((id . 3))))
-             ((id . 2) (episodes ((id . 1) (watched . t))
-                                 ((id . 2) (watched . t))))))
+  (->> tvdb--data
+       (-map-when (lambda (series) (= seriesId (alist-get 'id series)))
+                  (lambda (series)
+                    (setf (alist-get 'episodes series)
+                          (-map-when (lambda (episode) (= episodeId (alist-get 'id episode)))
+                                     (lambda (episode)
+                                       (setf (alist-get 'watched episode) t)
+                                       episode)
+                                     (alist-get 'episodes series)))
+                    series))))
+#+end_src
 
 
 #+end_src
