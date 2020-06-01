@@ -262,7 +262,8 @@ Example:
 
   (->> datetime
       date-to-time
-      (format-time-string "%s")))
+      (format-time-string "%s")
+      (string-to-number)))
 #+end_src
 
 #+begin_src elisp
