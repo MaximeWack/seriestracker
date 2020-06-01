@@ -636,6 +636,34 @@ Set all episodes in a series as watched.
                   series))))
 #+end_src
 
+*** watch all up to a specific episode in a series
+
+Set all episodes up to a specific episode in a series (including it) as watched.
+
+#+begin_src elisp
+(defun tvdb-watch-up (seriesId episodeId)
+  "Watch all episodes up to EPISODEID in SERIESID."
+
+  (let ((upto (->> tvdb--data
+                   (--filter (= seriesId (alist-get 'id it)))
+                   (-flatten-n 1)
+                   (alist-get 'episodes)
+                   (--filter (= episodeId (alist-get 'id it)))
+                   (-flatten-n 1)
+                   (alist-get 'absoluteNumber))))
+    (->> tvdb--data
+         (-map-when (lambda (series) (= seriesId (alist-get 'id series)))
+                    (lambda (series)
+                      (setf (alist-get 'episodes series)
+                            (-map-when (lambda (episode)
+                                         (<= (alist-get 'absoluteNumber episode)
+                                             upto))
+                                       (lambda (episode)
+                                         (setf (alist-get 'watched episode) t)
+                                         episode)
+                                       (alist-get 'episodes series)))
+                      series)))))
+#+end_src
 #+end_src
 
 *** get list of upcoming episodes
