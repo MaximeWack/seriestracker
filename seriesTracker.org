@@ -376,17 +376,19 @@ Needs a TOKEN to work. The TOKEN can be obtained using the LOGIN function.
 PAGE is the current queried page and ACC the accumulator."
 
   (let* ((query (_tvdb token (concat "/series/" (int-to-string id) "/episodes?page=" (int-to-string page))))
-         (links (alist-get 'links query))
-         (next (alist-get 'next links))
-         (data (array-select '(id
-                               absoluteNumber
-                               airedSeason
-                               airedEpisodeNumber
-                               episodeName
-                               firstAired
-                               siteRating
-                               siteRatingCount)
-                             (alist-get 'data query))))
+         (next (->> query
+                    (alist-get 'links)
+                    (alist-get 'next)))
+         (data (->> query
+                    (alist-get 'data)
+                    (array-select '(id
+                                    absoluteNumber
+                                    airedSeason
+                                    airedEpisodeNumber
+                                    episodeName
+                                    firstAired
+                                    siteRating
+                                    siteRatingCount)))))
     (if next
         (series/episodesPage token id next (append acc data))
       (append acc data))))
@@ -400,11 +402,10 @@ Filter out episodes with ~airedSeason~ = 0, and sort according to ~absoluteNumbe
   "Get all episodes for a specific series ID.
 Needs a TOKEN to work. The TOKEN can be obtained using the LOGIN function."
 
-  (seq-sort-by '(lambda (episode)
-                  (alist-get 'absoluteNumber episode))
-               #'<
-               (seq-filter (lambda (x) (> (alist-get 'airedSeason x) 0))
-                           (series/episodesPage token id 1 nil))))
+  (->> (series/episodesPage token id 1 nil)
+       (--filter (> (alist-get 'airedSeason it) 0))
+       (--sort (< (alist-get 'absoluteNumber it)
+                  (alist-get 'absoluteNumber other)))))
 #+end_src
 
 For example, all episodes from Game of Thrones:
@@ -426,9 +427,9 @@ Query one week of updates and convert ~lastUpdated~ to a datestring.
   "Return an array of series that have changed in the week after FROMTIME.
 Needs a TOKEN to work. The TOKEN can be obtained using the LOGIN function."
 
-  (array-mutate 'epoch-to-datestring
-                'lastUpdated
-                (tvdb token "/updated/query?fromTime=" fromTime)))
+  (->> fromTime
+       (tvdb token "/updated/query?fromTime=")
+       (array-mutate 'epoch-to-datetime 'lastUpdated)))
 #+end_src
 
 Call ~_update~ for every week from ~fromTime~ to ~(current-time)~.
@@ -437,22 +438,20 @@ Call ~_update~ for every week from ~fromTime~ to ~(current-time)~.
 (defun update (token fromTime)
   "Return an array of series that have changed since FROMTIME.
 Needs a TOKEN to work.  The TOKEN can be obtained using the LOGIN function."
-
-  (seq-reduce 'append
-              (seq-map '(lambda (fromTime) (_update token fromTime))
-                       (seq-map 'int-to-string
-                                (number-sequence
-                                 (string-to-number (format-time-string "%s" (date-to-time fromTime)))
-                                 (string-to-number (format-time-string "%s" (current-time)))
-                                 (* 3600 24 7))))
-              nil))
+  (->> (number-sequence
+        (datetime-to-epoch fromTime)
+        (current-epoch)
+        (* 3600 24 7))
+       (-map 'int-to-string)
+       (--map (_update token it))
+       (-flatten-n 1)))
 #+end_src
 
 For example, the updates in the last hour:
 
 #+begin_src elisp
-(setq updates
-      (update tvdb--token (format-time-string "%Y-%m-%d %H:00" (current-time))))
+(setq updates (update tvdb--token (format-time-string "%Y-%m-%d %H:00" (current-time))))
+(update tvdb--token "2020-05-01 00:00")
 #+end_src
 
 * Internal API
@@ -532,15 +531,10 @@ Adding an already existing list resets the list (ie. all episodes are unwatched)
 Adding an already existing series resets it."
 
   (setq tvdb--data
-        (seq-remove (lambda (series)
-                      (equal id (alist-get 'id series)))
-                    tvdb--data))
-  (let ((series (series tvdb--token id))
-        (episodes (series/episodes tvdb--token id)))
-    (setq tvdb--data
-          (cons (setf (alist-get 'episodes series) episodes)
-                tvdb--data)))
-  nil)
+        (--> tvdb--data
+               (--remove (= id (alist-get 'id it)) it)
+               (-snoc it (--> (series tvdb--token id)
+                                  (-snoc it `(episodes ,@(series/episodes tvdb--token id))))))))
 #+end_src
 
 #+begin_src elisp
@@ -556,10 +550,7 @@ Remove a series from ~tvdb--data~.
   "Remove series with ID from tvdb--data."
 
   (setq tvdb--data
-        (seq-remove (lambda (series)
-                      (equal id (alist-get 'id series)))
-                    tvdb--data))
-  nil)
+        (--remove (= id (alist-get 'id it)) tvdb--data)))
 #+end_src
 
 #+begin_src elisp
@@ -575,7 +566,6 @@ Get the list of series in ~tvdb--data~ without episodes.
   "Get followed series."
 
   (array-select '(id seriesName) tvdb--data))
-
 #+end_src
 
 #+begin_src elisp
@@ -591,14 +581,11 @@ Get all episodes of a series in ~tvdb--data~.
   "Get episodes of series with ID."
 
   (alist-get 'episodes
-             (seq-find (lambda (series)
-                         (equal id (alist-get 'id series)))
-                       tvdb--data)))
-
+             (--first (= id (alist-get 'id it)) tvdb--data)))
 #+end_src
 
 #+begin_src elisp
-(tvdb-get-episodes 121361)
+(tvdb-get-episodes 264991)
 #+end_src
 
 *** watch an episode from a series
@@ -606,10 +593,25 @@ Get all episodes of a series in ~tvdb--data~.
 Set an episode as watched.
 
 #+begin_src elisp
-(defun tvdb-watch (seriesId epsiodeId)
+(defun tvdb-watch (seriesId episodeId)
   "Watch episode EPISODEID in series SERIESID."
 
-  )
+  (setq tvdb--data
+        (->> tvdb--data
+             (--map-when (= seriesId (alist-get 'id it))
+                        `((id         . ,(alist-get 'id it))
+                          (seriesName . ,(alist-get 'seriesName it))
+                          (episodes ,@(--map-when (= episodeId (alist-get 'id it))
+                                                 `((id                 . ,(alist-get 'id it))
+                                                   (absoluteNumber     . ,(alist-get 'absoluteNumber it))
+                                                   (airedSeason        . ,(alist-get 'airedSeason it))
+                                                   (airedEpisodeNumber . ,(alist-get 'airedEpisodeNumber it))
+                                                   (episodeName        . ,(alist-get 'episodeName it))
+                                                   (firstAired         . ,(alist-get 'firstAired it))
+                                                   (siteRating         . ,(alist-get 'siteRating it))
+                                                   (siteRatingCount    . ,(alist-get 'siteRatingCount it))
+                                                   (watched            . t))
+                                             (alist-get 'episodes it))))))))
 
 (setq list '(((id . 1) (episodes ((id . 1) (watched . t))
                                  ((id . 2))
@@ -617,14 +619,7 @@ Set an episode as watched.
              ((id . 2) (episodes ((id . 1) (watched . t))
                                  ((id . 2) (watched . t))))))
 
-(seq-remove (lambda (series)
-              (equal '(nil) (alist-get 'episodes series)))
-            (seq-map (lambda (series)
-                       `((id . ,(alist-get 'id series))
-                         (episodes ,(seq-filter (lambda (episode)
-                                                  (equal nil (alist-get 'watched episode)))
-                                                (alist-get 'episodes series)))))
-                     list))
+
 #+end_src
 
 *** get list of upcoming episodes
@@ -635,15 +630,16 @@ Get list of all unwatched episodes.
 (defun tvdb-upcoming ()
   "List upcoming episodes."
 
-  (seq-remove (lambda (series)
-                (equal '(nil) (alist-get 'episodes series)))
-              (seq-map (lambda (series)
-                         `((id . ,(alist-get 'id series))
-                           (seriesName . ,(alist-get 'seriesName series))
-                           (episodes ,(seq-filter (lambda (episode)
-                                                    (equal nil (alist-get 'watched episode)))
-                                                  (alist-get 'episodes series)))))
-                       tvdb--data)))
+  (->> tvdb--data
+       (--map `((id         . ,(alist-get 'id it))
+                (seriesName . ,(alist-get 'seriesName it))
+                (episodes ,@(--filter (equal nil (alist-get 'watched it))
+                                     (alist-get 'episodes it)))))
+       (--remove (equal '(nil) (alist-get 'episodes it)))))
+#+end_src
+
+#+begin_src elisp
+(tvdb-upcoming)
 #+end_src
 
 *** get list of episodes to watch
@@ -654,14 +650,15 @@ Get list of all unwatched episodes that have already aired.
 (defun tvdb-to-watch ()
   "List of episodes to watch."
 
-  (let ((upcoming (tvdb-upcoming)))
-    (seq-map (lambda (series)
-               `((id . ,(alist-get 'id series))
-                 (seriesName . ,(alist-get 'seriesName series))
-                 (episodes ,(seq-remove (lambda (episode)
-                                          (< (alist-get 'firstAired episode) (current-time)))
-                                        (alist-get 'episodes series)))))
-             upcoming)))
+  (->> (tvdb-upcoming)
+      (--map `((id         . ,(alist-get 'id it))
+               (seriesName . ,(alist-get 'seriesName it))
+               (episodes ,@(--remove (> (date-to-epoch (alist-get 'firstAired it)) (current-epoch))
+                                    (alist-get 'episodes it)))))))
+#+end_src
+
+#+begin_src elisp
+(tvdb-to-watch)
 #+end_src
 
 * Postamble
