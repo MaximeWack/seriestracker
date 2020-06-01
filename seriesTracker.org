@@ -271,7 +271,14 @@ Example:
   "Convert DATE to an epoch."
 
   (->> (concat date " 00:00:00")
-       datetime-to-epoch))
+      datetime-to-epoch))
+#+end_src
+
+#+begin_src elisp
+(defun current-epoch ()
+    "Get (current-time) as an epoch."
+
+    (string-to-number (format-time-string "%s" (current-time))))
 #+end_src
 
 Example:
@@ -279,6 +286,7 @@ Example:
 #+begin_src elisp
 (date-to-epoch "2020-01-01")
 (datetime-to-epoch "2020-01-01 00:00")
+(current-epoch)
 #+end_src
 
 *** search
