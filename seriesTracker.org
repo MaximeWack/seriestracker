@@ -465,11 +465,11 @@ Requirements:
 - [X] remove series from list of followed series
 - [X] show list of followed series
 - [X] show all episodes of a series in the list
-- [ ] mark any watched episode for any followed series
+- [X] mark any watched episode for any followed series
 - [ ] mark all episodes up to a given episodes as watched
 - [ ] query updates for new episodes
 - [X] show a list of upcoming episodes
-- [ ] show a list of available episodes to watch
+- [X] show a list of available episodes to watch
 
 ** Data model
 
