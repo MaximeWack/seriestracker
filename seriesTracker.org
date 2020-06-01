@@ -523,8 +523,12 @@ Search a series by name.
   (search tvdb--token seriesName))
 #+end_src
 
+For example:
+
 #+begin_src elisp
 (tvdb-search "utopia")
+(tvdb-search "game of thrones")
+(tvdb-search "rick and morty")
 #+end_src
 
 *** add series to list
@@ -544,6 +548,8 @@ Adding an already existing series resets it."
                                   (-snoc it `(episodes ,@(series/episodes tvdb--token id))))))))
 #+end_src
 
+For example, add the previously searched series.
+
 #+begin_src elisp
 (tvdb-add 121361)
 (tvdb-add 264991)
@@ -561,6 +567,8 @@ Remove a series from ~tvdb--data~.
   (setq tvdb--data
         (--remove (= id (alist-get 'id it)) tvdb--data)))
 #+end_src
+
+For example, remove Game of Thrones.
 
 #+begin_src elisp
 (tvdb-remove 121361)
@@ -593,6 +601,8 @@ Get all episodes of a series in ~tvdb--data~.
              (--first (= id (alist-get 'id it)) tvdb--data)))
 #+end_src
 
+For example, get all Utopia episodes.
+
 #+begin_src elisp
 (tvdb-get-episodes 264991)
 #+end_src
@@ -617,6 +627,12 @@ Set an episode as watched.
                     series))))
 #+end_src
 
+For example, watch Rick and Morty S04E10:
+
+#+begin_src elisp
+(tvdb-watch 275274 7687400)
+#+end_src
+
 *** watch all episodes in a series
 
 Set all episodes in a series as watched.
@@ -634,6 +650,12 @@ Set all episodes in a series as watched.
                                 episode)
                               (alist-get 'episodes series)))
                   series))))
+#+end_src
+
+For example, watch the whole of Utopia:
+
+#+begin_src elisp
+(tvdb-watch-all 264991)
 #+end_src
 
 *** watch all up to a specific episode in a series
@@ -664,6 +686,11 @@ Set all episodes up to a specific episode in a series (including it) as watched.
                                        (alist-get 'episodes series)))
                       series)))))
 #+end_src
+
+For example, watch all Rick and Morty episodes up to S03E06:
+
+#+begin_src elisp
+(tvdb-watch-up 275274 6231155)
 #+end_src
 
 *** get list of upcoming episodes
@@ -683,6 +710,8 @@ Get list of all unwatched episodes.
                 outseries)))
       (--remove (equal nil (alist-get 'episodes it)))))
 #+end_src
+
+For example:
 
 #+begin_src elisp
 (tvdb-upcoming)
@@ -704,6 +733,8 @@ Get list of all unwatched episodes that have already aired.
                                (alist-get 'episodes outseries)))
                 outseries)))))
 #+end_src
+
+For example:
 
 #+begin_src elisp
 (tvdb-to-watch)
