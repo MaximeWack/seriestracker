@@ -617,6 +617,24 @@ Set an episode as watched.
                     series))))
 #+end_src
 
+*** watch all episodes in a series
+
+Set all episodes in a series as watched.
+
+#+begin_src elisp
+(defun tvdb-watch-all (seriesId)
+"Watch all episodes in SERIESID."
+
+(->> tvdb--data
+     (-map-when (lambda (series) (= seriesId (alist-get 'id series)))
+                (lambda (series)
+                  (setf (alist-get 'episodes series)
+                        (-map (lambda (episode)
+                                (setf (alist-get 'watched episode) t)
+                                episode)
+                              (alist-get 'episodes series)))
+                  series))))
+#+end_src
 
 #+end_src
 
