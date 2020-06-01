@@ -675,11 +675,13 @@ Get list of all unwatched episodes.
   "List upcoming episodes."
 
   (->> tvdb--data
-       (--map `((id         . ,(alist-get 'id it))
-                (seriesName . ,(alist-get 'seriesName it))
-                (episodes ,@(--filter (equal nil (alist-get 'watched it))
-                                     (alist-get 'episodes it)))))
-       (--remove (equal '(nil) (alist-get 'episodes it)))))
+      (-map (lambda (series)
+              (let ((outseries (-clone series)))
+                (setf (alist-get 'episodes outseries)
+                      (--filter (equal nil (alist-get 'watched it))
+                               (alist-get 'episodes outseries)))
+                outseries)))
+      (--remove (equal nil (alist-get 'episodes it)))))
 #+end_src
 
 #+begin_src elisp
@@ -695,10 +697,12 @@ Get list of all unwatched episodes that have already aired.
   "List of episodes to watch."
 
   (->> (tvdb-upcoming)
-      (--map `((id         . ,(alist-get 'id it))
-               (seriesName . ,(alist-get 'seriesName it))
-               (episodes ,@(--remove (> (date-to-epoch (alist-get 'firstAired it)) (current-epoch))
-                                    (alist-get 'episodes it)))))))
+      (-map (lambda (series)
+              (let ((outseries (-clone series)))
+                (setf (alist-get 'episodes outseries)
+                      (--remove (> (date-to-epoch (alist-get 'firstAired it)) (current-epoch))
+                               (alist-get 'episodes outseries)))
+                outseries)))))
 #+end_src
 
 #+begin_src elisp
