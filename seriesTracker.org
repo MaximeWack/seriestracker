@@ -433,6 +433,7 @@ Needs a TOKEN to work. The TOKEN can be obtained using the LOGIN function."
 #+end_src
 
 Call ~_update~ for every week from ~fromTime~ to ~(current-time)~.
+~fromTime~ needs to be given as a datetime (YYYY-MM-DD HH:MM).
 
 #+begin_src elisp
 (defun update (token fromTime)
@@ -628,10 +629,10 @@ Set an episode as watched.
                     series))))
 #+end_src
 
-For example, watch Rick and Morty S04E10:
+For example, watch Rick and Morty S04E09:
 
 #+begin_src elisp
-(tvdb-watch 275274 7687400)
+(tvdb-watch 275274 7687399)
 #+end_src
 
 *** watch all episodes in a series
@@ -696,7 +697,7 @@ For example, watch all Rick and Morty episodes up to S03E06:
 
 *** get list of upcoming episodes
 
-Get list of all unwatched episodes.
+Get list of all unwatched episodes, including episodes that have not aired yet.
 
 #+begin_src elisp
 (defun tvdb-upcoming ()
