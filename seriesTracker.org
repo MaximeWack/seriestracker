@@ -330,6 +330,7 @@ Keep elements:
 - id :: unique id
 - seriesName :: series name
 - status :: Ended | Continuing | Upcoming
+- lastUpdated :: date of last update, as an epoch
 
 #+begin_src elisp
 (defun series (token id)
@@ -341,7 +342,8 @@ Needs a TOKEN to work. The TOKEN can be obtained using the LOGIN function."
       (tvdb token "/series/")
       (alist-select '(id
                       seriesName
-                      status))))
+                      status
+                      lastUpdated))))
 #+end_src
 
 For example:
@@ -577,9 +579,10 @@ Adding an already existing series resets it."
 
   (setq tvdb--data
         (--> tvdb--data
-               (--remove (= id (alist-get 'id it)) it)
-               (-snoc it (--> (series tvdb--token id)
-                                  (-snoc it `(episodes ,@(series/episodes tvdb--token id))))))))
+            (--remove (= id (alist-get 'id it)) it)
+            (-snoc it (--> (series tvdb--token id)
+                          (-snoc it `(lastPage . ,(series/episodesLastPage tvdb--token id)))
+                          (-snoc it `(episodes ,@(series/episodes tvdb--token id))))))))
 #+end_src
 
 For example, add the previously searched series.
