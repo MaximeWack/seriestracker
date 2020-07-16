@@ -449,10 +449,10 @@ For example, all episodes from Game of Thrones:
 *** update
 
 Get a list of updated series.
-The API only returns data for a period of *one week* after ~fromTime~.
+The API only returns data for a period of *one week* after ~fromTime~ (as an epoch).
 ~lastUpdated~ is given as an epoch.
 
-Query one week of updates and convert ~lastUpdated~ to a datestring.
+Query one week of updates.
 
 #+begin_src elisp
 (defun _update (token fromTime)
@@ -460,30 +460,30 @@ Query one week of updates and convert ~lastUpdated~ to a datestring.
 Needs a TOKEN to work. The TOKEN can be obtained using the LOGIN function."
 
   (->> fromTime
-       (tvdb token "/updated/query?fromTime=")
-       (array-mutate 'epoch-to-datetime 'lastUpdated)))
+       (tvdb token "/updated/query?fromTime=")))
 #+end_src
 
 Call ~_update~ for every week from ~fromTime~ to ~(current-time)~.
-~fromTime~ needs to be given as a datetime (YYYY-MM-DD HH:MM).
+~fromTime~ needs to be given as an epoch.
 
 #+begin_src elisp
 (defun update (token fromTime)
   "Return an array of series that have changed since FROMTIME.
 Needs a TOKEN to work.  The TOKEN can be obtained using the LOGIN function."
   (->> (number-sequence
-        (datetime-to-epoch fromTime)
+        fromTime
         (current-epoch)
         (* 3600 24 7))
        (-map 'int-to-string)
        (--map (_update token it))
-       (-flatten-n 1)))
+       (car)
+       ))
 #+end_src
 
 For example, the updates in the last hour:
 
 #+begin_src elisp
-(setq updates (update tvdb--token (format-time-string "%Y-%m-%d %H:00" (current-time))))
+(setq updates (update tvdb--token (current-epoch)))
 (update tvdb--token "2020-05-01 00:00")
 #+end_src
 
@@ -508,7 +508,7 @@ Requirements:
 ** Data model
 
 Keep track of followed series and watched episodes.
-The model is a list of series alists with keys ~id~, ~seriesName~, and ~status~.
+The model is a list of series alists with keys ~id~, ~seriesName~, ~status~, ~lastUpdated~, and ~lastPage~.
 Each series alist also contains an ~episodes~ key with a list of episodes alists with keys ~id~, ~absoluteNumber~, ~airedSeason~, ~airedEpisodeNumber~, ~episodeName~, ~firstAired~, ~siteRating~, ~siteRatingCount~
 Each episode alist also contains a ~watched~ key.
 
