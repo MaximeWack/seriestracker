@@ -632,7 +632,7 @@ Get all episodes of a series in ~tvdb--data~.
   "Get episodes of series with ID."
 
   (alist-get 'episodes
-             (--first (= id (alist-get 'id it)) tvdb--data)))
+             (--find (= id (alist-get 'id it)) tvdb--data)))
 #+end_src
 
 For example, get all Utopia episodes.
