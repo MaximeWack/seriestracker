@@ -421,8 +421,7 @@ Needs a TOKEN to work.  The TOKEN can be obtained using the LOGIN function."
         (* 3600 24 7))
        (-map 'int-to-string)
        (--map (_update token it))
-       (car)
-       ))
+       (car)))
 #+end_src
 
 For example, the updates in the last hour:
@@ -437,18 +436,18 @@ For example, the updates in the last hour:
 API to manipulate the internal data representation.
 
 Requirements:
-- [X] renew token
-- [X] search a series
-- [X] add series to list of followed series
-- [X] remove series from list of followed series
-- [X] show list of followed series
-- [X] show all episodes of a series in the list
-- [X] mark any watched episode for any followed series
-- [X] mark all episodes of a series as watched
-- [X] mark all episodes up to a given episodes as watched
-- [ ] query updates for new episodes
-- [X] show a list of upcoming episodes
-- [X] show a list of available episodes to watch
+- renew token
+- search a series
+- add series to list of followed series
+- remove series from list of followed series
+- show list of followed series
+- show all episodes of a series in the list
+- mark any watched episode for any followed series
+- mark all episodes of a series as watched
+- mark all episodes up to a given episodes as watched
+- query updates for new episodes
+- show a list of upcoming episodes
+- show a list of available episodes to watch
 
 ** Data model
 
