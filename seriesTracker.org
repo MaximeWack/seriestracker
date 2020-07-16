@@ -807,23 +807,17 @@ Query all followed series that are updated and add all new episodes.
 
 #+begin_src elisp
 (defun tvdb-update ()
-  "Query all updated series since the day of the latest watched episode.
+  "Query all updated series since the last known update.
 Keep only series that are followed.
 Update new episodes."
 
-  (let* ((updatedSeries (-some->> tvdb--data
-                          (--map (->> (alist-get 'episodes it)
-                                    (--filter (equal (alist-get 'watched it) t))
-                                    (array-pull 'firstAired)))
-                          (-flatten)
-                          (-map 'date-to-epoch)
-                          -max
-                          epoch-to-datetime
-                          (update tvdb--token)
-                          (array-pull 'id)
-                          (-intersection (array-pull 'id (tvdb-get-series)))))))
-
-  )
+  (-some->> tvdb--data
+    (array-pull 'lastUpdated)
+    -max
+    (update tvdb--token)
+    (array-pull 'id)
+    (-intersection (array-pull 'id (tvdb-get-series)))
+    (-map 'update-series)))
 #+end_src
 
 * Postamble
