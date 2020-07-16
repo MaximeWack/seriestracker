@@ -365,8 +365,36 @@ Keep elements:
 - siteRatingCount :: votes for this episode
 
 
-The episode list is paginated.
-Recursively append the results in the ~next~ page.
+The episode list is paginated, so there are a few steps to retrieve the whole episode list.
+
+**** Get one page of results for a series.
+
+First let's get any page of results.
+
+#+begin_src elisp
+(defun series/episodes1Page (token id page)
+  "Get one page of results for episodes in a series.
+
+Needs a TOKEN to work. The TOKEN can be obtained using the LOGIN function.
+PAGE is the queried page."
+
+  (_tvdb token (concat "/series/" (int-to-string id) "/episodes?page=" (int-to-string page))))
+#+end_src
+
+Let's also get the number of pages. This will help us retrieve only the needed results when updating later.
+
+#+begin_src elisp
+(defun series/episodesLastPage (token id)
+  "Get the number of pages of results for the episodes of series ID.
+
+Needs a TOKEN to work. The TOKEN can be obtained using the LOGIN function. "
+
+  (->> (series/episodes1Page token id 1)
+       (alist-get 'links)
+       (alist-get 'last)))
+#+end_src
+
+**** Recursively append the results in the ~next~ page.
 
 #+begin_src elisp
 (defun series/episodesPage (token id page acc)
@@ -375,7 +403,7 @@ Recursively append the results in the ~next~ page.
 Needs a TOKEN to work. The TOKEN can be obtained using the LOGIN function.
 PAGE is the current queried page and ACC the accumulator."
 
-  (let* ((query (_tvdb token (concat "/series/" (int-to-string id) "/episodes?page=" (int-to-string page))))
+  (let* ((query (series/episodes1Page token id page))
          (next (->> query
                     (alist-get 'links)
                     (alist-get 'next)))
@@ -394,15 +422,18 @@ PAGE is the current queried page and ACC the accumulator."
       (append acc data))))
 #+end_src
 
+**** Consolidate the list
+
 The results contain special episodes and are unsorted.
 Filter out episodes with ~airedSeason~ = 0, and sort according to ~absoluteNumber~.
 
 #+begin_src elisp
-(defun series/episodes (token id)
+(defun series/episodes (token id &optional startPage)
   "Get all episodes for a specific series ID.
-Needs a TOKEN to work. The TOKEN can be obtained using the LOGIN function."
+Needs a TOKEN to work. The TOKEN can be obtained using the LOGIN function.
+Optionally, begin at STARTPAGE instead of first page of results."
 
-  (->> (series/episodesPage token id 1 nil)
+  (->> (series/episodesPage token id (or startPage 1) nil)
        (--filter (> (alist-get 'airedSeason it) 0))
        (--sort (< (alist-get 'absoluteNumber it)
                   (alist-get 'absoluteNumber other)))))
@@ -412,6 +443,7 @@ For example, all episodes from Game of Thrones:
 
 #+begin_src elisp
 (setq episodes (series/episodes tvdb--token 121361))
+(series/episodes tvdb--token 121361 2)
 #+end_src
 
 *** update
