@@ -779,7 +779,30 @@ For example:
 
 *** query updates for new episodes
 
-Get all series updated since the last known date (date of the latest episode watched).
+Update a single series.
+Retrieve all new episodes and add them to the series. Update all series properties.
+
+#+begin_src elisp
+(defun update-series (id)
+  "Query new episodes for series ID, and add them to the list.
+Update the other series properties."
+
+  (let* ((series (--find (= id (alist-get 'id it)) tvdb--data))
+         (lastPage (alist-get 'lastPage series))
+         (oldEpisodes (alist-get 'episodes series))
+         (allEpisodes (series/episodes tvdb--token id lastPage))
+         (newEpisodesId (-difference (array-pull 'id allEpisodes) (array-pull 'id oldEpisodes)))
+         (newEpisodes (--filter (-contains? newEpisodesId (alist-get 'id it)) allEpisodes))
+         (newSeries (--> (series tvdb--token id)
+                         (-snoc it `(lastPage . ,(series/episodesLastPage tvdb--token id)))
+                         (-snoc it `(episodes ,@(append oldEpisodes newEpisodes))))))
+    (setq tvdb--data
+          (--> tvdb--data
+               (--remove (= id (alist-get 'id it)) it)
+               (-snoc it newSeries)))))
+#+end_src
+
+Get all series updated since the last known date (series lastUpdated date).
 Query all followed series that are updated and add all new episodes.
 
 #+begin_src elisp
