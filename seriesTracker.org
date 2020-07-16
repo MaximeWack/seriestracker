@@ -602,8 +602,7 @@ Set an episode as watched.
                                      (lambda (episode)
                                        (setf (alist-get 'watched episode) t)
                                        episode)
-                                     (alist-get 'episodes series)))
-                    series))))
+                                     (alist-get 'episodes series)))))))
 #+end_src
 
 For example, watch Rick and Morty S04E09:
@@ -627,8 +626,7 @@ Set all episodes in a series as watched.
                         (-map (lambda (episode)
                                 (setf (alist-get 'watched episode) t)
                                 episode)
-                              (alist-get 'episodes series)))
-                  series))))
+                              (alist-get 'episodes series)))))))
 #+end_src
 
 For example, watch the whole of Utopia:
@@ -662,8 +660,7 @@ Set all episodes up to a specific episode in a series (including it) as watched.
                                        (lambda (episode)
                                          (setf (alist-get 'watched episode) t)
                                          episode)
-                                       (alist-get 'episodes series)))
-                      series)))))
+                                       (alist-get 'episodes series))))))))
 #+end_src
 
 For example, watch all Rick and Morty episodes up to S03E06:
