@@ -37,7 +37,7 @@ TheTVdbAPI answers in JSON.
 Parse the JSON in the url-buffer response with ~json-read-object~.
 
 #+begin_src elisp
-(defun getJSON (url-buffer)
+(defun tvdb--getJSON (url-buffer)
   "Parse the JSON in the URL-BUFFER returned by url."
 
   (with-current-buffer url-buffer
@@ -51,10 +51,10 @@ Parse the JSON in the url-buffer response with ~json-read-object~.
 TheTVdbAPI requires login to access.
 This is the only /POST/ call in the API and it provides the token needed for all other operations.
 The login needs a ~username~, an ~apikey~, and a ~userkey~.
-Parse the response using ~getJSON~, and return the ~token~ element.
+Parse the response using ~tvdb--getJSON~, and return the ~token~ element.
 
 #+begin_src elisp
-(defun login (username apikey userkey)
+(defun tvdb--login (username apikey userkey)
   "Login using USERNAME, APIKEY and USERKEY.
 Return the token"
 
@@ -64,7 +64,7 @@ Return the token"
             (url-request-data (concat "{\"apikey\": \"" apikey "\", \"userkey\": \"" userkey "\", \"username\": \"" username "\" }"))
             (url-show-status nil))
         (url-retrieve-synchronously "https://api.thetvdb.com/login" t))
-      getJSON
+      tvdb--getJSON
       (alist-get 'token)))
 #+end_src
 
@@ -79,7 +79,7 @@ Save the token in a declared variable
 For example:
 
 #+begin_src elisp
-(setq tvdb--token (login ""
+(setq tvdb--token (tvdb--login ""
                         ""
                         ""))
 #+end_src
@@ -104,8 +104,8 @@ Call the API /GET/ endpoints with the Authorization ~token~ and the ~params~ as 
 Return the whole JSON response.
 
 #+begin_src elisp
-(defun _tvdb (token params)
-  (getJSON
+(defun tvdb--tvdb-raw (token params)
+  (tvdb--getJSON
    (let* ((url-request-method "GET")
           (bearer (concat "Bearer " token))
           (url-request-extra-headers `(("Accept" . "application/json")
@@ -119,24 +119,24 @@ Make the default call to ~tvdb~ when ~params~ is /nil/ to ~refresh_token~, retur
 ~params~ is concatenated as a string.
 
 #+begin_src elisp
-(defun tvdb (token &rest params)
+(defun tvdb--tvdb (token &rest params)
   "Generic function to query tvdbapi.
 
-Needs a TOKEN to work. The TOKEN can be obtained using the LOGIN function.
+Needs a TOKEN to work. The TOKEN can be obtained using the TVDB--LOGIN function.
 If no PARAMS are given, call refresh_token, else concatenate all params and call the API.
 Returns the data element of the parsed JSON response."
 
   (if params
       (alist-get 'data
-                 (_tvdb token (apply 'concat params)))
+                 (tvdb--tvdb-raw token (apply 'concat params)))
     (alist-get 'token
-               (_tvdb token "/refresh_token"))))
+               (tvdb--tvdb-raw token "/refresh_token"))))
 #+end_src
 
 For example, refreshing the token:
 
 #+begin_src elisp
-(tvdb tvdb--token)
+(tvdb--tvdb tvdb--token)
 #+end_src
 
 **** alist-select
@@ -145,7 +145,7 @@ Each series and episode is represented as an alist.
 Select a list of elements from an alist.
 
 #+begin_src elisp
-(defun alist-select (fields alist)
+(defun tvdb--utils-alist-select (fields alist)
   "Keep only FIELDS in ALIST by constructing a new alist containing only these elements."
 
   (->> fields
@@ -157,7 +157,7 @@ Select a list of elements from an alist.
 For example:
 
 #+begin_src elisp
-(alist-select
+(tvdb--utils-alist-select
  '(a c)
  '((a . 1)
    (b . "b")
@@ -170,16 +170,16 @@ Series and episodes lists are represented as arrays of alists.
 Select a list of elements from each alist in an array.
 
 #+begin_src elisp
-(defun array-select (fields array)
+(defun tvdb--utils-array-select (fields array)
   "Keep only FIELDS in every alist in the ARRAY. "
 
-  (--map (alist-select fields it) array))
+  (--map (tvdb--utils-alist-select fields it) array))
 #+end_src
 
 For example:
 
 #+begin_src elisp
-(array-select '(a c)
+(tvdb--utils-array-select '(a c)
               '(((a . 1) (b . "b") (c . c))
                 ((a . 3) (b . "a") (c . d))))
 #+end_src
@@ -190,7 +190,7 @@ Same elements in each alist in a array consitute a column.
 Extract a column from an array.
 
 #+begin_src elisp
-(defun array-pull (field array)
+(defun tvdb--utils-array-pull (field array)
   "Keep only FIELD in every alist in the ARRAY and flatten."
 
   (--map (alist-get field it) array))
@@ -199,7 +199,7 @@ Extract a column from an array.
 Example:
 
 #+begin_src elisp
-(array-pull 'a
+(tvdb--utils-array-pull 'a
             '(((a . 1) (b . 2)) ((a . 3) (b . 4))))
 #+end_src
 
@@ -208,7 +208,7 @@ Example:
 Get (current-time) as an epoch.
 
 #+begin_src elisp
-(defun current-epoch ()
+(defun tvdb--utils-current-epoch ()
     "Get (current-time) as an epoch."
 
     (string-to-number (format-time-string "%s" (current-time))))
@@ -219,17 +219,19 @@ fromTime in ~update~ and lastUpdated ou are epochs.
 However, firstAired for series and episodes is a date, and needs to be compared to current-epoch
 
 #+begin_src elisp
-(defun date-to-epoch (date)
+(defun tvdb--utils-date-to-epoch (date)
   "Convert DATE to an epoch."
 
   (->> (concat date " 00:00:00")
-      datetime-to-epoch))
+       date-to-time
+       (format-time-string "%s")
+       (string-to-number)))
 #+end_src
 Example:
 
 #+begin_src elisp
-(date-to-epoch "2020-01-01")
-(current-epoch)
+(tvdb--utils-date-to-epoch "2020-01-01")
+(tvdb--utils-current-epoch)
 #+end_src
 
 *** search
@@ -245,13 +247,13 @@ Keep elements:
 - overview :: description
 
 #+begin_src elisp
-(defun search (token seriesName)
+(defun tvdb--search (token seriesName)
   "Search for SERIESNAME.
-Needs a TOKEN to work. The TOKEN can be obtained using the LOGIN function."
+Needs a TOKEN to work. The TOKEN can be obtained using the TVDB--LOGIN function."
 
   (->> seriesName
-      (tvdb token "/search/series?name=")
-      (array-select '(id
+      (tvdb--tvdb token "/search/series?name=")
+      (tvdb--utils-array-select '(id
                       seriesName
                       firstAired
                       status
@@ -262,7 +264,7 @@ Needs a TOKEN to work. The TOKEN can be obtained using the LOGIN function."
 For example:
 
 #+begin_src elisp
-(setq series-list (search tvdb--token "Game of Thrones"))
+(setq series-list (tvdb--search tvdb--token "Game of Thrones"))
 #+end_src
 
 *** series
@@ -276,14 +278,14 @@ Keep elements:
 - lastUpdated :: date of last update, as an epoch
 
 #+begin_src elisp
-(defun series (token id)
+(defun tvdb--series (token id)
   "Get informations about a specific series ID.
-Needs a TOKEN to work. The TOKEN can be obtained using the LOGIN function."
+Needs a TOKEN to work. The TOKEN can be obtained using the TVDB--LOGIN function."
 
   (->> id
       int-to-string
-      (tvdb token "/series/")
-      (alist-select '(id
+      (tvdb--tvdb token "/series/")
+      (tvdb--utils-alist-select '(id
                       seriesName
                       status
                       lastUpdated))))
@@ -292,7 +294,7 @@ Needs a TOKEN to work. The TOKEN can be obtained using the LOGIN function."
 For example:
 
 #+begin_src elisp
-(setq serie (series tvdb--token 121361))
+(setq serie (tvdb--series tvdb--token 121361))
 #+end_src
 
 *** series/episodes
@@ -317,24 +319,24 @@ The episode list is paginated, so there are a few steps to retrieve the whole ep
 First let's get any page of results.
 
 #+begin_src elisp
-(defun series/episodes1Page (token id page)
+(defun tvdb--series/episodes1Page (token id page)
   "Get one page of results for episodes in a series.
 
-Needs a TOKEN to work. The TOKEN can be obtained using the LOGIN function.
+Needs a TOKEN to work. The TOKEN can be obtained using the TVDB--LOGIN function.
 PAGE is the queried page."
 
-  (_tvdb token (concat "/series/" (int-to-string id) "/episodes?page=" (int-to-string page))))
+  (tvdb--tvdb-raw token (concat "/series/" (int-to-string id) "/episodes?page=" (int-to-string page))))
 #+end_src
 
 Let's also get the number of pages. This will help us retrieve only the needed results when updating later.
 
 #+begin_src elisp
-(defun series/episodesLastPage (token id)
+(defun tvdb--series/episodesLastPage (token id)
   "Get the number of pages of results for the episodes of series ID.
 
-Needs a TOKEN to work. The TOKEN can be obtained using the LOGIN function. "
+Needs a TOKEN to work. The TOKEN can be obtained using the TVDB--LOGIN function. "
 
-  (->> (series/episodes1Page token id 1)
+  (->> (tvdb--series/episodes1Page token id 1)
        (alist-get 'links)
        (alist-get 'last)))
 #+end_src
@@ -342,19 +344,19 @@ Needs a TOKEN to work. The TOKEN can be obtained using the LOGIN function. "
 **** Recursively append the results in the ~next~ page.
 
 #+begin_src elisp
-(defun series/episodesPage (token id page acc)
+(defun tvdb--series/episodesPage (token id page acc)
   "Get the whole episode list of show ID recursively.
 
-Needs a TOKEN to work. The TOKEN can be obtained using the LOGIN function.
+Needs a TOKEN to work. The TOKEN can be obtained using the TVDB--LOGIN function.
 PAGE is the current queried page and ACC the accumulator."
 
-  (let* ((query (series/episodes1Page token id page))
+  (let* ((query (tvdb--series/episodes1Page token id page))
          (next (->> query
                     (alist-get 'links)
                     (alist-get 'next)))
          (data (->> query
                     (alist-get 'data)
-                    (array-select '(id
+                    (tvdb--utils-array-select '(id
                                     absoluteNumber
                                     airedSeason
                                     airedEpisodeNumber
@@ -363,7 +365,7 @@ PAGE is the current queried page and ACC the accumulator."
                                     siteRating
                                     siteRatingCount)))))
     (if next
-        (series/episodesPage token id next (append acc data))
+        (tvdb--series/episodesPage token id next (append acc data))
       (append acc data))))
 #+end_src
 
@@ -373,12 +375,12 @@ The results contain special episodes and are unsorted.
 Filter out episodes with ~airedSeason~ = 0, and sort according to ~absoluteNumber~.
 
 #+begin_src elisp
-(defun series/episodes (token id &optional startPage)
+(defun tvdb--series/episodes (token id &optional startPage)
   "Get all episodes for a specific series ID.
-Needs a TOKEN to work. The TOKEN can be obtained using the LOGIN function.
+Needs a TOKEN to work. The TOKEN can be obtained using the TVDB--LOGIN function.
 Optionally, begin at STARTPAGE instead of first page of results."
 
-  (->> (series/episodesPage token id (or startPage 1) nil)
+  (->> (tvdb--series/episodesPage token id (or startPage 1) nil)
        (--filter (> (alist-get 'airedSeason it) 0))
        (--sort (< (alist-get 'absoluteNumber it)
                   (alist-get 'absoluteNumber other)))))
@@ -387,8 +389,8 @@ Optionally, begin at STARTPAGE instead of first page of results."
 For example, all episodes from Game of Thrones:
 
 #+begin_src elisp
-(setq episodes (series/episodes tvdb--token 121361))
-(series/episodes tvdb--token 121361 2)
+(setq episodes (tvdb--series/episodes tvdb--token 121361))
+(tvdb--series/episodes tvdb--token 121361 2)
 #+end_src
 
 *** update
@@ -400,35 +402,35 @@ The API only returns data for a period of *one week* after ~fromTime~ (as an epo
 Query one week of updates.
 
 #+begin_src elisp
-(defun _update (token fromTime)
+(defun tvdb--update-one-week (token fromTime)
   "Return an array of series that have changed in the week after FROMTIME.
-Needs a TOKEN to work. The TOKEN can be obtained using the LOGIN function."
+Needs a TOKEN to work. The TOKEN can be obtained using the TVDB--LOGIN function."
 
   (->> fromTime
-       (tvdb token "/updated/query?fromTime=")))
+       (tvdb--tvdb token "/updated/query?fromTime=")))
 #+end_src
 
-Call ~_update~ for every week from ~fromTime~ to ~(current-time)~.
+Call ~tvdb--update-one-week~ for every week from ~fromTime~ to ~(current-time)~.
 ~fromTime~ needs to be given as an epoch.
 
 #+begin_src elisp
-(defun update (token fromTime)
+(defun tvdb--update (token fromTime)
   "Return an array of series that have changed since FROMTIME.
-Needs a TOKEN to work.  The TOKEN can be obtained using the LOGIN function."
+Needs a TOKEN to work.  The TOKEN can be obtained using the TVDB--LOGIN function."
   (->> (number-sequence
         fromTime
-        (current-epoch)
+        (tvdb--utils-current-epoch)
         (* 3600 24 7))
        (-map 'int-to-string)
-       (--map (_update token it))
+       (--map (tvdb--update-one-week token it))
        (car)))
 #+end_src
 
 For example, the updates in the last hour:
 
 #+begin_src elisp
-(setq updates (update tvdb--token (current-epoch)))
-(update tvdb--token "2020-05-01 00:00")
+(setq updates (tvdb--update tvdb--token (tvdb--utils-current-epoch)))
+(tvdb--update tvdb--token (tvdb--utils-date-to-epoch "2020-05-01 00:00"))
 #+end_src
 
 * Internal API
@@ -483,7 +485,7 @@ The token should be renewed prior to any query (or after a certain timeout?)
 (defun tvdb-renew-token ()
   "Renew the token in tvdb--token."
 
-  (setq tvdb--token (tvdb tvdb--token)))
+  (setq tvdb--token (tvdb--tvdb tvdb--token)))
 #+end_src
 
 #+begin_src elisp
@@ -498,7 +500,7 @@ Search a series by name.
 (defun tvdb-search (seriesName)
   "Search SERIESNAME."
 
-  (search tvdb--token seriesName))
+  (tvdb--search tvdb--token seriesName))
 #+end_src
 
 For example:
@@ -522,9 +524,9 @@ Adding an already existing series resets it."
   (setq tvdb--data
         (--> tvdb--data
             (--remove (= id (alist-get 'id it)) it)
-            (-snoc it (--> (series tvdb--token id)
-                          (-snoc it `(lastPage . ,(series/episodesLastPage tvdb--token id)))
-                          (-snoc it `(episodes ,@(series/episodes tvdb--token id))))))))
+            (-snoc it (--> (tvdb--series tvdb--token id)
+                          (-snoc it `(lastPage . ,(tvdb--series/episodesLastPage tvdb--token id)))
+                          (-snoc it `(episodes ,@(tvdb--series/episodes tvdb--token id))))))))
 #+end_src
 
 For example, add the previously searched series.
@@ -561,7 +563,7 @@ Get the list of series in ~tvdb--data~ without episodes.
 (defun tvdb-get-series ()
   "Get followed series."
 
-  (array-select '(id seriesName) tvdb--data))
+  (tvdb--utils-array-select '(id seriesName) tvdb--data))
 #+end_src
 
 #+begin_src elisp
@@ -705,7 +707,7 @@ Get list of all unwatched episodes that have already aired.
       (-map (lambda (series)
               (let ((outseries (-clone series)))
                 (setf (alist-get 'episodes outseries)
-                      (--remove (> (date-to-epoch (alist-get 'firstAired it)) (current-epoch))
+                      (--remove (> (tvdb--utils-date-to-epoch (alist-get 'firstAired it)) (tvdb--utils-current-epoch))
                                (alist-get 'episodes outseries)))
                 outseries)))))
 #+end_src
@@ -722,18 +724,18 @@ Update a single series.
 Retrieve all new episodes and add them to the series. Update all series properties.
 
 #+begin_src elisp
-(defun update-series (id)
+(defun tvdb--update-series (id)
   "Query new episodes for series ID, and add them to the list.
 Update the other series properties."
 
   (let* ((series (--find (= id (alist-get 'id it)) tvdb--data))
          (lastPage (alist-get 'lastPage series))
          (oldEpisodes (alist-get 'episodes series))
-         (allEpisodes (series/episodes tvdb--token id lastPage))
-         (newEpisodesId (-difference (array-pull 'id allEpisodes) (array-pull 'id oldEpisodes)))
+         (allEpisodes (tvdb--series/episodes tvdb--token id lastPage))
+         (newEpisodesId (-difference (tvdb--utils-array-pull 'id allEpisodes) (tvdb--utils-array-pull 'id oldEpisodes)))
          (newEpisodes (--filter (-contains? newEpisodesId (alist-get 'id it)) allEpisodes))
-         (newSeries (--> (series tvdb--token id)
-                         (-snoc it `(lastPage . ,(series/episodesLastPage tvdb--token id)))
+         (newSeries (--> (tvdb--series tvdb--token id)
+                         (-snoc it `(lastPage . ,(tvdb--series/episodesLastPage tvdb--token id)))
                          (-snoc it `(episodes ,@(append oldEpisodes newEpisodes))))))
     (setq tvdb--data
           (--> tvdb--data
@@ -751,13 +753,15 @@ Keep only series that are followed.
 Update new episodes."
 
   (-some->> tvdb--data
-    (array-pull 'lastUpdated)
+    (tvdb--utils-array-pull 'lastUpdated)
     -max
-    (update tvdb--token)
-    (array-pull 'id)
-    (-intersection (array-pull 'id (tvdb-get-series)))
-    (-map 'update-series)))
+    (tvdb--update tvdb--token)
+    (tvdb--utils-array-pull 'id)
+    (-intersection (tvdb--utils-array-pull 'id (tvdb-get-series)))
+    (-map 'tvdb--update-series)))
 #+end_src
+
+* Interface
 
 * Postamble
 
