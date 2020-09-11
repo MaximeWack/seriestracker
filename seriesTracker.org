@@ -763,6 +763,12 @@ Update new episodes."
 
 * Interface
 
+We have an API layer, and an internal representation layer.
+We now need a user layer, as an interface.
+We need to be able to transform the data into a buffer (ideally with navigation (imenu?) and folding (outline?))
+We need commands to act on the buffer : add series, delete series, reset series, update, un/watch episode / selection / all, watch till
+All of this needs to be wrapped in a mode.
+
 * Postamble
 
 #+begin_src elisp
