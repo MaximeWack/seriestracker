@@ -5,7 +5,7 @@
 * Preamble
 
 #+begin_src elisp
-;;; package --- Summary
+;;; seriesTracker.el --- Series tracker -*- lexical-binding: t; -*-
 ;; Package-Requires: ((dash "2.12.1"))
 ;;; Commentary:
 ;;; Code:
@@ -761,6 +761,33 @@ Update new episodes."
     (-map 'tvdb--update-series)))
 #+end_src
 
+*** save/load data
+
+Save and load the elisp object to /tvdb--file/.
+
+#+begin_src elisp
+(defvar tvdb--file
+  "~/.emacs.d/tvdb.el"
+  "Location of the save file")
+
+(defun tvdb--save ()
+  (with-temp-file tvdb--file
+    (prin1 tvdb--data (current-buffer))))
+
+(defun tvdb--load ()
+  (with-temp-buffer
+    (insert-file-contents tvdb--file)
+    (cl-assert (eq (point) (point-min)))
+    (setq tvdb--data (read (current-buffer)))))
+#+end_src
+
+
+#+begin_src elisp
+(tvdb--save)
+
+(tvdb--load)
+#+end_src
+
 * Interface
 
 We have an API layer, and an internal representation layer.
@@ -768,6 +795,37 @@ We now need a user layer, as an interface.
 We need to be able to transform the data into a buffer (ideally with navigation (imenu?) and folding (outline?))
 We need commands to act on the buffer : add series, delete series, reset series, update, un/watch episode / selection / all, watch till
 All of this needs to be wrapped in a mode.
+
+** Draw the buffer
+
+These are the functions that will convert the internal data representation to text in a buffer
+
+*** Display one episode
+
+#+begin_src elisp
+(defun tvdb--draw-episode (episode)
+
+)
+
+#+end_src
+
+** Create the mode
+
+This function will run the mode and switch to the dedicated buffer.
+
+#+begin_src elisp
+(defun tvdb ()
+  "Run TVDB"
+  (interactive)
+  (switch-to-buffer "tvdb")
+  (tvdb-mode))
+#+end_src
+
+And this will define the mode
+
+#+begin_src elisp
+(define-derived-mode tvdb-mode special-mode "tvdb")
+#+end_src
 
 * Postamble
 
