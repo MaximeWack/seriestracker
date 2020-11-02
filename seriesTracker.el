@@ -436,10 +436,11 @@ Erase first then redraw the whole buffer."
   (let ((id (alist-get 'id series))
         (name (alist-get 'seriesName series))
         (episodes (alist-get 'episodes series)))
-    (insert (concat "* " (int-to-string id) " - " name "\n"))
-    (-each episodes 'tvdb--draw-episode)))
+    (tvdb--insert-id id)
+    (insert (concat "* " name "\n"))
+    (--each episodes (tvdb--draw-episode id it))))
 
-(defun tvdb--draw-episode (episode)
+(defun tvdb--draw-episode (series episode)
   "Print the episode id, S**E**, and name."
 
   (let ((id (alist-get 'id episode))
@@ -448,8 +449,22 @@ Erase first then redraw the whole buffer."
         (name (alist-get 'episodeName episode))
         (watched (alist-get 'watched episode)))
     (when (= episode 1)
+      (tvdb--insert-id series season)
       (insert (concat "** Season " (int-to-string season) "\n")))
-    (insert (concat "- [" (if watched "X" " ") "] " (int-to-string id) " - S" (format "%02d" season) "E" (format "%02d" episode) " - " name "\n"))))
+    (let ((start (point)))
+      (tvdb--insert-id series season id)
+      (insert (concat "- S" (format "%02d" season) "E" (format "%02d" episode) " - " name "\n")))))
+
+(defun tvdb--insert-id (series &optional season episode)
+  "Insert the id and set the tvdb-id overlay."
+
+  (let ((start (point))
+        (id (cond (episode (concat (int-to-string series) "/" (int-to-string season) "/" (int-to-string episode)))
+                  (season (concat (int-to-string series) "/" (int-to-string season)))
+                  (t (int-to-string series)))))
+    (insert (concat id " "))
+    (let ((o (make-overlay start (point))))
+      (overlay-put o 'invisible 'tvdb-id))))
 
 ;;;; Create mode
 
