@@ -412,10 +412,15 @@ Update new episodes."
 (defun tvdb-refresh ()
   "Refresh the tvdb buffer.
 Updates the database and redraws the buffer."
+  (interactive)
 
-  (save-excursion
-    (tvdb-update)
-    (tvdb--draw-buffer)))
+  (if (and (string-equal (buffer-name) "tvdb") (string-equal mode-name "tvdb"))
+      (let ((line (line-number-at-pos)))
+        (tvdb-renew-token)
+        (tvdb-update)
+        (tvdb--draw-buffer)
+        (goto-line line))
+    (message "Not in tvdb buffer!")))
 
 (defun tvdb--draw-buffer ()
   "Draw the buffer.
