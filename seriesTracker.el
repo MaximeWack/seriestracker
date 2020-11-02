@@ -473,10 +473,15 @@ Erase first then redraw the whole buffer."
 
   (interactive)
   (switch-to-buffer "tvdb")
-  (tvdb-refresh)
-  (tvdb-mode))
+  (tvdb-mode)
+  (outline-minor-mode)
+  (setq-local outline-regexp "[0-9/]+ [*]+")
+  (tvdb-refresh))
 
-(define-derived-mode tvdb-mode special-mode "tvdb")
+(define-derived-mode tvdb-mode special-mode "tvdb"
+  "Series tracking with TheTVdbAPI."
+
+  (setq-local buffer-invisibility-spec '(tvdb-id)))
 
 ;;; Postamble
 
