@@ -11,16 +11,6 @@
 
 ;;; Helpers
 
-;;;; getJSON
-
-(defun tvdb--getJSON (url-buffer)
-  "Parse the JSON in the URL-BUFFER returned by url."
-
-  (with-current-buffer url-buffer
-    (goto-char (point-max))
-    (move-beginning-of-line 1)
-    (json-read-object)))
-
 ;;;; alist-select
 
 (defun tvdb--utils-alist-select (fields alist)
@@ -68,6 +58,16 @@ returns '(1 3)"
        date-to-time
        (format-time-string "%s")
        (string-to-number)))
+
+;;;; getJSON
+
+(defun tvdb--getJSON (url-buffer)
+  "Parse the JSON in the URL-BUFFER returned by url."
+
+  (with-current-buffer url-buffer
+    (goto-char (point-max))
+    (move-beginning-of-line 1)
+    (json-read-object)))
 
 ;;; tvdb API
 
