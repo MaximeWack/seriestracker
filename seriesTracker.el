@@ -241,9 +241,14 @@ Of the form :
 ;;;;; Renew token
 
 (defun tvdb-renew-token ()
-  "Renew the token in tvdb--token."
+  "Renew the token in tvdb--token.
+Check that the token is renewed, else try to login using the credentials in TVDB-USER, TVDB-APIKEY, and TVDB-USERKEY.
+If all fails, give an error message."
 
-  (setq tvdb--token (tvdb--tvdb)))
+  (setq tvdb--token (tvdb--tvdb))
+  (when (not tvdb--token)
+    (when (not (tvdb--login))
+      (message "Couldn't login to TheTVdbAPI. Please check tvdb-user, tvdb-apikey, and tvdb-userkey."))))
 
 ;;;;; Search series
 
