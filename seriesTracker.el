@@ -73,20 +73,32 @@ returns '(1 3)"
 
 ;;;; Login
 
+(defvar tvdb-user
+  nil
+  "TheTVdbAPI Username")
+
+(defvar tvdb-apikey
+  nil
+  "TheTVdbAPI API key")
+
+(defvar tvdb-userkey
+  nil
+  "TheTVdbAPI user key")
+
 (defvar tvdb--token
   nil
   "Auth token")
 
-(defun tvdb--login (username apikey userkey)
-  "Login using USERNAME, APIKEY and USERKEY.
+(defun tvdb--login ()
+  "Login using TVDB-USER, TVDB-APIKEY and TVDB-USERKEY.
 Sets tvdb--token."
 
   (->> (let ((url-request-method "POST")
             (url-request-extra-headers '(("Content-Type" . "application/json")
                                          ("Accept" . "application/json")))
-            (url-request-data (concat "{\"apikey\": \"" apikey "\", \"userkey\": \"" userkey "\", \"username\": \"" username "\" }"))
+            (url-request-data (concat "{\"apikey\": \"" tvdb-apikey "\", \"userkey\": \"" tvdb-userkey "\", \"username\": \"" tvdb-user "\" }"))
             (url-show-status nil))
-        (url-retrieve-synchronously "https://api.thetvdb.com/login" t))
+        (url-retrieve-synchronously "https://api.thetvdb.com/login" t nil 2))
       tvdb--getJSON
       (alist-get 'token)
       (setq tvdb--token)))
@@ -490,9 +502,9 @@ Erase first then redraw the whole buffer."
 
 ;;; Example
 
-(tvdb--login "maximewack"
-             "0c737339fe858fadb896104543d0845b"
-             "5DDF090101B740.38233217")
+(setq tvdb-user "maximewack")
+(setq tvdb-apikey "0c737339fe858fadb896104543d0845b")
+(setq tvdb-userkey "5DDF090101B740.38233217")
 
 (tvdb-renew-token)
 
