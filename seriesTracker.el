@@ -491,7 +491,10 @@ Erase first then redraw the whole buffer."
       (let ((start (point)))
         (insert (concat (format "%02d" episode) " - " name "\n"))
         (when watched
-          (put-text-property start (point) 'face 'tvdb-watched))))))
+          (put-text-property start (point) 'face 'tvdb-watched)
+          (put-text-property start (point) 'invisible 'tvdb-watched))))))
+
+
 
 (defun tvdb--insert-id (series &optional season episode)
   "Insert the id and set the tvdb-id overlay."
@@ -501,8 +504,7 @@ Erase first then redraw the whole buffer."
                   (season (concat (int-to-string series) "/" (int-to-string season)))
                   (t (int-to-string series)))))
     (insert (concat id " "))
-    (let ((o (make-overlay start (point))))
-      (overlay-put o 'invisible 'tvdb-id))))
+    (put-text-property start (point) 'invisible 'tvdb-id nil)))
 
 ;;;; Create mode
 
