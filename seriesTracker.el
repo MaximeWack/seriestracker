@@ -206,12 +206,12 @@ If not present or invalid token, try refreshing the token or re-logging."
 ;;;;; update
 
 (defun tvdb--update-one-week (fromTime)
-  "Return an array of series that have changed in the week after FROMTIME."
+  "Return an array of series that have changed in the week after FROMTIME (datetime)."
 
   (tvdb--tvdb "/updated/query?fromTime=" fromTime))
 
 (defun tvdb--update (fromTime)
-  "Return an array of series that have changed since FROMTIME."
+  "Return an array of series that have changed since FROMTIME (epoch)."
 
   (->> (number-sequence
         fromTime
