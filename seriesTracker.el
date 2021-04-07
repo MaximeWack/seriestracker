@@ -427,11 +427,11 @@ Update new episodes."
 ;;;; Faces
 
 (defface tvdb-series
-  '((t :inherit outline-1))
+  '((t (:height 1.9 :weight bold :foreground "DeepSkyBlue")))
   "Face for series names")
 
 (defface tvdb-season
-  '((t :inherit outline-2))
+  '((t (:height 1.7 :weight bold :foreground "MediumPurple")))
   "Face for seasons")
 
 (defface tvdb-watched
