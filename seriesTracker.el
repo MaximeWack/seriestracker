@@ -118,7 +118,7 @@ If not present or invalid token, try refreshing the token or re-logging."
           (url-request-extra-headers `(("Accept" . "application/json")
                                        ("Authorization" . ,bearer)))
           (url-show-status nil))
-     (url-retrieve-synchronously (concat "https://api.thetvdb.com" params)))))
+     (url-retrieve-synchronously (concat "https://api.thetvdb.com" params) nil nil 2))))
 
 (defun tvdb--tvdb (&rest params)
   "Generic function to query tvdbapi."
