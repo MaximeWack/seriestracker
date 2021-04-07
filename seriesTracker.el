@@ -424,6 +424,20 @@ Update new episodes."
 
 ;;; Interface
 
+;;;; Faces
+
+(defface tvdb-series
+  '((t :inherit outline-1))
+  "Face for series names")
+
+(defface tvdb-season
+  '((t :inherit outline-2))
+  "Face for seasons")
+
+(defface tvdb-watched
+  '((t (:foreground "DimGrey" :strike-through t)))
+  "Face for watched episodes")
+
 ;;;; Draw buffer
 
 (defun tvdb-refresh ()
@@ -454,7 +468,9 @@ Erase first then redraw the whole buffer."
         (name (alist-get 'seriesName series))
         (episodes (alist-get 'episodes series)))
     (tvdb--insert-id id)
-    (insert (concat "* " name "\n"))
+    (let ((start (point)))
+      (insert (concat name "\n"))
+      (put-text-property start (point) 'face 'tvdb-series))
     (--each episodes (tvdb--draw-episode id it))))
 
 (defun tvdb--draw-episode (series episode)
@@ -467,10 +483,15 @@ Erase first then redraw the whole buffer."
         (watched (alist-get 'watched episode)))
     (when (= episode 1)
       (tvdb--insert-id series season)
-      (insert (concat "** Season " (int-to-string season) "\n")))
+      (let ((start (point)))
+        (insert (concat "Season " (int-to-string season) "\n"))
+        (put-text-property start (point) 'face 'tvdb-season)))
     (let ((start (point)))
       (tvdb--insert-id series season id)
-      (insert (concat "- S" (format "%02d" season) "E" (format "%02d" episode) " - " name "\n")))))
+      (let ((start (point)))
+        (insert (concat (format "%02d" episode) " - " name "\n"))
+        (when watched
+          (put-text-property start (point) 'face 'tvdb-watched))))))
 
 (defun tvdb--insert-id (series &optional season episode)
   "Insert the id and set the tvdb-id overlay."
