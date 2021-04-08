@@ -467,10 +467,13 @@ Erase first then redraw the whole buffer."
   (let ((id (alist-get 'id series))
         (name (alist-get 'seriesName series))
         (episodes (alist-get 'episodes series)))
-    (tvdb--insert-id id)
     (let ((start (point)))
       (insert (concat name "\n"))
-      (put-text-property start (point) 'face 'tvdb-series))
+      (set-text-properties start (point)
+                           `(face tvdb-series
+                                  tvdb-series ,id
+                                  tvdb-season nil
+                                  tvdb-episode nil)))
     (--each episodes (tvdb--draw-episode id it))))
 
 (defun tvdb--draw-episode (series episode)
@@ -480,31 +483,38 @@ Erase first then redraw the whole buffer."
         (season (alist-get 'airedSeason episode))
         (episode (alist-get 'airedEpisodeNumber episode))
         (name (alist-get 'episodeName episode))
+        (firstAired (alist-get 'firstAired episode))
         (watched (alist-get 'watched episode)))
     (when (= episode 1)
-      (tvdb--insert-id series season)
       (let ((start (point)))
         (insert (concat "Season " (int-to-string season) "\n"))
-        (put-text-property start (point) 'face 'tvdb-season)))
+        (set-text-properties start (point)
+                             `(face tvdb-season
+                                    tvdb-series ,series
+                                    tvdb-season ,season
+                                    tvdb-episode nil))))
     (let ((start (point)))
-      (tvdb--insert-id series season id)
       (let ((start (point)))
-        (insert (concat (format "%02d" episode) " - " name "\n"))
-        (when watched
-          (put-text-property start (point) 'face 'tvdb-watched)
-          (put-text-property start (point) 'invisible 'tvdb-watched))))))
+        (insert firstAired)
+        (let ((end-date (point)))
+          (insert (concat " " (format "%02d" episode) " - " name "\n"))
+          (set-text-properties start (point)
+                               `(face default
+                                      tvdb-series ,series
+                                      tvdb-season ,season
+                                      tvdb-episode ,id))
+          (put-text-property start end-date 'face '(t ((:foreground "MediumSpringGreen")))))
+          (when watched
+            (set-text-properties start (point)
+                                 `(face tvdb-watched
+                                        tvdb-series ,series
+                                        tvdb-season ,season
+                                        tvdb-episode ,id
+                                        invisible tvdb-watched))))))))
 
 
 
-(defun tvdb--insert-id (series &optional season episode)
-  "Insert the id and set the tvdb-id overlay."
 
-  (let ((start (point))
-        (id (cond (episode (concat (int-to-string series) "/" (int-to-string season) "/" (int-to-string episode)))
-                  (season (concat (int-to-string series) "/" (int-to-string season)))
-                  (t (int-to-string series)))))
-    (insert (concat id " "))
-    (put-text-property start (point) 'invisible 'tvdb-id nil)))
 
 ;;;; Create mode
 
@@ -521,7 +531,7 @@ Erase first then redraw the whole buffer."
 (define-derived-mode tvdb-mode special-mode "tvdb"
   "Series tracking with TheTVdbAPI."
 
-  (setq-local buffer-invisibility-spec '(tvdb-id)))
+  (setq-local buffer-invisibility-spec '(t tvdb-folded)))
 
 ;;; Postamble
 
