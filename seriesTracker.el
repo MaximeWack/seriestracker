@@ -285,14 +285,6 @@ Adding an already existing series resets it."
 
   (tvdb--utils-array-select '(id seriesName) tvdb--data))
 
-;;;;; Get series episodes
-
-(defun tvdb-get-episodes (id)
-  "Get episodes of series with ID."
-
-  (alist-get 'episodes
-             (--find (= id (alist-get 'id it)) tvdb--data)))
-
 ;;;;; Watch episode
 
 (defun tvdb-watch (seriesId episodeId)
@@ -345,33 +337,6 @@ Adding an already existing series resets it."
                                          (setf (alist-get 'watched episode) t)
                                          episode)
                                        (alist-get 'episodes series))))))))
-
-;;;;; Upcoming episodes
-
-(defun tvdb-upcoming ()
-  "List upcoming episodes."
-
-  (->> tvdb--data
-      (-map (lambda (series)
-              (let ((outseries (-clone series)))
-                (setf (alist-get 'episodes outseries)
-                      (--filter (equal nil (alist-get 'watched it))
-                               (alist-get 'episodes outseries)))
-                outseries)))
-      (--remove (equal nil (alist-get 'episodes it)))))
-
-;;;;; Episodes to watch
-
-(defun tvdb-to-watch ()
-  "List of episodes to watch."
-
-  (->> (tvdb-upcoming)
-      (-map (lambda (series)
-              (let ((outseries (-clone series)))
-                (setf (alist-get 'episodes outseries)
-                      (--remove (> (tvdb--utils-date-to-epoch (alist-get 'firstAired it)) (tvdb--utils-current-epoch))
-                               (alist-get 'episodes outseries)))
-                outseries)))))
 
 ;;;;; Query updates
 
@@ -636,10 +601,6 @@ Erase first then redraw the whole buffer."
 (tvdb-watch-up 275274 6231155)
 
 (tvdb-update)
-
-(tvdb-upcoming)
-
-(tvdb-to-watch)
 
 (tvdb--save)
 
