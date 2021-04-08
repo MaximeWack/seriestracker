@@ -512,9 +512,81 @@ Erase first then redraw the whole buffer."
                                         tvdb-episode ,id
                                         invisible tvdb-watched))))))))
 
+;;;; Folding
 
+(defun tvdb-fold-at-point ()
+  "Fold the section at point."
 
+  (interactive)
 
+  (if (and (string-equal (buffer-name) "tvdb") (string-equal mode-name "tvdb"))
+      (let ((inhibit-read-only t)
+            (series (get-text-property (point) 'tvdb-series))
+            (season (get-text-property (point) 'tvdb-season))
+            (episode (get-text-property (point) 'tvdb-episode)))
+        (cond (episode (tvdb-fold-episodes))
+              (season (tvdb-fold-season))
+              (t (tvdb-fold-series))))
+    (message "Not in tvdb buffer!")))
+
+(defun tvdb-fold-episodes ()
+  "Fold the episodes at point."
+
+  (let* ((season-start (previous-single-property-change (point) 'tvdb-season))
+         (fold-start (next-single-property-change season-start 'tvdb-episode))
+         (fold-end (next-single-property-change (point) 'tvdb-season nil (point-max))))
+    (put-text-property fold-start fold-end 'invisible 'tvdb-folded nil)))
+
+(defun tvdb-fold-season ()
+  "Fold the season at point."
+
+  (let* ((fold-start (next-single-property-change (point) 'tvdb-episode))
+         (fold-end (next-single-property-change (point) 'tvdb-season nil (point-max))))
+    (put-text-property fold-start fold-end 'invisible 'tvdb-folded nil)))
+
+(defun tvdb-fold-series ()
+  "Fold the series at point."
+
+  (let* ((fold-start (next-single-property-change (point) 'tvdb-season))
+         (fold-end (next-single-property-change (point) 'tvdb-series nil (point-max))))
+    (put-text-property fold-start fold-end 'invisible 'tvdb-folded nil)))
+
+(defun tvdb-unfold-at-point ()
+  "Unfold the section at point."
+
+  (interactive)
+
+  (if (and (string-equal (buffer-name) "tvdb") (string-equal mode-name "tvdb"))
+      (let ((inhibit-read-only t)
+            (series (get-text-property (point) 'tvdb-series))
+            (season (get-text-property (point) 'tvdb-season))
+            (episode (get-text-property (point) 'tvdb-episode)))
+        (cond (season (tvdb-unfold-season))
+              (t (tvdb-unfold-series))))
+    (message "Not in tvdb buffer!")))
+
+(defun tvdb-unfold-season ()
+  "Fold the season at point."
+
+  (let* ((fold-start (next-single-property-change (point) 'tvdb-episode))
+         (fold-end (next-single-property-change (point) 'tvdb-season nil (point-max))))
+    (put-text-property fold-start fold-end 'invisible nil nil)))
+
+(defun tvdb-unfold-series ()
+  "Fold the series at point."
+
+  (let* ((fold-start (next-single-property-change (point) 'tvdb-season))
+         (fold-end (next-single-property-change (point) 'tvdb-series nil (point-max))))
+    (put-text-property fold-start fold-end 'invisible nil nil)))
+
+(defun tvdb-switch-watched ()
+  "Switch visibility for watched episodes."
+
+  (interactive)
+
+  (if (-contains? buffer-invisibility-spec 'tvdb-watched)
+      (setq-local buffer-invisibility-spec '(t tvdb-folded))
+    (setq-local buffer-invisibility-spec '(t tvdb-folded tvdb-watched))))
 
 ;;;; Create mode
 
@@ -524,8 +596,6 @@ Erase first then redraw the whole buffer."
   (interactive)
   (switch-to-buffer "tvdb")
   (tvdb-mode)
-  (outline-minor-mode)
-  (setq-local outline-regexp "[0-9/]+ [*]+")
   (tvdb-refresh))
 
 (define-derived-mode tvdb-mode special-mode "tvdb"
@@ -536,7 +606,6 @@ Erase first then redraw the whole buffer."
 ;;; Postamble
 
 (provide 'seriesTracker)
-
 
 ;;; Example
 
