@@ -463,23 +463,22 @@ Erase first then redraw the whole buffer."
                                     tvdb-season ,season
                                     tvdb-episode nil))))
     (let ((start (point)))
-      (let ((start (point)))
-        (insert firstAired)
-        (let ((end-date (point)))
-          (insert (concat " " (format "%02d" episode) " - " name "\n"))
-          (set-text-properties start (point)
-                               `(face default
-                                      tvdb-series ,series
-                                      tvdb-season ,season
-                                      tvdb-episode ,id))
-          (put-text-property start end-date 'face '(t ((:foreground "MediumSpringGreen")))))
-          (when watched
-            (set-text-properties start (point)
-                                 `(face tvdb-watched
-                                        tvdb-series ,series
-                                        tvdb-season ,season
-                                        tvdb-episode ,id
-                                        invisible tvdb-watched)))))))
+      (insert firstAired)
+      (let ((end-date (point)))
+        (insert (concat " " (format "%02d" episode) " - " name "\n"))
+        (set-text-properties start (point)
+                             `(face default
+                                    tvdb-series ,series
+                                    tvdb-season ,season
+                                    tvdb-episode ,id))
+        (put-text-property start end-date 'face '(t ((:foreground "MediumSpringGreen")))))
+      (when watched
+        (set-text-properties start (point)
+                             `(face tvdb-watched
+                                    tvdb-series ,series
+                                    tvdb-season ,season
+                                    tvdb-episode ,id
+                                    invisible tvdb-watched))))))
 
 ;;;; Movements
 
@@ -495,7 +494,7 @@ Erase first then redraw the whole buffer."
             (episode (get-text-property (point) 'tvdb-episode)))
         (cond (episode (goto-char (previous-single-property-change (point) 'tvdb-season)))
               (season (goto-char (previous-single-property-change (point) 'tvdb-series))))
-    (message "Not in tvdb buffer!")))
+    (message "Not in tvdb buffer!"))))
 
 (defun tvdb-prev ()
   "Move up in the hierarchy."
