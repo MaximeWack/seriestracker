@@ -475,7 +475,7 @@ Erase first then redraw the whole buffer."
                                         tvdb-series ,series
                                         tvdb-season ,season
                                         tvdb-episode ,id
-                                        invisible tvdb-watched))))))))
+                                        invisible tvdb-watched)))))))
 
 ;;;; Movements
 
