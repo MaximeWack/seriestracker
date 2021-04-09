@@ -424,7 +424,11 @@ Erase first then redraw the whole buffer."
 
   (let ((inhibit-read-only t))
     (erase-buffer)
-    (-each tvdb--data 'tvdb--draw-series)))
+    (insert "0")
+    (put-text-property (point-min) (point) 'invisible t)
+    (put-text-property (point-min) (point) 'tvdb-series 0)
+    (-each tvdb--data 'tvdb--draw-series)
+    (delete-char (- 1))))
 
 (defun tvdb--draw-series (series)
   "Print the series id and name."
@@ -490,7 +494,7 @@ Erase first then redraw the whole buffer."
             (season (get-text-property (point) 'tvdb-season))
             (episode (get-text-property (point) 'tvdb-episode)))
         (cond (episode (goto-char (previous-single-property-change (point) 'tvdb-season)))
-              (season (goto-char (previous-single-property-change (point) 'tvdb-series nil (point-min))))))
+              (season (goto-char (previous-single-property-change (point) 'tvdb-series))))
     (message "Not in tvdb buffer!")))
 
 (defun tvdb-prev ()
@@ -504,8 +508,8 @@ Erase first then redraw the whole buffer."
             (season (get-text-property (point) 'tvdb-season))
             (episode (get-text-property (point) 'tvdb-episode)))
         (cond (episode (goto-char (previous-single-property-change (point) 'tvdb-season)))
-              (season (goto-char (previous-single-property-change (point) 'tvdb-season nil (point-min))))
-              (series (goto-char (previous-single-property-change (point) 'tvdb-season nil (point-min))))))
+              (season (goto-char (previous-single-property-change (point) 'tvdb-season)))
+              (series (goto-char (previous-single-property-change (point) 'tvdb-season)))))
     (message "Not in tvdb buffer!")))
 
 (defun tvdb-next ()
@@ -519,8 +523,8 @@ Erase first then redraw the whole buffer."
             (season (get-text-property (point) 'tvdb-season))
             (episode (get-text-property (point) 'tvdb-episode)))
         (cond (episode (goto-char (next-single-property-change (point) 'tvdb-season)))
-              (season (goto-char (next-single-property-change (point) 'tvdb-season nil (point-max))))
-              (series (goto-char (next-single-property-change (point) 'tvdb-season nil (point-max))))))
+              (season (goto-char (next-single-property-change (point) 'tvdb-season)))
+              (series (goto-char (next-single-property-change (point) 'tvdb-season)))))
     (message "Not in tvdb buffer!")))
 
 
@@ -535,8 +539,8 @@ Erase first then redraw the whole buffer."
             (season (get-text-property (point) 'tvdb-season))
             (episode (get-text-property (point) 'tvdb-episode)))
         (cond (episode (goto-char (previous-single-property-change (point) 'tvdb-season)))
-              (season (goto-char (previous-single-property-change (point) 'tvdb-season nil (point-min))))
-              (series (goto-char (previous-single-property-change (point) 'tvdb-series nil (point-min))))))
+              (season (goto-char (previous-single-property-change (point) 'tvdb-season)))
+              (series (goto-char (previous-single-property-change (point) 'tvdb-series)))))
     (message "Not in tvdb buffer!")))
 
 (defun tvdb-next-same ()
@@ -550,8 +554,8 @@ Erase first then redraw the whole buffer."
             (season (get-text-property (point) 'tvdb-season))
             (episode (get-text-property (point) 'tvdb-episode)))
         (cond (episode (goto-char (next-single-property-change (point) 'tvdb-season)))
-              (season (goto-char (next-single-property-change (point) 'tvdb-season nil (point-max))))
-              (series (goto-char (next-single-property-change (point) 'tvdb-series nil (point-max))))))
+              (season (goto-char (next-single-property-change (point) 'tvdb-season)))
+              (series (goto-char (next-single-property-change (point) 'tvdb-series)))))
     (message "Not in tvdb buffer!")))
 
 ;;;; Folding
@@ -643,7 +647,24 @@ Erase first then redraw the whole buffer."
 (define-derived-mode tvdb-mode special-mode "tvdb"
   "Series tracking with TheTVdbAPI."
 
-  (setq-local buffer-invisibility-spec '(t tvdb-folded)))
+  (defun imenu-prev ()
+    "imenu-prev-index-position-function for tvdb."
+
+    (let ((newpos (previous-single-property-change (point) 'tvdb-series)))
+      (if newpos
+          (goto-char newpos)
+        nil)))
+
+  (defun imenu-name ()
+    "imenu-extract-index-name-function for tvdb."
+
+    (let ((start (point)))
+      (end-of-line)
+      (buffer-substring start (point))))
+
+  (setq-local buffer-invisibility-spec '(t tvdb-folded))
+  (setq-local imenu-prev-index-position-function 'imenu-prev)
+  (setq-local imenu-extract-index-name-function 'imenu-name))
 
 ;;; Postamble
 
