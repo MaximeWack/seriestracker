@@ -477,6 +477,83 @@ Erase first then redraw the whole buffer."
                                         tvdb-episode ,id
                                         invisible tvdb-watched))))))))
 
+;;;; Movements
+
+(defun tvdb-up ()
+  "Move up in the hierarchy."
+
+  (interactive)
+
+  (if (and (string-equal (buffer-name) "tvdb") (string-equal mode-name "tvdb"))
+      (let ((inhibit-read-only t)
+            (series (get-text-property (point) 'tvdb-series))
+            (season (get-text-property (point) 'tvdb-season))
+            (episode (get-text-property (point) 'tvdb-episode)))
+        (cond (episode (goto-char (previous-single-property-change (point) 'tvdb-season)))
+              (season (goto-char (previous-single-property-change (point) 'tvdb-series nil (point-min))))))
+    (message "Not in tvdb buffer!")))
+
+(defun tvdb-prev ()
+  "Move up in the hierarchy."
+
+  (interactive)
+
+  (if (and (string-equal (buffer-name) "tvdb") (string-equal mode-name "tvdb"))
+      (let ((inhibit-read-only t)
+            (series (get-text-property (point) 'tvdb-series))
+            (season (get-text-property (point) 'tvdb-season))
+            (episode (get-text-property (point) 'tvdb-episode)))
+        (cond (episode (goto-char (previous-single-property-change (point) 'tvdb-season)))
+              (season (goto-char (previous-single-property-change (point) 'tvdb-season nil (point-min))))
+              (series (goto-char (previous-single-property-change (point) 'tvdb-season nil (point-min))))))
+    (message "Not in tvdb buffer!")))
+
+(defun tvdb-next ()
+  "Move up in the hierarchy."
+
+  (interactive)
+
+  (if (and (string-equal (buffer-name) "tvdb") (string-equal mode-name "tvdb"))
+      (let ((inhibit-read-only t)
+            (series (get-text-property (point) 'tvdb-series))
+            (season (get-text-property (point) 'tvdb-season))
+            (episode (get-text-property (point) 'tvdb-episode)))
+        (cond (episode (goto-char (next-single-property-change (point) 'tvdb-season)))
+              (season (goto-char (next-single-property-change (point) 'tvdb-season nil (point-max))))
+              (series (goto-char (next-single-property-change (point) 'tvdb-season nil (point-max))))))
+    (message "Not in tvdb buffer!")))
+
+
+(defun tvdb-prev-same ()
+  "Move up in the hierarchy."
+
+  (interactive)
+
+  (if (and (string-equal (buffer-name) "tvdb") (string-equal mode-name "tvdb"))
+      (let ((inhibit-read-only t)
+            (series (get-text-property (point) 'tvdb-series))
+            (season (get-text-property (point) 'tvdb-season))
+            (episode (get-text-property (point) 'tvdb-episode)))
+        (cond (episode (goto-char (previous-single-property-change (point) 'tvdb-season)))
+              (season (goto-char (previous-single-property-change (point) 'tvdb-season nil (point-min))))
+              (series (goto-char (previous-single-property-change (point) 'tvdb-series nil (point-min))))))
+    (message "Not in tvdb buffer!")))
+
+(defun tvdb-next-same ()
+  "Move up in the hierarchy."
+
+  (interactive)
+
+  (if (and (string-equal (buffer-name) "tvdb") (string-equal mode-name "tvdb"))
+      (let ((inhibit-read-only t)
+            (series (get-text-property (point) 'tvdb-series))
+            (season (get-text-property (point) 'tvdb-season))
+            (episode (get-text-property (point) 'tvdb-episode)))
+        (cond (episode (goto-char (next-single-property-change (point) 'tvdb-season)))
+              (season (goto-char (next-single-property-change (point) 'tvdb-season nil (point-max))))
+              (series (goto-char (next-single-property-change (point) 'tvdb-series nil (point-max))))))
+    (message "Not in tvdb buffer!")))
+
 ;;;; Folding
 
 (defun tvdb-fold-at-point ()
