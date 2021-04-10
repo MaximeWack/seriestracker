@@ -322,80 +322,76 @@ Erase first then redraw the whole buffer."
 
 ;;;; Movements
 
-(defun tvdb-up ()
+(defun st-up ()
   "Move up in the hierarchy."
 
   (interactive)
 
-  (if (and (string-equal (buffer-name) "tvdb") (string-equal mode-name "tvdb"))
+  (if (and (string-equal (buffer-name) "st") (string-equal mode-name "st"))
       (let ((inhibit-read-only t)
-            (series (get-text-property (point) 'tvdb-series))
-            (season (get-text-property (point) 'tvdb-season))
-            (episode (get-text-property (point) 'tvdb-episode)))
-        (cond (episode (goto-char (previous-single-property-change (point) 'tvdb-season)))
-              (season (goto-char (previous-single-property-change (point) 'tvdb-series))))
-    (message "Not in tvdb buffer!"))))
+            (series (get-text-property (point) 'st-series))
+            (season (get-text-property (point) 'st-season))
+            (episode (get-text-property (point) 'st-episode)))
+        (cond (episode (goto-char (previous-single-property-change (point) 'st-season)))
+              (season (goto-char (previous-single-property-change (point) 'st-series))))
+    (message "Not in st buffer!"))))
 
-(defun tvdb-prev ()
+(defun st-prev ()
   "Move up in the hierarchy."
 
   (interactive)
 
-  (if (and (string-equal (buffer-name) "tvdb") (string-equal mode-name "tvdb"))
+  (if (and (string-equal (buffer-name) "st") (string-equal mode-name "st"))
       (let ((inhibit-read-only t)
-            (series (get-text-property (point) 'tvdb-series))
-            (season (get-text-property (point) 'tvdb-season))
-            (episode (get-text-property (point) 'tvdb-episode)))
-        (cond (episode (goto-char (previous-single-property-change (point) 'tvdb-season)))
-              (season (goto-char (previous-single-property-change (point) 'tvdb-season)))
-              (series (goto-char (previous-single-property-change (point) 'tvdb-season)))))
-    (message "Not in tvdb buffer!")))
+            (series (get-text-property (point) 'st-series))
+            (season (get-text-property (point) 'st-season))
+            (episode (get-text-property (point) 'st-episode)))
+        (goto-char (previous-single-property-change (point) 'st-season nil (point-min))))
+    (message "Not in st buffer!")))
 
-(defun tvdb-next ()
+(defun st-next ()
   "Move up in the hierarchy."
 
   (interactive)
 
-  (if (and (string-equal (buffer-name) "tvdb") (string-equal mode-name "tvdb"))
+  (if (and (string-equal (buffer-name) "st") (string-equal mode-name "st"))
       (let ((inhibit-read-only t)
-            (series (get-text-property (point) 'tvdb-series))
-            (season (get-text-property (point) 'tvdb-season))
-            (episode (get-text-property (point) 'tvdb-episode)))
-        (cond (episode (goto-char (next-single-property-change (point) 'tvdb-season)))
-              (season (goto-char (next-single-property-change (point) 'tvdb-season)))
-              (series (goto-char (next-single-property-change (point) 'tvdb-season)))))
-    (message "Not in tvdb buffer!")))
+            (series (get-text-property (point) 'st-series))
+            (season (get-text-property (point) 'st-season))
+            (episode (get-text-property (point) 'st-episode)))
+        (goto-char (next-single-property-change (point) 'st-season nil (point-max))))
+    (message "Not in st buffer!")))
 
 
-(defun tvdb-prev-same ()
+(defun st-prev-same ()
   "Move up in the hierarchy."
 
   (interactive)
 
-  (if (and (string-equal (buffer-name) "tvdb") (string-equal mode-name "tvdb"))
+  (if (and (string-equal (buffer-name) "st") (string-equal mode-name "st"))
       (let ((inhibit-read-only t)
-            (series (get-text-property (point) 'tvdb-series))
-            (season (get-text-property (point) 'tvdb-season))
-            (episode (get-text-property (point) 'tvdb-episode)))
-        (cond (episode (goto-char (previous-single-property-change (point) 'tvdb-season)))
-              (season (goto-char (previous-single-property-change (point) 'tvdb-season)))
-              (series (goto-char (previous-single-property-change (point) 'tvdb-series)))))
-    (message "Not in tvdb buffer!")))
+            (series (get-text-property (point) 'st-series))
+            (season (get-text-property (point) 'st-season))
+            (episode (get-text-property (point) 'st-episode)))
+        (cond ((or episode season) (goto-char (previous-single-property-change (point) 'st-season nil (point-min))))
+              (series (goto-char (previous-single-property-change (point) 'st-series nil (point-min))))))
+    (message "Not in st buffer!")))
 
-(defun tvdb-next-same ()
+(defun st-next-same ()
   "Move up in the hierarchy."
 
   (interactive)
 
-  (if (and (string-equal (buffer-name) "tvdb") (string-equal mode-name "tvdb"))
-      (let ((inhibit-read-only t)
-            (series (get-text-property (point) 'tvdb-series))
-            (season (get-text-property (point) 'tvdb-season))
-            (episode (get-text-property (point) 'tvdb-episode)))
-        (cond (episode (goto-char (next-single-property-change (point) 'tvdb-season)))
-              (season (goto-char (next-single-property-change (point) 'tvdb-season)))
-              (series (goto-char (next-single-property-change (point) 'tvdb-series)))))
-    (message "Not in tvdb buffer!")))
+  (if (and (string-equal (buffer-name) "st") (string-equal mode-name "st"))
+      (progn (when (= 1 (point))
+               (goto-char 2))
+             (let ((inhibit-read-only t)
+                   (series (get-text-property (point) 'st-series))
+                   (season (get-text-property (point) 'st-season))
+                   (episode (get-text-property (point) 'st-episode)))
+               (cond ((or episode season) (goto-char (next-single-property-change (point) 'st-season nil (point-max))))
+                     (series (goto-char (next-single-property-change (point) 'st-series nil (point-max)))))))
+    (message "Not in st buffer!")))
 
 ;;;; Folding
 
