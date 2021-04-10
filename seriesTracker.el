@@ -56,25 +56,21 @@ returns '(1 3)"
 
 ;;; episodate.com API
 
+;;;; search
+
+(defun st--search (name)
+  "Search episodate.com db for NAME."
+
+  (->> (let ((url-request-method "GET"))
+         (url-retrieve-synchronously (concat "https://www.episodate.com/api/search?q=" name)))
+       st--getJSON
+       (st--utils-alist-select '(tv_shows))
+       car
+       cdr
+       (st--utils-array-select '(id name start_date status network))))
 
 
 
-
-
-
-;;;;; search
-
-(defun tvdb--search (seriesName)
-  "Search for SERIESNAME."
-
-  (->> seriesName
-      (tvdb--tvdb "/search/series?name=")
-      (tvdb--utils-array-select '(id
-                      seriesName
-                      firstAired
-                      status
-                      network
-                      overview))))
 
 ;;;;; series
 
