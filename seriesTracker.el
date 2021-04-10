@@ -180,36 +180,30 @@ Adding an already existing series resets it."
 
 ;;;; Query updates
 
-(defun tvdb--update-series (id)
-  "Query new episodes for series ID, and add them to the list.
-Update the other series properties."
+(defun st-update ()
+  "Update all non-finished shows."
 
-  (let* ((series (--find (= id (alist-get 'id it)) tvdb--data))
-         (lastPage (alist-get 'lastPage series))
-         (oldEpisodes (alist-get 'episodes series))
-         (allEpisodes (tvdb--series/episodes id lastPage))
-         (newEpisodesId (-difference (tvdb--utils-array-pull 'id allEpisodes) (tvdb--utils-array-pull 'id oldEpisodes)))
-         (newEpisodes (--filter (-contains? newEpisodesId (alist-get 'id it)) allEpisodes))
-         (newSeries (--> (tvdb--series id)
-                         (-snoc it `(lastPage . ,(tvdb--series/episodesLastPage id)))
-                         (-snoc it `(episodes ,@(append oldEpisodes newEpisodes))))))
-    (setq tvdb--data
-          (--> tvdb--data
-               (--remove (= id (alist-get 'id it)) it)
-               (-snoc it newSeries)))))
+  (->> st--data
+       (-map-when (lambda (series) (string-equal "Running" (alist-get 'status series)))
+                  (lambda (series) (st--update-series series)))))
 
-(defun tvdb-update ()
-  "Query all updated series since the last known update.
-Keep only series that are followed.
-Update new episodes."
+(defun st--update-series (series)
+  "Update the SERIES."
 
-  (-some->> tvdb--data
-    (tvdb--utils-array-pull 'lastUpdated)
-    -max
-    (tvdb--update)
-    (tvdb--utils-array-pull 'id)
-    (-intersection (tvdb--utils-array-pull 'id (tvdb-list-series)))
-    (-map 'tvdb--update-series)))
+  (let* ((new (st--series (alist-get 'id series)))
+         (newEp (alist-get 'episodes new))
+         (status (alist-get 'status new))
+         (watched (-find-indices (lambda (episode) (alist-get 'watched episode)) (alist-get 'episodes series)))
+         (newEps (--map-indexed (if (-contains? watched it-index)
+                                    (progn
+                                      (setf (alist-get 'watched it) t)
+                                      it)
+                                  it) newEp)))
+
+    (when (string-equal status "Ended") (setf (alist-get 'status series) "Ended"))
+    (setf (alist-get 'episodes series) newEps)
+
+    series))
 
 ;;;; Load/save data
 
@@ -528,7 +522,7 @@ Erase first then redraw the whole buffer."
 
 (st-watch-up 32157 3 5)
 
-(tvdb-update)
+(st-update)
 
 (st--save)
 
