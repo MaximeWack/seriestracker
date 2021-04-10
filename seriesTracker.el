@@ -134,14 +134,15 @@ Adding an already existing series resets it."
 
 ;;;;; Watch episode
 
-(defun tvdb-watch (seriesId episodeId)
-  "Watch episode EPISODEID in series SERIESID."
+(defun st-watch (id seasonN episodeN)
+  "Watch EPISODEN of SEASONN in series ID."
 
-  (->> tvdb--data
-       (-map-when (lambda (series) (= seriesId (alist-get 'id series)))
+  (->> st--data
+       (-map-when (lambda (series) (= id (alist-get 'id series)))
                   (lambda (series)
                     (setf (alist-get 'episodes series)
-                          (-map-when (lambda (episode) (= episodeId (alist-get 'id episode)))
+                          (-map-when (lambda (episode) (and (= seasonN (alist-get 'season episode))
+                                                       (= episodeN (alist-get 'episode episode))))
                                      (lambda (episode)
                                        (setf (alist-get 'watched episode) t)
                                        episode)
@@ -149,41 +150,35 @@ Adding an already existing series resets it."
 
 ;;;;; Watch all episodes
 
-(defun tvdb-watch-all (seriesId)
-"Watch all episodes in SERIESID."
+(defun st-watch-all (id)
+  "Watch all episodes in series ID."
 
-(->> tvdb--data
-     (-map-when (lambda (series) (= seriesId (alist-get 'id series)))
-                (lambda (series)
-                  (setf (alist-get 'episodes series)
-                        (-map (lambda (episode)
-                                (setf (alist-get 'watched episode) t)
-                                episode)
-                              (alist-get 'episodes series)))))))
+  (->> st--data
+       (-map-when (lambda (series) (= id (alist-get 'id series)))
+                  (lambda (series)
+                    (setf (alist-get 'episodes series)
+                          (-map (lambda (episode)
+                                  (setf (alist-get 'watched episode) t)
+                                  episode)
+                                (alist-get 'episodes series)))))))
 
 ;;;;; Watch all episodes up to episode
 
-(defun tvdb-watch-up (seriesId episodeId)
-  "Watch all episodes up to EPISODEID in SERIESID."
+(defun st-watch-up (id seasonN episodeN)
+  "Watch all episodes up to EPISODEN of SEASON in series ID."
 
-  (let ((upto (->> tvdb--data
-                   (--filter (= seriesId (alist-get 'id it)))
-                   (-flatten-n 1)
-                   (alist-get 'episodes)
-                   (--filter (= episodeId (alist-get 'id it)))
-                   (-flatten-n 1)
-                   (alist-get 'absoluteNumber))))
-    (->> tvdb--data
-         (-map-when (lambda (series) (= seriesId (alist-get 'id series)))
-                    (lambda (series)
-                      (setf (alist-get 'episodes series)
-                            (-map-when (lambda (episode)
-                                         (<= (alist-get 'absoluteNumber episode)
-                                             upto))
-                                       (lambda (episode)
-                                         (setf (alist-get 'watched episode) t)
-                                         episode)
-                                       (alist-get 'episodes series))))))))
+  (->> st--data
+       (-map-when (lambda (series) (= id (alist-get 'id series)))
+                  (lambda (series)
+                    (setf (alist-get 'episodes series)
+                          (-map-when (lambda (episode)
+                                       (or (< (alist-get 'season episode) seasonN)
+                                           (and (= (alist-get 'season episode) seasonN)
+                                                (<= (alist-get 'episode episode) episodeN))))
+                                     (lambda (episode)
+                                       (setf (alist-get 'watched episode) t)
+                                       episode)
+                                     (alist-get 'episodes series)))))))
 
 ;;;;; Query updates
 
@@ -530,11 +525,12 @@ Erase first then redraw the whole buffer."
 
 (st-remove 23455)
 
-(tvdb-watch 275274 7687399)
+(st-watch 32157 4 10)
 
-(tvdb-watch-all 264991)
+(st-watch-all 31085)
+(st-watch-all 23455)
 
-(tvdb-watch-up 275274 6231155)
+(st-watch-up 32157 3 5)
 
 (tvdb-update)
 
