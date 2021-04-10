@@ -104,16 +104,14 @@ Of the form :
 series props are name and start_date.
 episodes props are season, episode, name, and air_date.")
 
-;;;; Methods
-
-;;;;; Search series
+;;;; Search series
 
 (defun st-search (seriesName)
   "Search SERIESNAME."
 
   (st--search seriesName))
 
-;;;;; Add series
+;;;; Add series
 
 (defun st-add (id)
   "Add series with ID to st--data.
@@ -124,7 +122,7 @@ Adding an already existing series resets it."
             (--remove (= id (alist-get 'id it)) it)
             (-snoc it (--> (st--series id))))))
 
-;;;;; Remove series
+;;;; Remove series
 
 (defun st-remove (id)
   "Remove series with ID from st--data."
@@ -132,7 +130,7 @@ Adding an already existing series resets it."
   (setq st--data
         (--remove (= id (alist-get 'id it)) st--data)))
 
-;;;;; Watch episode
+;;;; Watch episode
 
 (defun st-watch (id seasonN episodeN)
   "Watch EPISODEN of SEASONN in series ID."
@@ -148,7 +146,7 @@ Adding an already existing series resets it."
                                        episode)
                                      (alist-get 'episodes series)))))))
 
-;;;;; Watch all episodes
+;;;; Watch all episodes
 
 (defun st-watch-all (id)
   "Watch all episodes in series ID."
@@ -162,7 +160,7 @@ Adding an already existing series resets it."
                                   episode)
                                 (alist-get 'episodes series)))))))
 
-;;;;; Watch all episodes up to episode
+;;;; Watch all episodes up to episode
 
 (defun st-watch-up (id seasonN episodeN)
   "Watch all episodes up to EPISODEN of SEASON in series ID."
@@ -180,7 +178,7 @@ Adding an already existing series resets it."
                                        episode)
                                      (alist-get 'episodes series)))))))
 
-;;;;; Query updates
+;;;; Query updates
 
 (defun tvdb--update-series (id)
   "Query new episodes for series ID, and add them to the list.
@@ -213,7 +211,7 @@ Update new episodes."
     (-intersection (tvdb--utils-array-pull 'id (tvdb-list-series)))
     (-map 'tvdb--update-series)))
 
-;;;;; Load/save data
+;;;; Load/save data
 
 (defvar st--file
   "~/.emacs.d/st.el"
