@@ -395,20 +395,22 @@ Erase first then redraw the whole buffer."
 
 ;;;; Folding
 
-(defun tvdb-fold-at-point ()
+(defun st-fold-at-point ()
   "Fold the section at point."
 
   (interactive)
 
-  (if (and (string-equal (buffer-name) "tvdb") (string-equal mode-name "tvdb"))
-      (let ((inhibit-read-only t)
-            (series (get-text-property (point) 'tvdb-series))
-            (season (get-text-property (point) 'tvdb-season))
-            (episode (get-text-property (point) 'tvdb-episode)))
-        (cond (episode (tvdb-fold-episodes))
-              (season (tvdb-fold-season))
-              (t (tvdb-fold-series))))
-    (message "Not in tvdb buffer!")))
+  (if (and (string-equal (buffer-name) "st") (string-equal mode-name "st"))
+      (progn (when (= 1 (point))
+               (goto-char 2))
+             (let ((inhibit-read-only t)
+                      (series (get-text-property (point) 'st-series))
+                      (season (get-text-property (point) 'st-season))
+                      (episode (get-text-property (point) 'st-episode)))
+                  (cond (episode (st-fold-episodes))
+                        (season (st-fold-season))
+                        (t (st-fold-series)))))
+    (message "Not in st buffer!")))
 
 (defun st-fold-episodes ()
   "Fold the episodes at point."
