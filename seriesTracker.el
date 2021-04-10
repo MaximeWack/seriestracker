@@ -69,69 +69,22 @@ returns '(1 3)"
        cdr
        (st--utils-array-select '(id name start_date status network))))
 
+;;;; series
 
+(defun st--episodes (series)
+         (setf (alist-get 'episodes series)
+               (mapcar (lambda (x) x) (alist-get 'episodes series)))
+         series)
 
+(defun st--series (id)
+  "Get series ID info."
 
-;;;;; series
-
-(defun tvdb--series (id)
-  "Get informations about a specific series ID."
-
-  (->> id
-      int-to-string
-      (tvdb--tvdb "/series/")
-      (tvdb--utils-alist-select '(id
-                      seriesName
-                      status
-                      lastUpdated))))
-
-;;;;; series/episodes
-
-;;;;;; one page results
-
-(defun tvdb--series/episodes1Page (id page)
-  "Get one page of results for episodes in a series."
-
-  (tvdb--tvdb-raw (concat "/series/" (int-to-string id) "/episodes?page=" (int-to-string page))))
-
-(defun tvdb--series/episodesLastPage (id)
-  "Get the number of pages of results for the episodes of series ID."
-
-  (->> (tvdb--series/episodes1Page id 1)
-       (alist-get 'links)
-       (alist-get 'last)))
-
-;;;;;; all pages
-
-(defun tvdb--series/episodesPage (id page acc)
-  "Get the whole episode list of show ID recursively."
-
-  (let* ((query (tvdb--series/episodes1Page id page))
-         (next (->> query
-                    (alist-get 'links)
-                    (alist-get 'next)))
-         (data (->> query
-                    (alist-get 'data)
-                    (tvdb--utils-array-select '(id
-                                    absoluteNumber
-                                    airedSeason
-                                    airedEpisodeNumber
-                                    episodeName
-                                    firstAired
-                                    siteRating
-                                    siteRatingCount)))))
-    (if next
-        (tvdb--series/episodesPage id next (append acc data))
-      (append acc data))))
-
-(defun tvdb--series/episodes (id &optional startPage)
-  "Get all episodes for a specific series ID, starting from STARTPAGE (default = 1)."
-
-  (->> (tvdb--series/episodesPage id (or startPage 1) nil)
-       (--filter (> (alist-get 'airedSeason it) 0))
-       (--sort (< (alist-get 'absoluteNumber it)
-                  (alist-get 'absoluteNumber other)))))
-
+  (->> (let ((url-request-method "GET"))
+         (url-retrieve-synchronously (concat "https://www.episodate.com/api/show-details?q=" (int-to-string id))))
+       st--getJSON
+       car
+       (st--utils-alist-select '(id name start_date status episodes))
+       st--episodes))
 
 ;;; Internal API
 
@@ -144,12 +97,14 @@ returns '(1 3)"
 Of the form :
 
 '(((id . seriesId) (props . value) (…) (episodes ((id . episodeId) (watched . t) (props.value) (…))
-                                                 ((id . episodeId) (watched . nil) (props.value) (…))))
+                                                 ((id . episodeId) (watched . nil) (props.value) (…)))))
   ((id . seriesId) (…) (episodes ((id . episodeId) (…))
-                                 ((id . episodeId) (…)))))")
+                                 ((id . episodeId) (…)))))
+
+series props are name and start_date.
+episodes props are season, episode, name, and air_date.")
 
 ;;;; Methods
-
 
 ;;;;; Search series
 
@@ -160,16 +115,14 @@ Of the form :
 
 ;;;;; Add series
 
-(defun tvdb-add (id)
-  "Add series with ID to tvdb--data.
+(defun st-add (id)
+  "Add series with ID to st--data.
 Adding an already existing series resets it."
 
-  (setq tvdb--data
-        (--> tvdb--data
+  (setq st--data
+        (--> st--data
             (--remove (= id (alist-get 'id it)) it)
-            (-snoc it (--> (tvdb--series id)
-                          (-snoc it `(lastPage . ,(tvdb--series/episodesLastPage id)))
-                          (-snoc it `(episodes ,@(tvdb--series/episodes id))))))))
+            (-snoc it (--> (st--series id))))))
 
 ;;;;; Remove series
 
@@ -323,55 +276,54 @@ Erase first then redraw the whole buffer."
     (-each st--data 'st--draw-series)
     (delete-char (- 1))))
 
-(defun tvdb--draw-series (series)
+(defun st--draw-series (series)
   "Print the series id and name."
 
   (let ((id (alist-get 'id series))
-        (name (alist-get 'seriesName series))
+        (name (alist-get 'name series))
         (episodes (alist-get 'episodes series)))
     (let ((start (point)))
       (insert (concat name "\n"))
       (set-text-properties start (point)
-                           `(face tvdb-series
-                                  tvdb-series ,id
-                                  tvdb-season nil
-                                  tvdb-episode nil)))
-    (--each episodes (tvdb--draw-episode id it))))
+                           `(face st-series
+                                  st-series ,id
+                                  st-season nil
+                                  st-episode nil)))
+    (--each episodes (st--draw-episode id it))))
 
-(defun tvdb--draw-episode (series episode)
+(defun st--draw-episode (series episode)
   "Print the episode id, S**E**, and name."
 
-  (let ((id (alist-get 'id episode))
-        (season (alist-get 'airedSeason episode))
-        (episode (alist-get 'airedEpisodeNumber episode))
-        (name (alist-get 'episodeName episode))
-        (firstAired (alist-get 'firstAired episode))
+  (let ((season (alist-get 'season episode))
+        (episode (alist-get 'episode episode))
+        (name (alist-get 'name episode))
+        (air_date (alist-get 'air_date episode))
         (watched (alist-get 'watched episode)))
     (when (= episode 1)
       (let ((start (point)))
         (insert (concat "Season " (int-to-string season) "\n"))
         (set-text-properties start (point)
-                             `(face tvdb-season
-                                    tvdb-series ,series
-                                    tvdb-season ,season
-                                    tvdb-episode nil))))
+                             `(face st-season
+                                    st-series ,series
+                                    st-season ,season
+                                    st-episode nil))))
     (let ((start (point)))
-      (insert firstAired)
+      (insert air_date)
       (let ((end-date (point)))
         (insert (concat " " (format "%02d" episode) " - " name "\n"))
         (set-text-properties start (point)
                              `(face default
-                                    tvdb-series ,series
-                                    tvdb-season ,season
-                                    tvdb-episode ,id))
+                                    st-series ,series
+                                    st-season ,season
+                                    st-episode ,episode))
         (put-text-property start end-date 'face '(t ((:foreground "MediumSpringGreen")))))
       (when watched
         (set-text-properties start (point)
-                             `(face tvdb-watched
-                                    tvdb-series ,series
-                                    tvdb-season ,season
-                                    tvdb-episode ,id
-                                    invisible tvdb-watched))))))
+                             `(face st-watched
+                                    st-series ,series
+                                    st-season ,season
+                                    st-episode ,episode
+                                    invisible st-watched))))))
 
 ;;;; Movements
 
