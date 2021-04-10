@@ -180,7 +180,7 @@ Adding an already existing series resets it."
 
 ;;;; Query updates
 
-(defun st-update ()
+(defun st--update ()
   "Update all non-finished shows."
 
   (->> st--data
@@ -239,17 +239,12 @@ Adding an already existing series resets it."
 
 ;;;; Draw buffer
 
-(defun st-refresh ()
-  "Refresh the st buffer.
-Updates the database and redraws the buffer."
-  (interactive)
+(defun st--refresh ()
+  "Refresh the st buffer."
 
-  (if (and (string-equal (buffer-name) "st") (string-equal mode-name "st"))
-      (let ((line (line-number-at-pos)))
-        (st-update)
-        (st--draw-buffer)
-        (goto-line line))
-    (message "Not in st buffer!")))
+  (let ((line (line-number-at-pos)))
+    (st--draw-buffer)
+    (goto-line line)))
 
 (defun st--draw-buffer ()
   "Draw the buffer.
@@ -465,13 +460,20 @@ Erase first then redraw the whole buffer."
 
 ;;;; Create mode
 
+(defun st-update ()
+  "Update the db and refresh the buffer."
+
+  (interactive)
+  (st--update)
+  (st--refresh))
+
 (defun st ()
   "Run ST"
 
   (interactive)
   (switch-to-buffer "st")
   (st-mode)
-  (st-refresh))
+  (st-update))
 
 (define-derived-mode st-mode special-mode "st"
   "Series tracking with episodate.com."
