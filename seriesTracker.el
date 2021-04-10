@@ -13,7 +13,7 @@
 
 ;;;; alist-select
 
-(defun tvdb--utils-alist-select (fields alist)
+(defun st--utils-alist-select (fields alist)
   "Keep only FIELDS in ALIST by constructing a new alist containing only these elements.
 
 alist-select '(a c) '((a .1) (b , \"b\") (c . c)
@@ -26,17 +26,17 @@ returns '((a . 1) (c . c))"
 
 ;;;; array-select
 
-(defun tvdb--utils-array-select (fields array)
+(defun st--utils-array-select (fields array)
   "Keep only FIELDS in every alist in the ARRAY.
 
 array-select '(a c) '(((a . 1) (b . 2) (c . c)) ((a . 3) (b . 5) (c . d)))
 returns '(((a . 1) (c . c)) ((a . 3) (c . d)))"
 
-  (--map (tvdb--utils-alist-select fields it) array))
+  (--map (st--utils-alist-select fields it) array))
 
 ;;;; array-pull
 
-(defun tvdb--utils-array-pull (field array)
+(defun st--utils-array-pull (field array)
   "Keep only FIELD in every alist in the ARRAY and flatten.
 
 array-pull 'a '(((a . 1) (b . 2)) ((a . 3) (b . 4)))
@@ -46,7 +46,7 @@ returns '(1 3)"
 
 ;;;; getJSON
 
-(defun tvdb--getJSON (url-buffer)
+(defun st--getJSON (url-buffer)
   "Parse the JSON in the URL-BUFFER returned by url."
 
   (with-current-buffer url-buffer
@@ -54,7 +54,7 @@ returns '(1 3)"
     (move-beginning-of-line 1)
     (json-read-object)))
 
-;;; tvdb API
+;;; episodate.com API
 
 
 
@@ -141,7 +141,7 @@ returns '(1 3)"
 
 ;;;; Data model
 
-(defvar tvdb--data
+(defvar st--data
   nil
   "Internal data containing followed series and episode.
 
@@ -157,10 +157,10 @@ Of the form :
 
 ;;;;; Search series
 
-(defun tvdb-search (seriesName)
+(defun st-search (seriesName)
   "Search SERIESNAME."
 
-  (tvdb--search seriesName))
+  (st--search seriesName))
 
 ;;;;; Add series
 
@@ -177,13 +177,11 @@ Adding an already existing series resets it."
 
 ;;;;; Remove series
 
-(defun tvdb-remove (id)
-  "Remove series with ID from tvdb--data."
+(defun st-remove (id)
+  "Remove series with ID from st--data."
 
-  (setq tvdb--data
-        (--remove (= id (alist-get 'id it)) tvdb--data)))
-
-
+  (setq st--data
+        (--remove (= id (alist-get 'id it)) st--data)))
 
 ;;;;; Watch episode
 
@@ -273,52 +271,51 @@ Update new episodes."
 
 ;;;;; Load/save data
 
-(defvar tvdb--file
-  "~/.emacs.d/tvdb.el"
+(defvar st--file
+  "~/.emacs.d/st.el"
   "Location of the save file")
 
-(defun tvdb--save ()
-  (with-temp-file tvdb--file
-    (prin1 tvdb--data (current-buffer))))
+(defun st--save ()
+  (with-temp-file st--file
+    (prin1 st--data (current-buffer))))
 
-(defun tvdb--load ()
+(defun st--load ()
   (with-temp-buffer
-    (insert-file-contents tvdb--file)
+    (insert-file-contents st--file)
     (cl-assert (eq (point) (point-min)))
-    (setq tvdb--data (read (current-buffer)))))
+    (setq st--data (read (current-buffer)))))
 
 ;;; Interface
 
 ;;;; Faces
 
-(defface tvdb-series
+(defface st-series
   '((t (:height 1.9 :weight bold :foreground "DeepSkyBlue")))
   "Face for series names")
 
-(defface tvdb-season
+(defface st-season
   '((t (:height 1.7 :weight bold :foreground "MediumPurple")))
   "Face for seasons")
 
-(defface tvdb-watched
+(defface st-watched
   '((t (:foreground "DimGrey" :strike-through t)))
   "Face for watched episodes")
 
 ;;;; Draw buffer
 
-(defun tvdb-refresh ()
-  "Refresh the tvdb buffer.
+(defun st-refresh ()
+  "Refresh the st buffer.
 Updates the database and redraws the buffer."
   (interactive)
 
-  (if (and (string-equal (buffer-name) "tvdb") (string-equal mode-name "tvdb"))
+  (if (and (string-equal (buffer-name) "st") (string-equal mode-name "st"))
       (let ((line (line-number-at-pos)))
-        (tvdb-renew-token)
-        (tvdb-update)
-        (tvdb--draw-buffer)
+        (st-update)
+        (st--draw-buffer)
         (goto-line line))
-    (message "Not in tvdb buffer!")))
+    (message "Not in st buffer!")))
 
-(defun tvdb--draw-buffer ()
+(defun st--draw-buffer ()
   "Draw the buffer.
 Erase first then redraw the whole buffer."
 
@@ -326,8 +323,8 @@ Erase first then redraw the whole buffer."
     (erase-buffer)
     (insert "0")
     (put-text-property (point-min) (point) 'invisible t)
-    (put-text-property (point-min) (point) 'tvdb-series 0)
-    (-each tvdb--data 'tvdb--draw-series)
+    (put-text-property (point-min) (point) 'st-series 0)
+    (-each st--data 'st--draw-series)
     (delete-char (- 1))))
 
 (defun tvdb--draw-series (series)
@@ -474,94 +471,94 @@ Erase first then redraw the whole buffer."
               (t (tvdb-fold-series))))
     (message "Not in tvdb buffer!")))
 
-(defun tvdb-fold-episodes ()
+(defun st-fold-episodes ()
   "Fold the episodes at point."
 
-  (let* ((season-start (previous-single-property-change (point) 'tvdb-season))
-         (fold-start (next-single-property-change season-start 'tvdb-episode))
-         (fold-end (next-single-property-change (point) 'tvdb-season nil (point-max))))
-    (put-text-property fold-start fold-end 'invisible 'tvdb-folded nil)))
+  (let* ((season-start (previous-single-property-change (point) 'st-season))
+         (fold-start (next-single-property-change season-start 'st-episode))
+         (fold-end (next-single-property-change (point) 'st-season nil (point-max))))
+    (put-text-property fold-start fold-end 'invisible 'st-folded nil)))
 
-(defun tvdb-fold-season ()
+(defun st-fold-season ()
   "Fold the season at point."
 
-  (let* ((fold-start (next-single-property-change (point) 'tvdb-episode))
-         (fold-end (next-single-property-change (point) 'tvdb-season nil (point-max))))
-    (put-text-property fold-start fold-end 'invisible 'tvdb-folded nil)))
+  (let* ((fold-start (next-single-property-change (point) 'st-episode))
+         (fold-end (next-single-property-change (point) 'st-season nil (point-max))))
+    (put-text-property fold-start fold-end 'invisible 'st-folded nil)))
 
-(defun tvdb-fold-series ()
+(defun st-fold-series ()
   "Fold the series at point."
 
-  (let* ((fold-start (next-single-property-change (point) 'tvdb-season))
-         (fold-end (next-single-property-change (point) 'tvdb-series nil (point-max))))
-    (put-text-property fold-start fold-end 'invisible 'tvdb-folded nil)))
+  (let* ((fold-start (next-single-property-change (point) 'st-season))
+         (fold-end (next-single-property-change (point) 'st-series nil (point-max))))
+    (put-text-property fold-start fold-end 'invisible 'st-folded nil)))
 
-(defun tvdb-unfold-at-point ()
+(defun st-unfold-at-point ()
   "Unfold the section at point."
 
   (interactive)
 
-  (if (and (string-equal (buffer-name) "tvdb") (string-equal mode-name "tvdb"))
+  (if (and (string-equal (buffer-name) "st") (string-equal mode-name "st"))
       (let ((inhibit-read-only t)
-            (series (get-text-property (point) 'tvdb-series))
-            (season (get-text-property (point) 'tvdb-season))
-            (episode (get-text-property (point) 'tvdb-episode)))
-        (cond (season (tvdb-unfold-season))
-              (t (tvdb-unfold-series))))
-    (message "Not in tvdb buffer!")))
+            (series (get-text-property (point) 'st-series))
+            (season (get-text-property (point) 'st-season))
+            (episode (get-text-property (point) 'st-episode)))
+        (cond (season (st-unfold-season))
+              (t (st-unfold-series))))
+    (message "Not in st buffer!")))
 
-(defun tvdb-unfold-season ()
+(defun st-unfold-season ()
   "Fold the season at point."
 
-  (let* ((fold-start (next-single-property-change (point) 'tvdb-episode))
-         (fold-end (next-single-property-change (point) 'tvdb-season nil (point-max))))
+  (let* ((fold-start (next-single-property-change (point) 'st-episode))
+         (fold-end (next-single-property-change (point) 'st-season nil (point-max))))
     (put-text-property fold-start fold-end 'invisible nil nil)))
 
-(defun tvdb-unfold-series ()
+(defun st-unfold-series ()
   "Fold the series at point."
 
-  (let* ((fold-start (next-single-property-change (point) 'tvdb-season))
-         (fold-end (next-single-property-change (point) 'tvdb-series nil (point-max))))
+  (let* ((fold-start (next-single-property-change (point) 'st-season))
+         (fold-end (next-single-property-change (point) 'st-series nil (point-max))))
     (put-text-property fold-start fold-end 'invisible nil nil)))
 
-(defun tvdb-switch-watched ()
+(defun st-switch-watched ()
   "Switch visibility for watched episodes."
 
   (interactive)
 
-  (if (-contains? buffer-invisibility-spec 'tvdb-watched)
-      (setq-local buffer-invisibility-spec '(t tvdb-folded))
-    (setq-local buffer-invisibility-spec '(t tvdb-folded tvdb-watched))))
+  (if (-contains? buffer-invisibility-spec 'st-watched)
+      (setq-local buffer-invisibility-spec '(t st-folded))
+    (setq-local buffer-invisibility-spec '(t st-folded st-watched))))
 
 ;;;; Create mode
 
-(defun tvdb ()
-  "Run TVDB"
+(defun st ()
+  "Run ST"
 
   (interactive)
-  (switch-to-buffer "tvdb")
-  (tvdb-mode)
-  (tvdb-refresh))
+  (switch-to-buffer "st")
+  (st-mode)
+  (st-refresh))
 
-(define-derived-mode tvdb-mode special-mode "tvdb"
-  "Series tracking with TheTVdbAPI."
+(define-derived-mode st-mode special-mode "st"
+  "Series tracking with episodate.com."
 
   (defun imenu-prev ()
-    "imenu-prev-index-position-function for tvdb."
+    "imenu-prev-index-position-function for st."
 
-    (let ((newpos (previous-single-property-change (point) 'tvdb-series)))
+    (let ((newpos (previous-single-property-change (point) 'st-series)))
       (if newpos
           (goto-char newpos)
         nil)))
 
   (defun imenu-name ()
-    "imenu-extract-index-name-function for tvdb."
+    "imenu-extract-index-name-function for st."
 
     (let ((start (point)))
       (end-of-line)
       (buffer-substring start (point))))
 
-  (setq-local buffer-invisibility-spec '(t tvdb-folded))
+  (setq-local buffer-invisibility-spec '(t st-folded))
   (setq-local imenu-prev-index-position-function 'imenu-prev)
   (setq-local imenu-extract-index-name-function 'imenu-name))
 
@@ -571,19 +568,19 @@ Erase first then redraw the whole buffer."
 
 ;;; Example
 
-(tvdb-search "utopia")
-(tvdb-search "game of thrones")
-(tvdb-search "rick and morty")
+(st-search "utopia")
+(st-search "game of thrones")
+(st-search "rick and morty")
 
-(tvdb-add 121361)
-(tvdb-add 264991)
-(tvdb-add 275274)
+(st--series 31085)
+(st--series 23455)
+(st--series 32157)
 
-(tvdb-remove 121361)
+(st-add 31085)
+(st-add 23455)
+(st-add 32157)
 
-(tvdb-list-series)
-
-(tvdb-get-episodes 264991)
+(st-remove 23455)
 
 (tvdb-watch 275274 7687399)
 
@@ -593,8 +590,8 @@ Erase first then redraw the whole buffer."
 
 (tvdb-update)
 
-(tvdb--save)
+(st--save)
 
-(tvdb--load)
+(st--load)
 
 ;;; seriesTracker.el ends here
