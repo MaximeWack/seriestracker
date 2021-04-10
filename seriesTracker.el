@@ -44,21 +44,6 @@ returns '(1 3)"
 
   (--map (alist-get field it) array))
 
-;;;; epoch/datestring
-
-(defun tvdb--utils-current-epoch ()
-    "Get (current-time) as an epoch."
-
-    (string-to-number (format-time-string "%s" (current-time))))
-
-(defun tvdb--utils-date-to-epoch (date)
-  "Convert DATE to an epoch."
-
-  (->> (concat date " 00:00:00")
-       date-to-time
-       (format-time-string "%s")
-       (string-to-number)))
-
 ;;;; getJSON
 
 (defun tvdb--getJSON (url-buffer)
@@ -71,63 +56,11 @@ returns '(1 3)"
 
 ;;; tvdb API
 
-;;;; Login
 
-(defvar tvdb-user
-  nil
-  "TheTVdbAPI Username")
 
-(defvar tvdb-apikey
-  nil
-  "TheTVdbAPI API key")
 
-(defvar tvdb-userkey
-  nil
-  "TheTVdbAPI user key")
 
-(defvar tvdb--token
-  nil
-  "Auth token")
 
-(defun tvdb--login ()
-  "Login using TVDB-USER, TVDB-APIKEY and TVDB-USERKEY.
-Sets tvdb--token."
-
-  (->> (let ((url-request-method "POST")
-            (url-request-extra-headers '(("Content-Type" . "application/json")
-                                         ("Accept" . "application/json")))
-            (url-request-data (concat "{\"apikey\": \"" tvdb-apikey "\", \"userkey\": \"" tvdb-userkey "\", \"username\": \"" tvdb-user "\" }"))
-            (url-show-status nil))
-        (url-retrieve-synchronously "https://api.thetvdb.com/login" t nil 2))
-      tvdb--getJSON
-      (alist-get 'token)
-      (setq tvdb--token)))
-
-;;;; Queries
-
-;;;;; tvdb
-
-(defun tvdb--tvdb-raw (params)
-  "Raw API query.
-Uses TVDB-TOKEN.
-If not present or invalid token, try refreshing the token or re-logging."
-
-  (tvdb--getJSON
-   (let* ((url-request-method "GET")
-          (bearer (concat "Bearer " tvdb--token))
-          (url-request-extra-headers `(("Accept" . "application/json")
-                                       ("Authorization" . ,bearer)))
-          (url-show-status nil))
-     (url-retrieve-synchronously (concat "https://api.thetvdb.com" params) nil nil 2))))
-
-(defun tvdb--tvdb (&rest params)
-  "Generic function to query tvdbapi."
-
-  (if params
-      (alist-get 'data
-                 (tvdb--tvdb-raw (apply 'concat params)))
-    (alist-get 'token
-               (tvdb--tvdb-raw "/refresh_token"))))
 
 ;;;;; search
 
@@ -203,23 +136,6 @@ If not present or invalid token, try refreshing the token or re-logging."
        (--sort (< (alist-get 'absoluteNumber it)
                   (alist-get 'absoluteNumber other)))))
 
-;;;;; update
-
-(defun tvdb--update-one-week (fromTime)
-  "Return an array of series that have changed in the week after FROMTIME (datetime)."
-
-  (tvdb--tvdb "/updated/query?fromTime=" fromTime))
-
-(defun tvdb--update (fromTime)
-  "Return an array of series that have changed since FROMTIME (epoch)."
-
-  (->> (number-sequence
-        fromTime
-        (tvdb--utils-current-epoch)
-        (* 3600 24 7))
-       (-map 'int-to-string)
-       (--map (tvdb--update-one-week it))
-       (car)))
 
 ;;; Internal API
 
@@ -238,17 +154,6 @@ Of the form :
 
 ;;;; Methods
 
-;;;;; Renew token
-
-(defun tvdb-renew-token ()
-  "Renew the token in tvdb--token.
-Check that the token is renewed, else try to login using the credentials in TVDB-USER, TVDB-APIKEY, and TVDB-USERKEY.
-If all fails, give an error message."
-
-  (setq tvdb--token (tvdb--tvdb))
-  (when (not tvdb--token)
-    (when (not (tvdb--login))
-      (message "Couldn't login to TheTVdbAPI. Please check tvdb-user, tvdb-apikey, and tvdb-userkey."))))
 
 ;;;;; Search series
 
@@ -278,12 +183,7 @@ Adding an already existing series resets it."
   (setq tvdb--data
         (--remove (= id (alist-get 'id it)) tvdb--data)))
 
-;;;;; List series
 
-(defun tvdb-list-series ()
-  "List followed series."
-
-  (tvdb--utils-array-select '(id seriesName) tvdb--data))
 
 ;;;;; Watch episode
 
@@ -670,12 +570,6 @@ Erase first then redraw the whole buffer."
 (provide 'seriesTracker)
 
 ;;; Example
-
-(setq tvdb-user "maximewack")
-(setq tvdb-apikey "0c737339fe858fadb896104543d0845b")
-(setq tvdb-userkey "5DDF090101B740.38233217")
-
-(tvdb-renew-token)
 
 (tvdb-search "utopia")
 (tvdb-search "game of thrones")
