@@ -268,19 +268,22 @@ Erase first then redraw the whole buffer."
     (let ((start (point)))
       (insert (concat name "\n"))
       (set-text-properties start (point)
-                           `(face st-series
-                                  st-series ,id
-                                  st-season nil
-                                  st-episode nil)))
-    (--each episodes (st--draw-episode id it))))
+                           `(st-series ,id
+                             st-season nil
+                             st-episode nil))
       (if finished
           (put-text-property start (point) 'face 'st-finished-series)
         (put-text-property start (point) 'face 'st-series))
+      (when (-all? (lambda (episode) (alist-get 'watched episode))
+                   (alist-get 'episodes series))
+        (put-text-property start (point) 'invisible 'st-watched nil)))
+    (--each episodes (st--draw-episode series it))))
 
 (defun st--draw-episode (series episode)
   "Print the episode id, S**E**, and name."
 
-  (let ((season (alist-get 'season episode))
+  (let ((id (alist-get 'id series))
+        (season (alist-get 'season episode))
         (episode (alist-get 'episode episode))
         (name (alist-get 'name episode))
         (air_date (alist-get 'air_date episode))
@@ -290,23 +293,27 @@ Erase first then redraw the whole buffer."
         (insert (concat "Season " (int-to-string season) "\n"))
         (set-text-properties start (point)
                              `(face st-season
-                                    st-series ,series
+                                    st-series ,id
                                     st-season ,season
-                                    st-episode nil))))
+                                    st-episode nil))
+        (when (-all? (lambda (episode) (alist-get 'watched episode))
+                     (-filter (lambda (episode) (= season (alist-get 'season episode)))
+                              (alist-get 'episodes series)))
+          (put-text-property start (point) 'invisible 'st-watched nil))))
     (let ((start (point)))
       (insert air_date)
       (let ((end-date (point)))
         (insert (concat " " (format "%02d" episode) " - " name "\n"))
         (set-text-properties start (point)
                              `(face default
-                                    st-series ,series
+                                    st-series ,id
                                     st-season ,season
                                     st-episode ,episode))
         (put-text-property start end-date 'face '(t ((:foreground "MediumSpringGreen")))))
       (when watched
         (set-text-properties start (point)
                              `(face st-watched
-                                    st-series ,series
+                                    st-series ,id
                                     st-season ,season
                                     st-episode ,episode
                                     invisible st-watched))))))
