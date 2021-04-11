@@ -500,7 +500,7 @@ Erase first then redraw the whole buffer."
    [("a" "Search and add a series" st-search)
     ("d" "Delete a series" st-remove)
     ("w" "Watch at point" st-watch)
-    ("u" "Refresh the buffer" st-refresh)
+    ("u" "Unwatch at point" st-unwatch)
     ("U" "Update and refresh the buffer" st-update)]]
 
   ["Display"
