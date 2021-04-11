@@ -490,7 +490,8 @@ Erase first then redraw the whole buffer."
 
   ["seriesTracker commands"
    :if-derived st-mode
-   [("w" "Hide/show watched" st-switch-watched)
+   [("w" "Watch at point" st-watch)
+    ("W" "Hide/show watched" st-switch-watched)
     ("u" "Refresh the buffer" st-refresh)
     ("U" "Update and refresh the buffer" st-update)
     ("a" "Search and add a series" st-search)
@@ -619,6 +620,11 @@ Erase first then redraw the whole buffer."
   (local-set-key "®" 'st-unfold-at-point)
 
   (local-set-key "h" 'st-dispatch)
+  (local-set-key "W" 'st-switch-watched)
+  (local-set-key "u" 'st-refresh)
+  (local-set-key "U" 'st-update)
+  (local-set-key "a" 'st-search)
+  (local-set-key "w" 'st-watch)
   )
 
 ;;; Postamble
