@@ -535,7 +535,8 @@ Erase first then redraw the whole buffer."
         (episode (get-text-property (point) 'st-episode)))
     (cond (episode (st--watch series season episode))
           (season (st-watch-season series season))
-          (t (st-watch-series series)))))
+          (t (st-watch-series series))))
+  (st-refresh))
 
 (defun st-watch-season (id seasonN)
   "Watch all episode in a season."
