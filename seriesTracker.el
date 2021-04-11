@@ -415,13 +415,12 @@ Erase first then redraw the whole buffer."
   (if (and (string-equal (buffer-name) "st") (string-equal mode-name "st"))
       (progn (when (= 1 (point))
                (goto-char 2))
-             (let ((inhibit-read-only t)
-                      (series (get-text-property (point) 'st-series))
-                      (season (get-text-property (point) 'st-season))
-                      (episode (get-text-property (point) 'st-episode)))
-                  (cond (episode (st-fold-episodes))
-                        (season (st-fold-season))
-                        (t (st-fold-series)))))
+             (let ((series (get-text-property (point) 'st-series))
+                   (season (get-text-property (point) 'st-season))
+                   (episode (get-text-property (point) 'st-episode)))
+               (cond (episode (st-fold-episodes))
+                     (season (st-fold-season))
+                     (t (st-fold-series)))))
     (message "Not in st buffer!")))
 
 (defun st-fold-episodes ()
@@ -429,22 +428,25 @@ Erase first then redraw the whole buffer."
 
   (let* ((season-start (previous-single-property-change (point) 'st-season))
          (fold-start (next-single-property-change season-start 'st-episode))
-         (fold-end (next-single-property-change (point) 'st-season nil (point-max))))
-    (put-text-property fold-start fold-end 'invisible 'st-folded nil)))
+         (fold-end (next-single-property-change (point) 'st-season nil (point-max)))
+         (overlay (make-overlay fold-start fold-end)))
+    (overlay-put overlay 'invisible t)))
 
 (defun st-fold-season ()
   "Fold the season at point."
 
   (let* ((fold-start (next-single-property-change (point) 'st-episode))
-         (fold-end (next-single-property-change (point) 'st-season nil (point-max))))
-    (put-text-property fold-start fold-end 'invisible 'st-folded nil)))
+         (fold-end (next-single-property-change (point) 'st-season nil (point-max)))
+         (overlay (make-overlay fold-start fold-end)))
+    (overlay-put overlay 'invisible t)))
 
 (defun st-fold-series ()
   "Fold the series at point."
 
   (let* ((fold-start (next-single-property-change (point) 'st-season))
-         (fold-end (next-single-property-change (point) 'st-series nil (point-max))))
-    (put-text-property fold-start fold-end 'invisible 'st-folded nil)))
+         (fold-end (next-single-property-change (point) 'st-series nil (point-max)))
+         (overlay (when (and fold-start fold-end) (make-overlay fold-start fold-end))))
+    (when overlay (overlay-put overlay 'invisible t))))
 
 (defun st-unfold-at-point ()
   "Unfold the section at point."
@@ -452,8 +454,7 @@ Erase first then redraw the whole buffer."
   (interactive)
 
   (if (and (string-equal (buffer-name) "st") (string-equal mode-name "st"))
-      (let ((inhibit-read-only t)
-            (series (get-text-property (point) 'st-series))
+      (let ((series (get-text-property (point) 'st-series))
             (season (get-text-property (point) 'st-season))
             (episode (get-text-property (point) 'st-episode)))
         (cond (season (st-unfold-season))
@@ -464,15 +465,15 @@ Erase first then redraw the whole buffer."
   "Fold the season at point."
 
   (let* ((fold-start (next-single-property-change (point) 'st-episode))
-         (fold-end (next-single-property-change (point) 'st-season nil (point-max))))
-    (put-text-property fold-start fold-end 'invisible nil nil)))
+         (overlay (car (overlays-at fold-start))))
+    (when overlay (delete-overlay overlay))))
 
 (defun st-unfold-series ()
   "Fold the series at point."
 
   (let* ((fold-start (next-single-property-change (point) 'st-season))
-         (fold-end (next-single-property-change (point) 'st-series nil (point-max))))
-    (put-text-property fold-start fold-end 'invisible nil nil)))
+         (overlay (when fold-start (car (overlays-at fold-start)))))
+    (when (and fold-start overlay) (delete-overlay overlay))))
 
 (defun st-switch-watched ()
   "Switch visibility for watched episodes."
