@@ -628,6 +628,17 @@ Erase first then redraw the whole buffer."
                                   episode)
                                 (alist-get 'episodes series)))))))
 
+(defun st-watch-up ()
+  "Watch up to episode at point."
+
+  (interactive)
+
+  (let ((inhibit-read-only t)
+        (series (get-text-property (point) 'st-series))
+        (season (get-text-property (point) 'st-season))
+        (episode (get-text-property (point) 'st-episode)))
+    (when episode (st--watch-up series season episode)))
+  (st-refresh))
 
 
 ;;;; Delete series
