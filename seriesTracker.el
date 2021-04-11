@@ -126,7 +126,7 @@ Adding an already existing series resets it."
 
 ;;;; Watch episode
 
-(defun st-watch (id seasonN episodeN)
+(defun st--watch (id seasonN episodeN)
   "Watch EPISODEN of SEASONN in series ID."
 
   (->> st--data
@@ -142,7 +142,7 @@ Adding an already existing series resets it."
 
 ;;;; Watch all episodes
 
-(defun st-watch-all (id)
+(defun st--watch-all (id)
   "Watch all episodes in series ID."
 
   (->> st--data
@@ -156,7 +156,7 @@ Adding an already existing series resets it."
 
 ;;;; Watch all episodes up to episode
 
-(defun st-watch-up (id seasonN episodeN)
+(defun st--watch-up (id seasonN episodeN)
   "Watch all episodes up to EPISODEN of SEASON in series ID."
 
   (->> st--data
@@ -504,6 +504,46 @@ Erase first then redraw the whole buffer."
          (toadd (alist-get 'id (-find (lambda (series) (string-equal nametoadd (alist-get 'permalink series))) series-list))))
     (st-add toadd)
     (st-refresh)))
+
+;;;; (un)Watch episodes
+
+(defun st-watch ()
+  "Watch at point."
+
+  (interactive)
+
+  (let ((inhibit-read-only t)
+        (series (get-text-property (point) 'st-series))
+        (season (get-text-property (point) 'st-season))
+        (episode (get-text-property (point) 'st-episode)))
+    (cond (episode (st--watch series season episode))
+          (season (st-watch-season series season))
+          (t (st-watch-series series)))))
+
+(defun st-watch-season (id seasonN)
+  "Watch all episode in a season."
+
+  (->> st--data
+       (-map-when (lambda (series) (= id (alist-get 'id series)))
+                  (lambda (series)
+                    (setf (alist-get 'episodes series)
+                          (-map-when (lambda (episode) (= seasonN (alist-get 'season episode)))
+                                     (lambda (episode)
+                                       (setf (alist-get 'watched episode) t)
+                                       episode)
+                                     (alist-get 'episodes series)))))))
+
+(defun st-watch-series (id)
+  "Watch all episode in a series."
+
+  (->> st--data
+       (-map-when (lambda (series) (= id (alist-get 'id series)))
+                  (lambda (series)
+                    (setf (alist-get 'episodes series)
+                          (-map (lambda (episode)
+                                  (setf (alist-get 'watched episode) t)
+                                  episode)
+                                (alist-get 'episodes series)))))))
 
 ;;;; Create mode
 
