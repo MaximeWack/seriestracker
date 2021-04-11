@@ -326,13 +326,12 @@ Erase first then redraw the whole buffer."
   (interactive)
 
   (if (and (string-equal (buffer-name) "st") (string-equal mode-name "st"))
-      (let ((inhibit-read-only t)
-            (series (get-text-property (point) 'st-series))
+      (let ((series (get-text-property (point) 'st-series))
             (season (get-text-property (point) 'st-season))
             (episode (get-text-property (point) 'st-episode)))
         (cond (episode (goto-char (previous-single-property-change (point) 'st-season)))
-              (season (goto-char (previous-single-property-change (point) 'st-series))))
-    (message "Not in st buffer!"))))
+              (season (goto-char (previous-single-property-change (point) 'st-series)))))
+    (message "Not in st buffer!")))
 
 (defun st-prev ()
   "Move up in the hierarchy."
