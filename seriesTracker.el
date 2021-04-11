@@ -499,7 +499,8 @@ Erase first then redraw the whole buffer."
    :if-derived st-mode
    [("a" "Search and add a series" st-search)
     ("d" "Delete a series" st-remove)
-    ("w" "Watch at point" st-watch)
+    ("ww" "Watch at point" st-watch)
+    ("wu" "Watch up to point" st-watch-up)
     ("u" "Unwatch at point" st-unwatch)
     ("U" "Update and refresh the buffer" st-update)]]
 
