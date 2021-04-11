@@ -625,6 +625,79 @@ Erase first then redraw the whole buffer."
     (st--remove series)
     (st-refresh)))
 
+;;;; Sort series
+
+(defun st-sort-next ()
+  "Sort series by date of next episode to watch."
+
+  (interactive)
+
+  (defun first-next-date (series)
+    (let ((dates (->> series
+                      (alist-get 'episodes)
+                      (--filter (not (alist-get 'watched it))))))
+      (if dates
+          (->> dates
+               (st--utils-array-pull 'air_date)
+               (--map (car (date-to-time it)))
+               -min)
+        0)))
+
+  (defun comp (a b)
+    (< (first-next-date a)
+       (first-next-date b)))
+
+  (setq st--data (-sort 'comp st--data))
+
+  (st-refresh))
+
+(defun st-sort-watched ()
+  "Sort series by date of last watched episode."
+
+  (interactive)
+
+  (defun max-air-date (series)
+    (->> series
+         (alist-get 'episodes)
+         (--filter (alist-get 'watched it))
+         (st--utils-array-pull 'air_date)
+         (--map (car (date-to-time it)))
+         -max))
+
+  (defun comp (a b)
+    (< (max-air-date a)
+       (max-air-date b)))
+
+  (setq st--data (-sort 'comp st--data))
+
+  (st-refresh))
+
+(defun st-sort-alpha-rev ()
+  "Sort alphabetically."
+
+  (interactive)
+
+  (defun comp (a b)
+    (string> (alist-get 'name a)
+             (alist-get 'name b)))
+
+  (setq st--data (-sort 'comp st--data))
+
+  (st-refresh))
+
+(defun st-sort-alpha ()
+  "Sort alphabetically."
+
+  (interactive)
+
+  (defun comp (a b)
+    (string< (alist-get 'name a)
+             (alist-get 'name b)))
+
+  (setq st--data (-sort 'comp st--data))
+
+  (st-refresh))
+
 ;;;; Create mode
 
 (defun st-update ()
