@@ -495,16 +495,34 @@ Erase first then redraw the whole buffer."
 (transient-define-prefix st-dispatch ()
   "Command dispatch for st."
 
-  ["seriesTracker commands"
+  ["Series"
    :if-derived st-mode
-   [("w" "Watch at point" st-watch)
-    ("W" "Hide/show watched" st-switch-watched)
+   [("a" "Search and add a series" st-search)
+    ("d" "Delete a series" st-remove)
+    ("w" "Watch at point" st-watch)
     ("u" "Refresh the buffer" st-refresh)
-    ("U" "Update and refresh the buffer" st-update)
-    ("a" "Search and add a series" st-search)
-    ("s" "Save database" st-save)
+    ("U" "Update and refresh the buffer" st-update)]]
+
+  ["Display"
+   :if-derived st-mode
+   [("W" "Hide/show watched" st-switch-watched)
+    ("S" "Sort series" st-dispatch-sort)]]
+
+  ["Load/Save"
+   :if-derived st-mode
+   [("s" "Save database" st-save)
     ("l" "Load database" st-load)]]
   )
+
+(transient-define-prefix st-dispatch-sort ()
+  "Sort commands dispatch for st."
+
+  ["Sort"
+   :if-derived st-mode
+   [("a" "Sort alphabetically" st-sort-alpha)
+    ("z" "Reverse sort alphabetically" st-sort-alpha-rev)
+    ("w" "Sort by date of last watched episode" st-sort-watched)
+    ("t" "Sort by date of next episode to watch" st-sort-next)]])
 
 ;;;; Load/save data
 
