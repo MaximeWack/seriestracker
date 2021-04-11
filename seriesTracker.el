@@ -207,7 +207,9 @@ Adding an already existing series resets it."
 
 (defun st--save ()
   (with-temp-file st--file
-    (prin1 st--data (current-buffer))))
+    (let ((print-level nil)
+          (print-length nil))
+      (prin1 st--data (current-buffer)))))
 
 (defun st--load ()
   (with-temp-buffer
