@@ -140,6 +140,20 @@ Adding an already existing series resets it."
                                        episode)
                                      (alist-get 'episodes series)))))))
 
+(defun st--unwatch (id seasonN episodeN)
+  "Watch EPISODEN of SEASONN in series ID."
+
+  (->> st--data
+       (-map-when (lambda (series) (= id (alist-get 'id series)))
+                  (lambda (series)
+                    (setf (alist-get 'episodes series)
+                          (-map-when (lambda (episode) (and (= seasonN (alist-get 'season episode))
+                                                       (= episodeN (alist-get 'episode episode))))
+                                     (lambda (episode)
+                                       (setf (alist-get 'watched episode) nil)
+                                       episode)
+                                     (alist-get 'episodes series)))))))
+
 ;;;; Watch all episodes
 
 (defun st--watch-all (id)
@@ -554,6 +568,47 @@ Erase first then redraw the whole buffer."
                                   episode)
                                 (alist-get 'episodes series)))))))
 
+(defun st-unwatch ()
+  "Watch at point."
+
+  (interactive)
+
+  (let ((inhibit-read-only t)
+        (series (get-text-property (point) 'st-series))
+        (season (get-text-property (point) 'st-season))
+        (episode (get-text-property (point) 'st-episode)))
+    (cond (episode (st--unwatch series season episode))
+          (season (st-unwatch-season series season))
+          (t (st-unwatch-series series))))
+  (st-refresh))
+
+(defun st-unwatch-season (id seasonN)
+  "Watch all episode in a season."
+
+  (->> st--data
+       (-map-when (lambda (series) (= id (alist-get 'id series)))
+                  (lambda (series)
+                    (setf (alist-get 'episodes series)
+                          (-map-when (lambda (episode) (= seasonN (alist-get 'season episode)))
+                                     (lambda (episode)
+                                       (setf (alist-get 'watched episode) nil)
+                                       episode)
+                                     (alist-get 'episodes series)))))))
+
+(defun st-watch-series (id)
+  "Watch all episode in a series."
+
+  (->> st--data
+       (-map-when (lambda (series) (= id (alist-get 'id series)))
+                  (lambda (series)
+                    (setf (alist-get 'episodes series)
+                          (-map (lambda (episode)
+                                  (setf (alist-get 'watched episode) nil)
+                                  episode)
+                                (alist-get 'episodes series)))))))
+
+
+
 ;;;; Create mode
 
 (defun st-update ()
@@ -611,10 +666,10 @@ Erase first then redraw the whole buffer."
 
   (local-set-key "h" 'st-dispatch)
   (local-set-key "W" 'st-switch-watched)
-  (local-set-key "u" 'st-refresh)
   (local-set-key "U" 'st-update)
   (local-set-key "a" 'st-search)
   (local-set-key "w" 'st-watch)
+  (local-set-key "u" 'st-unwatch)
   )
 
 ;;; Postamble
