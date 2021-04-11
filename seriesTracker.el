@@ -563,7 +563,8 @@ Erase first then redraw the whole buffer."
     (cond (episode (st--watch series season episode))
           (season (st-watch-season series season))
           (t (st-watch-series series))))
-  (st-refresh))
+  (st-refresh)
+  (forward-line))
 
 (defun st-watch-season (id seasonN)
   "Watch all episode in a season."
@@ -602,7 +603,8 @@ Erase first then redraw the whole buffer."
     (cond (episode (st--unwatch series season episode))
           (season (st-unwatch-season series season))
           (t (st-unwatch-series series))))
-  (st-refresh))
+  (st-refresh)
+  (forward-line))
 
 (defun st-unwatch-season (id seasonN)
   "Watch all episode in a season."
@@ -639,7 +641,8 @@ Erase first then redraw the whole buffer."
         (season (get-text-property (point) 'st-season))
         (episode (get-text-property (point) 'st-episode)))
     (when episode (st--watch-up series season episode)))
-  (st-refresh))
+  (st-refresh)
+  (forward-line))
 
 
 ;;;; Delete series
