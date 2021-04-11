@@ -616,7 +616,7 @@ Erase first then redraw the whole buffer."
                                        episode)
                                      (alist-get 'episodes series)))))))
 
-(defun st-watch-series (id)
+(defun st-unwatch-series (id)
   "Watch all episode in a series."
 
   (->> st--data
