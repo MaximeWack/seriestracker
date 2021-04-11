@@ -344,7 +344,8 @@ Erase first then redraw the whole buffer."
             (season (get-text-property (point) 'st-season))
             (episode (get-text-property (point) 'st-episode)))
         (goto-char (previous-single-property-change (point) 'st-season nil (point-min))))
-    (message "Not in st buffer!")))
+    (message "Not in st buffer!"))
+  (when (invisible-p (point)) (st-prev)))
 
 (defun st-next ()
   "Move up in the hierarchy."
@@ -357,7 +358,8 @@ Erase first then redraw the whole buffer."
             (season (get-text-property (point) 'st-season))
             (episode (get-text-property (point) 'st-episode)))
         (goto-char (next-single-property-change (point) 'st-season nil (point-max))))
-    (message "Not in st buffer!")))
+    (message "Not in st buffer!"))
+  (when (invisible-p (point)) (st-next)))
 
 
 (defun st-prev-same ()
@@ -372,7 +374,8 @@ Erase first then redraw the whole buffer."
             (episode (get-text-property (point) 'st-episode)))
         (cond ((or episode season) (goto-char (previous-single-property-change (point) 'st-season nil (point-min))))
               (series (goto-char (previous-single-property-change (point) 'st-series nil (point-min))))))
-    (message "Not in st buffer!")))
+    (message "Not in st buffer!"))
+  (when (invisible-p (point)) (st-prev-same)))
 
 (defun st-next-same ()
   "Move up in the hierarchy."
@@ -388,7 +391,8 @@ Erase first then redraw the whole buffer."
                    (episode (get-text-property (point) 'st-episode)))
                (cond ((or episode season) (goto-char (next-single-property-change (point) 'st-season nil (point-max))))
                      (series (goto-char (next-single-property-change (point) 'st-series nil (point-max)))))))
-    (message "Not in st buffer!")))
+    (message "Not in st buffer!"))
+  (when (invisible-p (point)) (st-next-same)))
 
 ;;;; Folding
 
