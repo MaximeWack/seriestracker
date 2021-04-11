@@ -67,7 +67,7 @@ returns '(1 3)"
        (st--utils-alist-select '(tv_shows))
        car
        cdr
-       (st--utils-array-select '(id name start_date status network))))
+       (st--utils-array-select '(id name start_date status network permalink))))
 
 ;;;; series
 
@@ -103,13 +103,6 @@ Of the form :
 
 series props are name and start_date.
 episodes props are season, episode, name, and air_date.")
-
-;;;; Search series
-
-(defun st-search (seriesName)
-  "Search SERIESNAME."
-
-  (st--search seriesName))
 
 ;;;; Add series
 
@@ -458,6 +451,20 @@ Erase first then redraw the whole buffer."
       (setq-local buffer-invisibility-spec '(t st-folded))
     (setq-local buffer-invisibility-spec '(t st-folded st-watched))))
 
+;;;; Add series
+
+(defun st-search ()
+
+  (interactive)
+
+  (let* ((searchterm (read-from-minibuffer "Search: "))
+         (series-list (st--search searchterm))
+         (names-list (st--utils-array-pull 'permalink series-list))
+         (nametoadd (completing-read "Options: " names-list))
+         (toadd (alist-get 'id (-find (lambda (series) (string-equal nametoadd (alist-get 'permalink series))) series-list))))
+    (st-add toadd)
+    (st-refresh)))
+
 ;;;; Create mode
 
 (defun st-update ()
@@ -503,9 +510,9 @@ Erase first then redraw the whole buffer."
 
 ;;; Example
 
-(st-search "utopia")
-(st-search "game of thrones")
-(st-search "rick and morty")
+(st--search "utopia")
+(st--search "game of thrones")
+(st--search "rick and morty")
 
 (st--series 31085)
 (st--series 23455)
