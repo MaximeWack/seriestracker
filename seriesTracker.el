@@ -303,6 +303,20 @@ Erase first then redraw the whole buffer."
 
 ;;;; Movements
 
+(defun st--up ()
+  "Move one line up."
+
+  (interactive)
+
+  (vertical-motion (- 1)))
+
+(defun st--down ()
+  "Move one line down."
+
+  (interactive)
+
+  (vertical-motion 1))
+
 (defun st-up ()
   "Move up in the hierarchy."
 
@@ -529,7 +543,25 @@ Erase first then redraw the whole buffer."
 
   (setq-local buffer-invisibility-spec '(t st-folded))
   (setq-local imenu-prev-index-position-function 'imenu-prev)
-  (setq-local imenu-extract-index-name-function 'imenu-name))
+  (setq-local imenu-extract-index-name-function 'imenu-name)
+
+  ;; keymap
+
+  (local-set-key "d" 'st--up)
+  (local-set-key "s" 'st--down)
+
+  (local-set-key "ð" 'st-prev)
+  (local-set-key "ß" 'st-next)
+
+  (local-set-key "Þ" 'st-up)
+  (local-set-key "Ð" 'st-prev-same)
+  (local-set-key "ẞ" 'st-next-same)
+
+  (local-set-key "þ" 'st-fold-at-point)
+  (local-set-key "®" 'st-unfold-at-point)
+
+  (local-set-key "h" 'st-dispatch)
+  )
 
 ;;; Postamble
 
