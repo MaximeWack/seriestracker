@@ -270,7 +270,7 @@ Erase first then redraw the whole buffer."
     (put-text-property (point-min) (point) 'invisible t)
     (put-text-property (point-min) (point) 'st-series 0)
     (-each st--data 'st--draw-series)
-    (delete-char (- 1))))
+    (delete-char -1)))
 
 (defun st--draw-series (series)
   "Print the series id and name."
@@ -664,8 +664,8 @@ Erase first then redraw the whole buffer."
 
   ;; keymap
 
-  (local-set-key "d" 'previous-line)
-  (local-set-key "s" 'next-line)
+  (local-set-key "d" '(lambda () (interactive) (forward-line -1)))
+  (local-set-key "s" 'forward-line)
 
   (local-set-key "ð" 'st-prev)
   (local-set-key "ß" 'st-next)
