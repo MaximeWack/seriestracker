@@ -8,6 +8,7 @@
 (require 'url)                                                                  ; used to fetch api data
 (require 'json)                                                                 ; used to parse api response
 (require 'dash)                                                                 ; threading etc.
+(require 'transient)                                                            ; transient for command dispatch
 
 ;;; Helpers
 
@@ -451,6 +452,31 @@ Erase first then redraw the whole buffer."
       (setq-local buffer-invisibility-spec '(t st-folded))
     (setq-local buffer-invisibility-spec '(t st-folded st-watched))))
 
+;;;; Transient
+
+(transient-define-prefix st-dispatch ()
+  "Command dispatch for st."
+
+  ["seriesTracker commands"
+   :if-derived st-mode
+   [("w" "Hide/show watched" st-switch-watched)
+    ("u" "Refresh the buffer" st-refresh)
+    ("U" "Update and refresh the buffer" st-update)
+    ("a" "Search and add a series" st-search)
+    ("s" "Save database" st-save)
+    ("l" "Load database" st-load)]]
+  )
+
+;;;; Load/save data
+
+(defun st-save ()
+  (interactive)
+  (st--save))
+
+(defun st-load ()
+  (interactive)
+  (st--load))
+
 ;;;; Add series
 
 (defun st-search ()
@@ -485,6 +511,7 @@ Erase first then redraw the whole buffer."
 (define-derived-mode st-mode special-mode "st"
   "Series tracking with episodate.com."
 
+  ;; imenu
   (defun imenu-prev ()
     "imenu-prev-index-position-function for st."
 
