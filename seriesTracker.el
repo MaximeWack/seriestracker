@@ -225,6 +225,10 @@ Adding an already existing series resets it."
   '((t (:height 1.9 :weight bold :foreground "DeepSkyBlue")))
   "Face for series names")
 
+(defface st-finished-series
+  '((t (:height 2.0 :weight bold :foreground "DimGrey")))
+  "Face for finished series names")
+
 (defface st-season
   '((t (:height 1.7 :weight bold :foreground "MediumPurple")))
   "Face for seasons")
@@ -259,6 +263,7 @@ Erase first then redraw the whole buffer."
 
   (let ((id (alist-get 'id series))
         (name (alist-get 'name series))
+        (finished (string-equal "Ended" (alist-get 'status series)))
         (episodes (alist-get 'episodes series)))
     (let ((start (point)))
       (insert (concat name "\n"))
@@ -268,6 +273,9 @@ Erase first then redraw the whole buffer."
                                   st-season nil
                                   st-episode nil)))
     (--each episodes (st--draw-episode id it))))
+      (if finished
+          (put-text-property start (point) 'face 'st-finished-series)
+        (put-text-property start (point) 'face 'st-series))
 
 (defun st--draw-episode (series episode)
   "Print the episode id, S**E**, and name."
