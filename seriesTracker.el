@@ -118,7 +118,7 @@ Adding an already existing series resets it."
 
 ;;;; Remove series
 
-(defun st-remove (id)
+(defun st--remove (id)
   "Remove series with ID from st--data."
 
   (setq st--data
@@ -608,6 +608,19 @@ Erase first then redraw the whole buffer."
                                 (alist-get 'episodes series)))))))
 
 
+
+;;;; Delete series
+
+(defun st-remove ()
+  "Remove series at point."
+
+  (interactive)
+  (let ((inhibit-read-only t)
+        (series (get-text-property (point) 'st-series))
+        (season (get-text-property (point) 'st-season))
+        (episode (get-text-property (point) 'st-episode)))
+    (st--remove series)
+    (st-refresh)))
 
 ;;;; Create mode
 
