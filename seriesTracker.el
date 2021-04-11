@@ -320,20 +320,6 @@ Erase first then redraw the whole buffer."
 
 ;;;; Movements
 
-(defun st--up ()
-  "Move one line up."
-
-  (interactive)
-
-  (vertical-motion (- 1)))
-
-(defun st--down ()
-  "Move one line down."
-
-  (interactive)
-
-  (vertical-motion 1))
-
 (defun st-up ()
   "Move up in the hierarchy."
 
@@ -607,8 +593,8 @@ Erase first then redraw the whole buffer."
 
   ;; keymap
 
-  (local-set-key "d" 'st--up)
-  (local-set-key "s" 'st--down)
+  (local-set-key "d" 'previous-line)
+  (local-set-key "s" 'next-line)
 
   (local-set-key "ð" 'st-prev)
   (local-set-key "ß" 'st-next)
