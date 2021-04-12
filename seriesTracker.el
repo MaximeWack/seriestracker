@@ -547,7 +547,7 @@ Erase first then redraw the whole buffer."
          (nametoadd (completing-read "Options: " names-list))
          (toadd (alist-get 'id (-find (lambda (series) (string-equal nametoadd (alist-get 'permalink series))) series-list))))
     (st-add toadd)
-    (st-refresh)))
+    (st--refresh)))
 
 ;;;; (un)Watch episodes
 
@@ -563,7 +563,7 @@ Erase first then redraw the whole buffer."
     (cond (episode (st--watch series season episode))
           (season (st-watch-season series season))
           (t (st-watch-series series))))
-  (st-refresh)
+  (st--refresh)
   (forward-line))
 
 (defun st-watch-season (id seasonN)
@@ -603,7 +603,7 @@ Erase first then redraw the whole buffer."
     (cond (episode (st--unwatch series season episode))
           (season (st-unwatch-season series season))
           (t (st-unwatch-series series))))
-  (st-refresh)
+  (st--refresh)
   (forward-line))
 
 (defun st-unwatch-season (id seasonN)
@@ -641,7 +641,7 @@ Erase first then redraw the whole buffer."
         (season (get-text-property (point) 'st-season))
         (episode (get-text-property (point) 'st-episode)))
     (when episode (st--watch-up series season episode)))
-  (st-refresh)
+  (st--refresh)
   (forward-line))
 
 
@@ -656,7 +656,7 @@ Erase first then redraw the whole buffer."
         (season (get-text-property (point) 'st-season))
         (episode (get-text-property (point) 'st-episode)))
     (st--remove series)
-    (st-refresh)))
+    (st--refresh)))
 
 ;;;; Sort series
 
@@ -682,7 +682,7 @@ Erase first then redraw the whole buffer."
 
   (setq st--data (-sort 'comp st--data))
 
-  (st-refresh))
+  (st--refresh))
 
 (defun st-sort-watched ()
   "Sort series by date of last watched episode."
@@ -703,7 +703,7 @@ Erase first then redraw the whole buffer."
 
   (setq st--data (-sort 'comp st--data))
 
-  (st-refresh))
+  (st--refresh))
 
 (defun st-sort-alpha-rev ()
   "Sort alphabetically."
@@ -716,7 +716,7 @@ Erase first then redraw the whole buffer."
 
   (setq st--data (-sort 'comp st--data))
 
-  (st-refresh))
+  (st--refresh))
 
 (defun st-sort-alpha ()
   "Sort alphabetically."
@@ -729,7 +729,7 @@ Erase first then redraw the whole buffer."
 
   (setq st--data (-sort 'comp st--data))
 
-  (st-refresh))
+  (st--refresh))
 
 ;;;; Create mode
 
