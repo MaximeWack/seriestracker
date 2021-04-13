@@ -651,7 +651,7 @@ Erase first then redraw the whole buffer."
   (forward-line))
 
 
-;;;; Delete series
+;;;; Remove series
 
 (defun st-remove ()
   "Remove series at point."
@@ -661,7 +661,7 @@ Erase first then redraw the whole buffer."
         (series (get-text-property (point) 'st-series))
         (season (get-text-property (point) 'st-season))
         (episode (get-text-property (point) 'st-episode)))
-    (st--remove series)
+    (when (y-or-n-p "Are you sure you want to delete this series? ") (st--remove series))
     (st--refresh)))
 
 ;;;; Sort series
