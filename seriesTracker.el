@@ -266,9 +266,9 @@ Erase first then redraw the whole buffer."
 
   (let ((inhibit-read-only t))
     (erase-buffer)
-    (insert "0")
-    (put-text-property (point-min) (point) 'invisible t)
-    (put-text-property (point-min) (point) 'st-series 0)
+    ;; (insert "0")
+    ;; (put-text-property (point-min) (point) 'invisible t)
+    ;; (put-text-property (point-min) (point) 'st-series 0)
     (-each st--data 'st--draw-series)
     (delete-char -1)))
 
@@ -427,14 +427,12 @@ Erase first then redraw the whole buffer."
   (interactive)
 
   (if (and (string-equal (buffer-name) "st") (string-equal mode-name "st"))
-      (progn (when (= 1 (point))
-               (goto-char 2))
-             (let ((series (get-text-property (point) 'st-series))
-                   (season (get-text-property (point) 'st-season))
-                   (episode (get-text-property (point) 'st-episode)))
-               (cond (episode (st-fold-episodes))
-                     (season (st-fold-season))
-                     (t (st-fold-series)))))
+      (let ((series (get-text-property (point) 'st-series))
+            (season (get-text-property (point) 'st-season))
+            (episode (get-text-property (point) 'st-episode)))
+        (cond (episode (st-fold-episodes))
+              (season (st-fold-season))
+              (t (st-fold-series))))
     (message "Not in st buffer!")))
 
 (defun st-fold-episodes ()
@@ -759,25 +757,7 @@ Erase first then redraw the whole buffer."
 (define-derived-mode st-mode special-mode "st"
   "Series tracking with episodate.com."
 
-  ;; imenu
-  (defun imenu-prev ()
-    "imenu-prev-index-position-function for st."
-
-    (let ((newpos (previous-single-property-change (point) 'st-series)))
-      (if newpos
-          (goto-char newpos)
-        nil)))
-
-  (defun imenu-name ()
-    "imenu-extract-index-name-function for st."
-
-    (let ((start (point)))
-      (end-of-line)
-      (buffer-substring start (point))))
-
-  (setq-local buffer-invisibility-spec '(t st-folded))
-  (setq-local imenu-prev-index-position-function 'imenu-prev)
-  (setq-local imenu-extract-index-name-function 'imenu-name)
+  (setq-local buffer-invisibility-spec '(t st-series st-season))
 
   ;; keymap
 
