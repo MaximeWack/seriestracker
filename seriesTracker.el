@@ -487,8 +487,8 @@ Erase first then redraw the whole buffer."
   (interactive)
 
   (if (-contains? buffer-invisibility-spec 'st-watched)
-      (setq-local buffer-invisibility-spec '(t st-folded))
-    (setq-local buffer-invisibility-spec '(t st-folded st-watched))))
+      (remove-from-invisibility-spec 'st-watched)
+    (add-to-invisibility-spec 'st-watched)))
 
 ;;;; Transient
 
