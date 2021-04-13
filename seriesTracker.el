@@ -367,6 +367,9 @@ Erase first then redraw the whole buffer."
             (episode (get-text-property (point) 'st-episode)))
         (goto-char (previous-single-property-change (point) 'st-season nil (point-min))))
     (message "Not in st buffer!"))
+  (when (and (= 1 (point))
+             (invisible-p 1))
+    (st-next))
   (when (invisible-p (point)) (st-prev)))
 
 (defun st-next ()
@@ -399,6 +402,9 @@ Erase first then redraw the whole buffer."
         (cond ((or episode season) (goto-char (previous-single-property-change (point) 'st-season nil (point-min))))
               (series (goto-char (previous-single-property-change (point) 'st-series nil (point-min))))))
     (message "Not in st buffer!"))
+  (when (and (= 1 (point))
+             (invisible-p 1))
+    (st-next))
   (when (invisible-p (point)) (st-prev-same)))
 
 (defun st-next-same ()
