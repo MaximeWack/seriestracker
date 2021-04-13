@@ -290,7 +290,9 @@ Erase first then redraw the whole buffer."
         (put-text-property start (point) 'face 'st-series))
       (when (-all? (lambda (episode) (alist-get 'watched episode))
                    (alist-get 'episodes series))
-        (put-text-property start (point) 'invisible 'st-watched nil)))
+        (let ((overlay (make-overlay start (point))))
+          (overlay-put overlay 'invisible 'st-watched)
+          (overlay-put overlay 'priority -1))))
     (--each episodes (st--draw-episode series it))))
 
 (defun st--draw-episode (series episode)
@@ -313,7 +315,9 @@ Erase first then redraw the whole buffer."
         (when (-all? (lambda (episode) (alist-get 'watched episode))
                      (-filter (lambda (episode) (= season (alist-get 'season episode)))
                               (alist-get 'episodes series)))
-          (put-text-property start (point) 'invisible 'st-watched nil))))
+          (let ((overlay (make-overlay start (point))))
+            (overlay-put overlay 'invisible 'st-watched)
+            (overlay-put overlay 'priority -1)))))
     (let ((start (point)))
       (insert air_date)
       (let ((end-date (point)))
@@ -436,7 +440,7 @@ Erase first then redraw the whole buffer."
          (fold-start (next-single-property-change season-start 'st-episode))
          (fold-end (next-single-property-change (point) 'st-season nil (point-max)))
          (overlay (make-overlay fold-start fold-end)))
-    (overlay-put overlay 'invisible t)))
+    (overlay-put overlay 'invisible 'st-season)))
 
 (defun st-fold-season ()
   "Fold the season at point."
@@ -444,7 +448,7 @@ Erase first then redraw the whole buffer."
   (let* ((fold-start (next-single-property-change (point) 'st-episode))
          (fold-end (next-single-property-change (point) 'st-season nil (point-max)))
          (overlay (make-overlay fold-start fold-end)))
-    (overlay-put overlay 'invisible t)))
+    (overlay-put overlay 'invisible 'st-season)))
 
 (defun st-fold-series ()
   "Fold the series at point."
@@ -452,7 +456,7 @@ Erase first then redraw the whole buffer."
   (let* ((fold-start (next-single-property-change (point) 'st-season))
          (fold-end (next-single-property-change (point) 'st-series nil (point-max)))
          (overlay (when (and fold-start fold-end) (make-overlay fold-start fold-end))))
-    (when overlay (overlay-put overlay 'invisible t))))
+    (when overlay (overlay-put overlay 'invisible 'st-series))))
 
 (defun st-unfold-at-point ()
   "Unfold the section at point."
@@ -470,16 +474,16 @@ Erase first then redraw the whole buffer."
 (defun st-unfold-season ()
   "Fold the season at point."
 
-  (let* ((fold-start (next-single-property-change (point) 'st-episode))
-         (overlay (car (overlays-at fold-start))))
-    (when overlay (delete-overlay overlay))))
+  (let ((fold-start (next-single-property-change (point) 'st-episode))
+        (fold-end (next-single-property-change (point) 'st-season)))
+    (remove-overlays fold-start fold-end 'invisible 'st-season)))
 
 (defun st-unfold-series ()
   "Fold the series at point."
 
-  (let* ((fold-start (next-single-property-change (point) 'st-season))
-         (overlay (when fold-start (car (overlays-at fold-start)))))
-    (when (and fold-start overlay) (delete-overlay overlay))))
+  (let ((fold-start (next-single-property-change (point) 'st-season))
+        (fold-end (next-single-property-change (point) 'st-series)))
+    (remove-overlays fold-start fold-end 'invisible 'st-series)))
 
 (defun st-switch-watched ()
   "Switch visibility for watched episodes."
