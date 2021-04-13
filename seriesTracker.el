@@ -359,9 +359,10 @@ Erase first then redraw the whole buffer."
 
   (interactive)
 
+  (setq disable-point-adjustment t)
+
   (if (and (string-equal (buffer-name) "st") (string-equal mode-name "st"))
-      (let ((inhibit-read-only t)
-            (series (get-text-property (point) 'st-series))
+      (let ((series (get-text-property (point) 'st-series))
             (season (get-text-property (point) 'st-season))
             (episode (get-text-property (point) 'st-episode)))
         (goto-char (previous-single-property-change (point) 'st-season nil (point-min))))
@@ -373,9 +374,10 @@ Erase first then redraw the whole buffer."
 
   (interactive)
 
+  (setq disable-point-adjustment t)
+
   (if (and (string-equal (buffer-name) "st") (string-equal mode-name "st"))
-      (let ((inhibit-read-only t)
-            (series (get-text-property (point) 'st-series))
+      (let ((series (get-text-property (point) 'st-series))
             (season (get-text-property (point) 'st-season))
             (episode (get-text-property (point) 'st-episode)))
         (goto-char (next-single-property-change (point) 'st-season nil (point-max))))
@@ -388,9 +390,10 @@ Erase first then redraw the whole buffer."
 
   (interactive)
 
+  (setq disable-point-adjustment t)
+
   (if (and (string-equal (buffer-name) "st") (string-equal mode-name "st"))
-      (let ((inhibit-read-only t)
-            (series (get-text-property (point) 'st-series))
+      (let ((series (get-text-property (point) 'st-series))
             (season (get-text-property (point) 'st-season))
             (episode (get-text-property (point) 'st-episode)))
         (cond ((or episode season) (goto-char (previous-single-property-change (point) 'st-season nil (point-min))))
@@ -403,11 +406,12 @@ Erase first then redraw the whole buffer."
 
   (interactive)
 
+  (setq disable-point-adjustment t)
+
   (if (and (string-equal (buffer-name) "st") (string-equal mode-name "st"))
       (progn (when (= 1 (point))
                (goto-char 2))
-             (let ((inhibit-read-only t)
-                   (series (get-text-property (point) 'st-series))
+             (let ((series (get-text-property (point) 'st-series))
                    (season (get-text-property (point) 'st-season))
                    (episode (get-text-property (point) 'st-episode)))
                (cond ((or episode season) (goto-char (next-single-property-change (point) 'st-season nil (point-max))))
@@ -795,8 +799,7 @@ Erase first then redraw the whole buffer."
   (local-set-key "U" 'st-update)
   (local-set-key "a" 'st-search)
   (local-set-key "w" 'st-watch)
-  (local-set-key "u" 'st-unwatch)
-  )
+  (local-set-key "u" 'st-unwatch))
 
 ;;; Postamble
 
