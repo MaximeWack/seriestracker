@@ -785,33 +785,4 @@ Erase first then redraw the whole buffer."
 
 (provide 'seriesTracker)
 
-;;; Example
-
-(st--search "utopia")
-(st--search "game of thrones")
-(st--search "rick and morty")
-
-(st--series 31085)
-(st--series 23455)
-(st--series 32157)
-
-(st-add 31085)
-(st-add 23455)
-(st-add 32157)
-
-(st-remove 23455)
-
-(st-watch 32157 4 10)
-
-(st-watch-all 31085)
-(st-watch-all 23455)
-
-(st-watch-up 32157 3 5)
-
-(st-update)
-
-(st--save)
-
-(st--load)
-
 ;;; seriesTracker.el ends here
