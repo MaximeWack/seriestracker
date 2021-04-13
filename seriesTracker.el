@@ -761,8 +761,8 @@ Erase first then redraw the whole buffer."
 
   ;; keymap
 
-  (local-set-key "d" '(lambda () (interactive) (forward-line -1)))
-  (local-set-key "s" 'forward-line)
+  (local-set-key "d" 'previous-line)
+  (local-set-key "s" 'next-line)
 
   (local-set-key "ð" 'st-prev)
   (local-set-key "ß" 'st-next)
