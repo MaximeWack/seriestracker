@@ -258,7 +258,14 @@ Adding an already existing series resets it."
 
   (let ((line (line-number-at-pos)))
     (st--draw-buffer)
-    (goto-line line)))
+    (goto-line line))
+
+  (cond ((eq fold-cycle 'st-all-folded)
+         (st-fold-all))
+        ((eq fold-cycle 'st-all-unfolded)
+         (st-unfold-all))
+        ((eq fold-cycle 'st-series-folded)
+         (st-unfold-all-series))))
 
 (defun st--draw-buffer ()
   "Draw the buffer.
@@ -817,13 +824,7 @@ Erase first then redraw the whole buffer."
   (interactive)
   (switch-to-buffer "st")
   (st-mode)
-  (st-update))
-  (cond ((eq fold-cycle 'st-all-folded)
-         (st-fold-all))
-        ((eq fold-cycle 'st-all-unfolded)
-         (st-unfold-all))
-        ((eq fold-cycle 'st-series-folded)
-         (st-unfold-all-series))))
+  (st--refresh))
 
 (define-derived-mode st-mode special-mode "st"
   "Series tracking with episodate.com."
