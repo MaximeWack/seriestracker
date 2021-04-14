@@ -387,6 +387,17 @@ Erase first then redraw the whole buffer."
     (message "Not in st buffer!"))
   (when (invisible-p (point)) (st-next)))
 
+(defun st--next-any ()
+  "Move up in the hierarchy, including invisible headings."
+
+  (setq disable-point-adjustment t)
+
+  (if (and (string-equal (buffer-name) "st") (string-equal mode-name "st"))
+      (let ((series (get-text-property (point) 'st-series))
+            (season (get-text-property (point) 'st-season))
+            (episode (get-text-property (point) 'st-episode)))
+        (goto-char (next-single-property-change (point) 'st-season nil (point-max))))
+    (message "Not in st buffer!")))
 
 (defun st-prev-same ()
   "Move up in the hierarchy."
@@ -501,6 +512,54 @@ Erase first then redraw the whole buffer."
   (if (-contains? buffer-invisibility-spec 'st-watched)
       (remove-from-invisibility-spec 'st-watched)
     (add-to-invisibility-spec 'st-watched)))
+
+;;;; Cycle folding
+
+(defvar fold-cycle 'st-all-folded)
+
+(defun st-cycle ()
+  "Cycle folding."
+
+  (interactive)
+
+  (cond ((eq fold-cycle 'st-all-folded)
+         (st-unfold-all-series)
+         (setq fold-cycle 'st-series-folded))
+        ((eq fold-cycle 'st-series-folded)
+         (st-unfold-all)
+         (setq fold-cycle 'st-all-unfolded))
+        ((eq fold-cycle 'st-all-unfolded)
+         (st-fold-all)
+         (setq fold-cycle 'st-all-folded))))
+
+(defun st-unfold-all ()
+  "Unfold everything."
+
+  (interactive)
+
+  (remove-overlays (point-min) (point-max) 'invisible 'st-series)
+  (remove-overlays (point-min) (point-max) 'invisible 'st-season))
+
+(defun st-fold-all ()
+  "Fold everything."
+
+  (interactive)
+
+  (save-excursion
+    (st-unfold-all)
+    (goto-char 1)
+    (while (< (point)
+              (point-max))
+      (st-fold-at-point)
+      (st--next-any))))
+
+(defun st-unfold-all-series ()
+  "Unfold all series."
+
+  (interactive)
+
+  (st-fold-all)
+  (remove-overlays (point-min) (point-max) 'invisible 'st-series))
 
 ;;;; Transient
 
@@ -759,6 +818,12 @@ Erase first then redraw the whole buffer."
   (switch-to-buffer "st")
   (st-mode)
   (st-update))
+  (cond ((eq fold-cycle 'st-all-folded)
+         (st-fold-all))
+        ((eq fold-cycle 'st-all-unfolded)
+         (st-unfold-all))
+        ((eq fold-cycle 'st-series-folded)
+         (st-unfold-all-series))))
 
 (define-derived-mode st-mode special-mode "st"
   "Series tracking with episodate.com."
@@ -785,7 +850,8 @@ Erase first then redraw the whole buffer."
   (local-set-key "U" 'st-update)
   (local-set-key "a" 'st-search)
   (local-set-key "w" 'st-watch)
-  (local-set-key "u" 'st-unwatch))
+  (local-set-key "u" 'st-unwatch)
+  (local-set-key [tab] 'st-cycle))
 
 ;;; Postamble
 
