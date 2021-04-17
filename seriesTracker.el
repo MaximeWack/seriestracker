@@ -571,7 +571,7 @@ Erase first then redraw the whole buffer."
   "Command dispatch for st."
 
   ["Series"
-   :if-derived st-mode
+   :if-mode st-mode
    [("a" "Search and add a series" st-search)
     ("d" "Delete a series" st-remove)
     ("ww" "Watch at point" st-watch)
@@ -580,12 +580,12 @@ Erase first then redraw the whole buffer."
     ("U" "Update and refresh the buffer" st-update)]]
 
   ["Display"
-   :if-derived st-mode
+   :if-mode st-mode
    [("W" "Hide/show watched" st-switch-watched)
     ("S" "Sort series" st-dispatch-sort)]]
 
   ["Load/Save"
-   :if-derived st-mode
+   :if-mode st-mode
    [("s" "Save database" st-save)
     ("l" "Load database" st-load)]]
   )
