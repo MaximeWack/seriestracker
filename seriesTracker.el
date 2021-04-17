@@ -273,9 +273,6 @@ Erase first then redraw the whole buffer."
 
   (let ((inhibit-read-only t))
     (erase-buffer)
-    ;; (insert "0")
-    ;; (put-text-property (point-min) (point) 'invisible t)
-    ;; (put-text-property (point-min) (point) 'st-series 0)
     (-each st--data 'st--draw-series)
     (delete-char -1)))
 
