@@ -334,8 +334,8 @@ Erase first then redraw the whole buffer."
                                     st-series ,id
                                     st-season ,season
                                     st-episode ,episode))
-        (if (<= (car (date-to-time air_date))
-                (car (current-time)))
+        (if (time-less-p (date-to-time air_date)
+                         (current-time))
             (put-text-property start end-date 'face '(t ((:foreground "MediumSpringGreen"))))
           (put-text-property start end-date 'face '(t ((:foreground "firebrick"))))))
       (when watched
