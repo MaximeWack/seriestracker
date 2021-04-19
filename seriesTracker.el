@@ -508,15 +508,6 @@ Erase first then redraw the whole buffer."
         (fold-end (next-single-property-change (point) 'st-series)))
     (remove-overlays fold-start fold-end 'invisible 'st-series)))
 
-(defun st-switch-watched ()
-  "Switch visibility for watched episodes."
-
-  (interactive)
-
-  (if (-contains? buffer-invisibility-spec 'st-watched)
-      (remove-from-invisibility-spec 'st-watched)
-    (add-to-invisibility-spec 'st-watched)))
-
 ;;;; Cycle folding
 
 (defvar fold-cycle 'st-all-folded)
@@ -567,38 +558,119 @@ Erase first then redraw the whole buffer."
 
 ;;;; Transient
 
+(defvar st-show-watched "hide")
+
+(defvar st-sorting-type "next")
+
 (transient-define-prefix st-dispatch ()
   "Command dispatch for st."
 
   ["Series"
    :if-mode st-mode
    [("a" "Search and add a series" st-search)
-    ("d" "Delete a series" st-remove)
-    ("ww" "Watch at point" st-watch)
+    ("d" "Delete a series" st-remove)]
+   [("ww" "Watch at point" st-watch)
     ("wu" "Watch up to point" st-watch-up)
-    ("u" "Unwatch at point" st-unwatch)
-    ("U" "Update and refresh the buffer" st-update)]]
+    ("u" "Unwatch at point" st-unwatch)]
+   [("U" "Update and refresh the buffer" st-update)]]
 
   ["Display"
    :if-mode st-mode
-   [("W" "Hide/show watched" st-switch-watched)
-    ("S" "Sort series" st-dispatch-sort)]]
+   [("W" st-infix-watched)
+    ("S" st-infix-sorting)]]
 
   ["Load/Save"
    :if-mode st-mode
    [("s" "Save database" st-save)
-    ("l" "Load database" st-load)]]
+    ("l" "Load database" st-load)
+    ("f" st-infix-savefile)]]
   )
 
-(transient-define-prefix st-dispatch-sort ()
-  "Sort commands dispatch for st."
+(defclass st-transient-variable (transient-variable)
+  ((variable :initarg :variable)))
 
-  ["Sort"
-   :if-derived st-mode
-   [("a" "Sort alphabetically" st-sort-alpha)
-    ("z" "Reverse sort alphabetically" st-sort-alpha-rev)
-    ("w" "Sort by date of last watched episode" st-sort-watched)
-    ("t" "Sort by date of next episode to watch" st-sort-next)]])
+(defclass st-transient-variable:choice (st-transient-variable)
+  ((name :initarg :name)
+   (choices :initarg :choices)
+   (default :initarg :default)
+   (action :initarg :action)))
+
+(cl-defmethod transient-init-value ((obj st-transient-variable))
+  (oset obj value (eval (oref obj variable))))
+
+(cl-defmethod transient-infix-read ((obj st-transient-variable))
+  (read-from-minibuffer "Save file: " (oref obj value)))
+
+(cl-defmethod transient-infix-read ((obj st-transient-variable:choice))
+  (let ((choices (oref obj choices)))
+    (if-let* ((value (oref obj value))
+              (notlast (cadr (member value choices))))
+        (cadr (member value choices))
+      (car choices))))
+
+(cl-defmethod transient-infix-set ((obj st-transient-variable) value)
+  (oset obj value value)
+  (set (oref obj variable) value))
+
+(cl-defmethod transient-infix-set ((obj st-transient-variable:choice) value)
+  (oset obj value value)
+  (set (oref obj variable) value)
+  (funcall (oref obj action)))
+
+(cl-defmethod transient-format-value ((obj st-transient-variable))
+  (let ((value (oref obj value)))
+    (concat
+     (propertize "(" 'face 'transient-inactive-value)
+     (propertize value 'face 'transient-value)
+     (propertize ")" 'face 'transient-inactive-value))))
+
+(cl-defmethod transient-format-value ((obj st-transient-variable:choice))
+  (let* ((variable (oref obj variable))
+         (choices  (oref obj choices))
+         (value    (oref obj value)))
+    (concat
+     (propertize "[" 'face 'transient-inactive-value)
+     (mapconcat (lambda (choice)
+                  (propertize choice 'face (if (equal choice value)
+                                               (if (member choice choices)
+                                                   'transient-value
+                                                 'font-lock-warning-face)
+                                             'transient-inactive-value)))
+                (if (and value (not (member value choices)))
+                    (cons value choices)
+                  choices)
+                (propertize "|" 'face 'transient-inactive-value))
+     (propertize "]" 'face 'transient-inactive-value))))
+
+(transient-define-infix st-infix-watched ()
+  :class 'st-transient-variable:choice
+  :choices '("show" "hide")
+  :variable 'st-show-watched
+  :description "Watched"
+  :action 'st--apply-watched)
+
+(defun st--apply-watched ()
+  "Switch visibility for watched episodes."
+
+  (if (-contains? buffer-invisibility-spec 'st-watched)
+      (when (string-equal st-show-watched "show") (remove-from-invisibility-spec 'st-watched))
+    (when (string-equal st-show-watched "hide") (add-to-invisibility-spec 'st-watched))))
+
+(transient-define-infix st-infix-sorting ()
+  :class 'st-transient-variable:choice
+  :choices '("alpha" "next")
+  :variable 'st-sorting-type
+  :description "Sorting"
+  :action 'st--apply-sort)
+
+(defun st--apply-sort ()
+  (cond ((string-equal st-sorting-type "alpha") (st-sort-alpha))
+        ((string-equal st-sorting-type "next") (st-sort-next))))
+
+(transient-define-infix st-infix-savefile ()
+  :class 'st-transient-variable
+  :variable 'st--file
+  :description "Save file")
 
 ;;;; Load/save data
 
@@ -759,40 +831,6 @@ Erase first then redraw the whole buffer."
 
   (st--refresh))
 
-(defun st-sort-watched ()
-  "Sort series by date of last watched episode."
-
-  (interactive)
-
-  (defun max-air-date (series)
-    (->> series
-         (alist-get 'episodes)
-         (--filter (alist-get 'watched it))
-         (st--utils-array-pull 'air_date)
-         (--map (car (date-to-time it)))
-         -max))
-
-  (defun comp (a b)
-    (< (max-air-date a)
-       (max-air-date b)))
-
-  (setq st--data (-sort 'comp st--data))
-
-  (st--refresh))
-
-(defun st-sort-alpha-rev ()
-  "Sort alphabetically."
-
-  (interactive)
-
-  (defun comp (a b)
-    (string> (alist-get 'name a)
-             (alist-get 'name b)))
-
-  (setq st--data (-sort 'comp st--data))
-
-  (st--refresh))
-
 (defun st-sort-alpha ()
   "Sort alphabetically."
 
@@ -812,6 +850,7 @@ Erase first then redraw the whole buffer."
   "Update the db and refresh the buffer."
 
   (interactive)
+
   (st--update)
   (st--refresh))
 
@@ -819,8 +858,11 @@ Erase first then redraw the whole buffer."
   "Run ST"
 
   (interactive)
+
   (switch-to-buffer "st")
   (st-mode)
+  (st-load)
+  (st--apply-watched)
   (st--refresh))
 
 (define-derived-mode st-mode special-mode "st"
@@ -844,7 +886,6 @@ Erase first then redraw the whole buffer."
   (local-set-key "®" 'st-unfold-at-point)
 
   (local-set-key "h" 'st-dispatch)
-  (local-set-key "W" 'st-switch-watched)
   (local-set-key "U" 'st-update)
   (local-set-key "a" 'st-search)
   (local-set-key "w" 'st-watch)
