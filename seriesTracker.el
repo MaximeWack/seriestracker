@@ -694,6 +694,7 @@ Erase first then redraw the whole buffer."
          (nametoadd (completing-read "Options: " names-list))
          (toadd (alist-get 'id (-find (lambda (series) (string-equal nametoadd (alist-get 'permalink series))) series-list))))
     (st-add toadd)
+    (st--apply-sort)
     (st--refresh)))
 
 ;;;; (un)Watch episodes
