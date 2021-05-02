@@ -742,27 +742,9 @@ The element under the cursor is used to decide whether to watch or unwatch."
             (put-text-property start (+ start 19) 'face '(t ((:foreground "MediumSpringGreen"))))
           (put-text-property start (+ start 19) 'face '(t ((:foreground "firebrick"))))))))
 
-  (->> st--data
-       (-map-when (lambda (series) (= id (alist-get 'id series)))
-                  (lambda (series)
-                    (setf (alist-get 'episodes series)
-                          (-map-when (lambda (episode) (= seasonN (alist-get 'season episode)))
-                                     (lambda (episode)
-                                       (setf (alist-get 'watched episode) nil)
-                                       episode)
-                                     (alist-get 'episodes series)))))))
 
-(defun st-unwatch-series (id)
   "Watch all episode in a series."
 
-  (->> st--data
-       (-map-when (lambda (series) (= id (alist-get 'id series)))
-                  (lambda (series)
-                    (setf (alist-get 'episodes series)
-                          (-map (lambda (episode)
-                                  (setf (alist-get 'watched episode) nil)
-                                  episode)
-                                (alist-get 'episodes series)))))))
 
 (defun st-watch-up ()
   "Watch up to episode at point."
