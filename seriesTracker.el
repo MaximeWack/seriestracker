@@ -786,9 +786,12 @@ The element under the cursor is used to decide whether to watch or unwatch."
   (let ((inhibit-read-only t)
         (series (get-text-property (point) 'st-series))
         (season (get-text-property (point) 'st-season))
-        (episode (get-text-property (point) 'st-episode)))
-    (when (y-or-n-p "Are you sure you want to delete this series? ") (st--remove series))
-    (st--refresh)))
+        (episode (get-text-property (point) 'st-episode))
+        (start (previous-single-property-change (1+ (point)) 'st-series))
+        (end (next-single-property-change (point) 'st-series)))
+    (when (y-or-n-p "Are you sure you want to delete this series? ")
+      (st--remove series)
+      (delete-region start end))))
 
 ;;;; Sort series
 
