@@ -719,14 +719,27 @@ The element under the cursor is used to decide whether to watch or unwatch."
         (series (get-text-property (point) 'st-series))
         (season (get-text-property (point) 'st-season))
         (episode (get-text-property (point) 'st-episode)))
-    (cond (episode (st--unwatch series season episode))
-          (season (st-unwatch-season series season))
-          (t (st-unwatch-series series))))
-  (st--refresh)
+    (cond (episode (st-watch-episode series season episode watch))
+          (season (st-watch-season series season watch))
+          (t (st-watch-series series watch))))
   (forward-line))
 
-(defun st-unwatch-season (id seasonN)
-  "Watch all episode in a season."
+(defun st-watch-episode (id seasonN episodeN watch)
+  "Watch an episode."
+
+  (st--watch-episode id seasonN episodeN watch)
+  (let ((start (previous-single-property-change (1+ (point)) 'st-episode))
+        (end (next-single-property-change (point) 'st-episode)))
+    (if watch
+        (progn
+          (put-text-property start end 'invisible 'st-watched)
+          (put-text-property start end 'face 'st-watched))
+      (put-text-property start end 'invisible nil)
+      (put-text-property start end 'face 'default)
+      (if (time-less-p (date-to-time (buffer-substring start (+ start 19)))
+                         (current-time))
+            (put-text-property start (+ start 19) 'face '(t ((:foreground "MediumSpringGreen"))))
+          (put-text-property start (+ start 19) 'face '(t ((:foreground "firebrick"))))))))
 
   (->> st--data
        (-map-when (lambda (series) (= id (alist-get 'id series)))
