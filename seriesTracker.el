@@ -681,7 +681,8 @@ Erase first then redraw the whole buffer."
 
 (defun st-load ()
   (interactive)
-  (st--load))
+  (st--load)
+  (st--refresh))
 
 ;;;; Add series
 
