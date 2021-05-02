@@ -21,9 +21,9 @@ alist-select '(a c) '((a .1) (b , \"b\") (c . c)
 returns '((a . 1) (c . c))"
 
   (->> fields
-       reverse
-       (--reduce-from (acons it (alist-get it alist) acc)
-                     nil)))
+    reverse
+    (--reduce-from (acons it (alist-get it alist) acc)
+                   nil)))
 
 ;;;; array-select
 
@@ -64,28 +64,28 @@ returns '(1 3)"
 
   (->> (let ((url-request-method "GET"))
          (url-retrieve-synchronously (concat "https://www.episodate.com/api/search?q=" name)))
-       st--getJSON
-       (st--utils-alist-select '(tv_shows))
-       car
-       cdr
-       (st--utils-array-select '(id name start_date status network permalink))))
+    st--getJSON
+    (st--utils-alist-select '(tv_shows))
+    car
+    cdr
+    (st--utils-array-select '(id name start_date status network permalink))))
 
 ;;;; series
 
 (defun st--episodes (series)
-         (setf (alist-get 'episodes series)
-               (mapcar (lambda (x) x) (alist-get 'episodes series)))
-         series)
+  (setf (alist-get 'episodes series)
+        (mapcar (lambda (x) x) (alist-get 'episodes series)))
+  series)
 
 (defun st--series (id)
   "Get series ID info."
 
   (->> (let ((url-request-method "GET"))
          (url-retrieve-synchronously (concat "https://www.episodate.com/api/show-details?q=" (int-to-string id))))
-       st--getJSON
-       car
-       (st--utils-alist-select '(id name start_date status episodes))
-       st--episodes))
+    st--getJSON
+    car
+    (st--utils-alist-select '(id name start_date status episodes))
+    st--episodes))
 
 ;;; Internal API
 
@@ -113,8 +113,8 @@ Adding an already existing series resets it."
 
   (setq st--data
         (--> st--data
-            (--remove (= id (alist-get 'id it)) it)
-            (-snoc it (--> (st--series id))))))
+          (--remove (= id (alist-get 'id it)) it)
+          (-snoc it (--> (st--series id))))))
 
 ;;;; Remove series
 
@@ -130,15 +130,15 @@ Adding an already existing series resets it."
   "Watch EPISODEN of SEASONN in series ID."
 
   (->> st--data
-       (-map-when (lambda (series) (= id (alist-get 'id series)))
-                  (lambda (series)
-                    (setf (alist-get 'episodes series)
-                          (-map-when (lambda (episode) (and (= seasonN (alist-get 'season episode))
-                                                       (= episodeN (alist-get 'episode episode))))
-                                     (lambda (episode)
-                                       (setf (alist-get 'watched episode) watch)
-                                       episode)
-                                     (alist-get 'episodes series)))))))
+    (-map-when (lambda (series) (= id (alist-get 'id series)))
+               (lambda (series)
+                 (setf (alist-get 'episodes series)
+                       (-map-when (lambda (episode) (and (= seasonN (alist-get 'season episode))
+                                                         (= episodeN (alist-get 'episode episode))))
+                                  (lambda (episode)
+                                    (setf (alist-get 'watched episode) watch)
+                                    episode)
+                                  (alist-get 'episodes series)))))))
 
 ;;;; Watch season
 
@@ -161,13 +161,13 @@ Adding an already existing series resets it."
   "Watch all episodes in series ID."
 
   (->> st--data
-       (-map-when (lambda (series) (= id (alist-get 'id series)))
-                  (lambda (series)
-                    (setf (alist-get 'episodes series)
-                          (-map (lambda (episode)
-                                  (setf (alist-get 'watched episode) watch)
-                                  episode)
-                                (alist-get 'episodes series)))))))
+    (-map-when (lambda (series) (= id (alist-get 'id series)))
+               (lambda (series)
+                 (setf (alist-get 'episodes series)
+                       (-map (lambda (episode)
+                               (setf (alist-get 'watched episode) watch)
+                               episode)
+                             (alist-get 'episodes series)))))))
 
 ;;;; Watch all episodes up to episode
 
@@ -175,17 +175,17 @@ Adding an already existing series resets it."
   "Watch all episodes up to EPISODEN of SEASON in series ID."
 
   (->> st--data
-       (-map-when (lambda (series) (= id (alist-get 'id series)))
-                  (lambda (series)
-                    (setf (alist-get 'episodes series)
-                          (-map-when (lambda (episode)
-                                       (or (< (alist-get 'season episode) seasonN)
-                                           (and (= (alist-get 'season episode) seasonN)
-                                                (<= (alist-get 'episode episode) episodeN))))
-                                     (lambda (episode)
-                                       (setf (alist-get 'watched episode) t)
-                                       episode)
-                                     (alist-get 'episodes series)))))))
+    (-map-when (lambda (series) (= id (alist-get 'id series)))
+               (lambda (series)
+                 (setf (alist-get 'episodes series)
+                       (-map-when (lambda (episode)
+                                    (or (< (alist-get 'season episode) seasonN)
+                                        (and (= (alist-get 'season episode) seasonN)
+                                             (<= (alist-get 'episode episode) episodeN))))
+                                  (lambda (episode)
+                                    (setf (alist-get 'watched episode) t)
+                                    episode)
+                                  (alist-get 'episodes series)))))))
 
 ;;;; Query updates
 
@@ -193,8 +193,8 @@ Adding an already existing series resets it."
   "Update all non-finished shows."
 
   (->> st--data
-       (-map-when (lambda (series) (string-equal "Running" (alist-get 'status series)))
-                  (lambda (series) (st--update-series series)))))
+    (-map-when (lambda (series) (string-equal "Running" (alist-get 'status series)))
+               (lambda (series) (st--update-series series)))))
 
 (defun st--update-series (series)
   "Update the SERIES."
@@ -752,7 +752,7 @@ The element under the cursor is used to decide whether to watch or unwatch."
       (put-text-property start-season end 'invisible nil)
       (put-text-property start end 'face 'default)))
 
-    (st--watch-season id seasonN watch))
+  (st--watch-season id seasonN watch))
 
 (defun st-watch-series (id watch)
   "Watch all episode in a series."
@@ -816,13 +816,13 @@ The element under the cursor is used to decide whether to watch or unwatch."
 
   (defun first-next-date (series)
     (let ((dates (->> series
-                      (alist-get 'episodes)
-                      (--filter (not (alist-get 'watched it))))))
+                   (alist-get 'episodes)
+                   (--filter (not (alist-get 'watched it))))))
       (if dates
           (->> dates
-               (st--utils-array-pull 'air_date)
-               (--map (car (date-to-time it)))
-               -min)
+            (st--utils-array-pull 'air_date)
+            (--map (car (date-to-time it)))
+            -min)
         0)))
 
   (defun comp (a b)
