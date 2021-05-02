@@ -126,7 +126,7 @@ Adding an already existing series resets it."
 
 ;;;; Watch episode
 
-(defun st--watch (id seasonN episodeN)
+(defun st--watch-episode (id seasonN episodeN watch)
   "Watch EPISODEN of SEASONN in series ID."
 
   (->> st--data
@@ -136,27 +136,28 @@ Adding an already existing series resets it."
                           (-map-when (lambda (episode) (and (= seasonN (alist-get 'season episode))
                                                        (= episodeN (alist-get 'episode episode))))
                                      (lambda (episode)
-                                       (setf (alist-get 'watched episode) t)
+                                       (setf (alist-get 'watched episode) watch)
                                        episode)
                                      (alist-get 'episodes series)))))))
 
-(defun st--unwatch (id seasonN episodeN)
-  "Watch EPISODEN of SEASONN in series ID."
+;;;; Watch season
+
+(defun st--watch-season (id seasonN watch)
+  "Watch all episode in a season."
 
   (->> st--data
-       (-map-when (lambda (series) (= id (alist-get 'id series)))
-                  (lambda (series)
-                    (setf (alist-get 'episodes series)
-                          (-map-when (lambda (episode) (and (= seasonN (alist-get 'season episode))
-                                                       (= episodeN (alist-get 'episode episode))))
-                                     (lambda (episode)
-                                       (setf (alist-get 'watched episode) nil)
-                                       episode)
-                                     (alist-get 'episodes series)))))))
+    (-map-when (lambda (series) (= id (alist-get 'id series)))
+               (lambda (series)
+                 (setf (alist-get 'episodes series)
+                       (-map-when (lambda (episode) (= seasonN (alist-get 'season episode)))
+                                  (lambda (episode)
+                                    (setf (alist-get 'watched episode) watch)
+                                    episode)
+                                  (alist-get 'episodes series)))))))
 
-;;;; Watch all episodes
+;;;; Watch series
 
-(defun st--watch-all (id)
+(defun st--watch-series (id watch)
   "Watch all episodes in series ID."
 
   (->> st--data
@@ -164,7 +165,7 @@ Adding an already existing series resets it."
                   (lambda (series)
                     (setf (alist-get 'episodes series)
                           (-map (lambda (episode)
-                                  (setf (alist-get 'watched episode) t)
+                                  (setf (alist-get 'watched episode) watch)
                                   episode)
                                 (alist-get 'episodes series)))))))
 
