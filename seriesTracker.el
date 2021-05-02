@@ -700,48 +700,18 @@ Erase first then redraw the whole buffer."
 
 ;;;; (un)Watch episodes
 
-(defun st-watch ()
-  "Watch at point."
+(defun st-toggle-watch ()
+  "Toggle watch at point.
+The element under the cursor is used to decide whether to watch or unwatch."
 
   (interactive)
 
-  (let ((inhibit-read-only t)
-        (series (get-text-property (point) 'st-series))
-        (season (get-text-property (point) 'st-season))
-        (episode (get-text-property (point) 'st-episode)))
-    (cond (episode (st--watch series season episode))
-          (season (st-watch-season series season))
-          (t (st-watch-series series))))
-  (st--refresh)
-  (forward-line))
+  (let* ((watched (get-char-property-and-overlay (point) 'invisible))
+         (watch (not (-contains? watched 'st-watched))))
+    (st-watch watch)))
 
-(defun st-watch-season (id seasonN)
-  "Watch all episode in a season."
-
-  (->> st--data
-       (-map-when (lambda (series) (= id (alist-get 'id series)))
-                  (lambda (series)
-                    (setf (alist-get 'episodes series)
-                          (-map-when (lambda (episode) (= seasonN (alist-get 'season episode)))
-                                     (lambda (episode)
-                                       (setf (alist-get 'watched episode) t)
-                                       episode)
-                                     (alist-get 'episodes series)))))))
-
-(defun st-watch-series (id)
-  "Watch all episode in a series."
-
-  (->> st--data
-       (-map-when (lambda (series) (= id (alist-get 'id series)))
-                  (lambda (series)
-                    (setf (alist-get 'episodes series)
-                          (-map (lambda (episode)
-                                  (setf (alist-get 'watched episode) t)
-                                  episode)
-                                (alist-get 'episodes series)))))))
-
-(defun st-unwatch ()
-  "Watch at point."
+(defun st-watch (watch)
+  "Watch at point. If UNWATCH, unwatch at point."
 
   (interactive)
 
@@ -890,8 +860,7 @@ Erase first then redraw the whole buffer."
   (local-set-key "h" 'st-dispatch)
   (local-set-key "U" 'st-update)
   (local-set-key "a" 'st-search)
-  (local-set-key "w" 'st-watch)
-  (local-set-key "u" 'st-unwatch)
+  (local-set-key "w" 'st-toggle-watch)
   (local-set-key [tab] 'st-cycle))
 
 ;;; Postamble
