@@ -724,7 +724,6 @@ The element under the cursor is used to decide whether to watch or unwatch."
 (defun st-watch-episode (id seasonN episodeN watch)
   "Watch an episode."
 
-  (st--watch-episode id seasonN episodeN watch)
   (let ((start (previous-single-property-change (1+ (point)) 'st-episode))
         (end (next-single-property-change (point) 'st-episode)))
     (if watch
@@ -734,25 +733,62 @@ The element under the cursor is used to decide whether to watch or unwatch."
       (put-text-property start end 'invisible nil)
       (put-text-property start end 'face 'default)
       (if (time-less-p (date-to-time (buffer-substring start (+ start 19)))
-                         (current-time))
-            (put-text-property start (+ start 19) 'face '(t ((:foreground "MediumSpringGreen"))))
-          (put-text-property start (+ start 19) 'face '(t ((:foreground "firebrick"))))))))
+                       (current-time))
+          (put-text-property start (+ start 19) 'face '(t ((:foreground "MediumSpringGreen"))))
+        (put-text-property start (+ start 19) 'face '(t ((:foreground "firebrick")))))))
 
+  (st--watch-episode id seasonN episodeN watch))
 
+(defun st-watch-season (id seasonN watch)
+
+  (let* ((start-season (previous-single-property-change (1+ (point)) 'st-season))
+         (start (next-single-property-change (1+ (point)) 'st-episode))
+         (end (next-single-property-change start 'st-season)))
+
+    (if watch
+        (progn
+          (put-text-property start-season end 'invisible 'st-watched)
+          (put-text-property start end 'face 'st-watched))
+      (put-text-property start-season end 'invisible nil)
+      (put-text-property start end 'face 'default)))
+
+    (st--watch-season id seasonN watch))
+
+(defun st-watch-series (id watch)
   "Watch all episode in a series."
 
+  (let* ((start-series (previous-single-property-change (1+ (point)) 'st-series))
+         (start (next-single-property-change (1+ (point)) 'st-episode))
+         (end (next-single-property-change start 'st-series)))
+
+    (if watch
+        (progn
+          (put-text-property start-series end 'invisible 'st-watched)
+          (put-text-property start end 'face 'st-watched))
+      (put-text-property start-series end 'invisible nil)
+      (put-text-property start end 'face 'default)))
+
+  (st--watch-series id watch))
 
 (defun st-watch-up ()
   "Watch up to episode at point."
 
   (interactive)
 
-  (let ((inhibit-read-only t)
-        (series (get-text-property (point) 'st-series))
-        (season (get-text-property (point) 'st-season))
-        (episode (get-text-property (point) 'st-episode)))
-    (when episode (st--watch-up series season episode)))
-  (st--refresh)
+  (let* ((inhibit-read-only t)
+         (series (get-text-property (point) 'st-series))
+         (season (get-text-property (point) 'st-season))
+         (episode (get-text-property (point) 'st-episode))
+         (start-series (previous-single-property-change (1+ (point)) 'st-series))
+         (start-season (next-single-property-change start-series 'st-season))
+         (start (next-single-property-change start-season 'st-episode))
+         (end (next-single-property-change (1+ (point)) 'st-episode)))
+    (when episode
+      (st--watch-up series season episode)
+      (unless (= 1 season) (put-text-property start-season start 'invisible 'st-watched))
+      (put-text-property start end 'invisible 'st-watched)
+      (put-text-property start end 'face 'st-watched)))
+
   (forward-line))
 
 
