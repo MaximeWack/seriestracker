@@ -108,7 +108,7 @@ episodes props are season, episode, name, and air_date.")
 ;;;; Add/remove
 ;;;;; Add series
 
-(defun st-add (id)
+(defun st--add (id)
   "Add series with ID to st--data.
 Adding an already existing series resets it."
 
@@ -694,7 +694,7 @@ Erase first then redraw the whole buffer."
          (names-list (st--utils-array-pull 'permalink series-list))
          (nametoadd (completing-read "Options: " names-list))
          (toadd (alist-get 'id (-find (lambda (series) (string-equal nametoadd (alist-get 'permalink series))) series-list))))
-    (st-add toadd)
+    (st--add toadd)
     (st--apply-sort)
     (st--refresh)))
 
