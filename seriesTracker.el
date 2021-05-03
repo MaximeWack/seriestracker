@@ -105,7 +105,8 @@ Of the form :
 series props are name and start_date.
 episodes props are season, episode, name, and air_date.")
 
-;;;; Add series
+;;;; Add/remove
+;;;;; Add series
 
 (defun st-add (id)
   "Add series with ID to st--data.
@@ -116,7 +117,7 @@ Adding an already existing series resets it."
           (--remove (= id (alist-get 'id it)) it)
           (-snoc it (--> (st--series id))))))
 
-;;;; Remove series
+;;;;; Remove series
 
 (defun st--remove (id)
   "Remove series with ID from st--data."
@@ -124,7 +125,9 @@ Adding an already existing series resets it."
   (setq st--data
         (--remove (= id (alist-get 'id it)) st--data)))
 
-;;;; Watch episode
+;;;; Watch
+
+;;;;; Watch episode
 
 (defun st--watch-episode (id seasonN episodeN watch)
   "Watch EPISODEN of SEASONN in series ID."
@@ -140,7 +143,7 @@ Adding an already existing series resets it."
                                     episode)
                                   (alist-get 'episodes series)))))))
 
-;;;; Watch season
+;;;;; Watch season
 
 (defun st--watch-season (id seasonN watch)
   "Watch all episode in a season."
@@ -155,7 +158,7 @@ Adding an already existing series resets it."
                                     episode)
                                   (alist-get 'episodes series)))))))
 
-;;;; Watch series
+;;;;; Watch series
 
 (defun st--watch-series (id watch)
   "Watch all episodes in series ID."
@@ -169,7 +172,7 @@ Adding an already existing series resets it."
                                episode)
                              (alist-get 'episodes series)))))))
 
-;;;; Watch all episodes up to episode
+;;;;; Watch all episodes up to episode
 
 (defun st--watch-up (id seasonN episodeN)
   "Watch all episodes up to EPISODEN of SEASON in series ID."
@@ -505,7 +508,7 @@ Erase first then redraw the whole buffer."
         (fold-end (next-single-property-change (point) 'st-series)))
     (remove-overlays fold-start fold-end 'invisible 'st-series)))
 
-;;;; Cycle folding
+;;;;; Cycle folding
 
 (defvar fold-cycle 'st-all-folded)
 
@@ -695,6 +698,21 @@ Erase first then redraw the whole buffer."
     (st--apply-sort)
     (st--refresh)))
 
+;;;; Remove series
+
+(defun st-remove ()
+  "Remove series at point."
+
+  (interactive)
+
+  (let ((inhibit-read-only t)
+        (series (get-text-property (point) 'st-series))
+        (start (previous-single-property-change (1+ (point)) 'st-series))
+        (end (next-single-property-change (point) 'st-series)))
+    (when (y-or-n-p "Are you sure you want to delete this series? ")
+      (st--remove series)
+      (delete-region start end))))
+
 ;;;; (un)Watch episodes
 
 (defun st-toggle-watch ()
@@ -791,21 +809,6 @@ The element under the cursor is used to decide whether to watch or unwatch."
 
   (forward-line))
 
-
-;;;; Remove series
-
-(defun st-remove ()
-  "Remove series at point."
-
-  (interactive)
-
-  (let ((inhibit-read-only t)
-        (series (get-text-property (point) 'st-series))
-        (start (previous-single-property-change (1+ (point)) 'st-series))
-        (end (next-single-property-change (point) 'st-series)))
-    (when (y-or-n-p "Are you sure you want to delete this series? ")
-      (st--remove series)
-      (delete-region start end))))
 
 ;;;; Sort series
 
