@@ -133,15 +133,14 @@ Adding an already existing series resets it."
   "Watch EPISODEN of SEASONN in series ID."
 
   (->> st--data
-    (-map-when (lambda (series) (= id (alist-get 'id series)))
-               (lambda (series)
-                 (setf (alist-get 'episodes series)
-                       (-map-when (lambda (episode) (and (= seasonN (alist-get 'season episode))
-                                                         (= episodeN (alist-get 'episode episode))))
-                                  (lambda (episode)
-                                    (setf (alist-get 'watched episode) watch)
-                                    episode)
-                                  (alist-get 'episodes series)))))))
+    (--map-when (= id (alist-get 'id it))
+                (setf (alist-get 'episodes it)
+                      (--map-when (and (= seasonN (alist-get 'season it))
+                                       (= episodeN (alist-get 'episode it)))
+                                  (progn
+                                    (setf (alist-get 'watched it) watch)
+                                    it)
+                                  (alist-get 'episodes it))))))
 
 ;;;;; Watch season
 
@@ -149,14 +148,13 @@ Adding an already existing series resets it."
   "Watch all episode in a season."
 
   (->> st--data
-    (-map-when (lambda (series) (= id (alist-get 'id series)))
-               (lambda (series)
-                 (setf (alist-get 'episodes series)
-                       (-map-when (lambda (episode) (= seasonN (alist-get 'season episode)))
-                                  (lambda (episode)
-                                    (setf (alist-get 'watched episode) watch)
-                                    episode)
-                                  (alist-get 'episodes series)))))))
+    (--map-when (= id (alist-get 'id it))
+                (setf (alist-get 'episodes it)
+                      (--map-when (= seasonN (alist-get 'season it))
+                                  (progn
+                                    (setf (alist-get 'watched it) watch)
+                                    it)
+                                  (alist-get 'episodes it))))))
 
 ;;;;; Watch series
 
@@ -164,13 +162,12 @@ Adding an already existing series resets it."
   "Watch all episodes in series ID."
 
   (->> st--data
-    (-map-when (lambda (series) (= id (alist-get 'id series)))
-               (lambda (series)
-                 (setf (alist-get 'episodes series)
-                       (-map (lambda (episode)
-                               (setf (alist-get 'watched episode) watch)
-                               episode)
-                             (alist-get 'episodes series)))))))
+    (--map-when (= id (alist-get 'id it))
+                (setf (alist-get 'episodes it)
+                      (--map (progn
+                               (setf (alist-get 'watched it) watch)
+                               it)
+                             (alist-get 'episodes it))))))
 
 ;;;;; Watch all episodes up to episode
 
@@ -178,17 +175,15 @@ Adding an already existing series resets it."
   "Watch all episodes up to EPISODEN of SEASON in series ID."
 
   (->> st--data
-    (-map-when (lambda (series) (= id (alist-get 'id series)))
-               (lambda (series)
-                 (setf (alist-get 'episodes series)
-                       (-map-when (lambda (episode)
-                                    (or (< (alist-get 'season episode) seasonN)
-                                        (and (= (alist-get 'season episode) seasonN)
-                                             (<= (alist-get 'episode episode) episodeN))))
-                                  (lambda (episode)
-                                    (setf (alist-get 'watched episode) t)
-                                    episode)
-                                  (alist-get 'episodes series)))))))
+    (--map-when (= id (alist-get 'id it))
+                (setf (alist-get 'episodes it)
+                      (--map-when (or (< (alist-get 'season it) seasonN)
+                                      (and (= (alist-get 'season it) seasonN)
+                                           (<= (alist-get 'episode it) episodeN)))
+                                  (progn
+                                    (setf (alist-get 'watched it) t)
+                                    it)
+                                  (alist-get 'episodes it))))))
 
 ;;;; Query updates
 
@@ -196,8 +191,8 @@ Adding an already existing series resets it."
   "Update all non-finished shows."
 
   (->> st--data
-    (-map-when (lambda (series) (string-equal "Running" (alist-get 'status series)))
-               (lambda (series) (st--update-series series)))))
+    (--map-when (string-equal "Running" (alist-get 'status it))
+                (st--update-series it))))
 
 (defun st--update-series (series)
   "Update the SERIES."
@@ -205,7 +200,7 @@ Adding an already existing series resets it."
   (let* ((new (st--series (alist-get 'id series)))
          (newEp (alist-get 'episodes new))
          (status (alist-get 'status new))
-         (watched (-find-indices (lambda (episode) (alist-get 'watched episode)) (alist-get 'episodes series)))
+         (watched (--find-indices (alist-get 'watched it) (alist-get 'episodes series)))
          (newEps (--map-indexed (if (-contains? watched it-index)
                                     (progn
                                       (setf (alist-get 'watched it) t)
@@ -296,8 +291,8 @@ Erase first then redraw the whole buffer."
       (if finished
           (put-text-property start (point) 'face 'st-finished-series)
         (put-text-property start (point) 'face 'st-series))
-      (when (-all? (lambda (episode) (alist-get 'watched episode))
-                   (alist-get 'episodes series))
+      (when (--all? (alist-get 'watched it)
+                    (alist-get 'episodes series))
         (put-text-property start (point) 'invisible 'st-watched)))
     (--each episodes (st--draw-episode series it))))
 
@@ -318,9 +313,9 @@ Erase first then redraw the whole buffer."
                                     st-series ,id
                                     st-season ,season
                                     st-episode nil))
-        (when (-all? (lambda (episode) (alist-get 'watched episode))
-                     (-filter (lambda (episode) (= season (alist-get 'season episode)))
-                              (alist-get 'episodes series)))
+        (when (--all? (alist-get 'watched it)
+                      (--filter (= season (alist-get 'season it))
+                                (alist-get 'episodes series)))
           (put-text-property start (point) 'invisible 'st-watched))))
     (let ((start (point)))
       (insert air_date)
