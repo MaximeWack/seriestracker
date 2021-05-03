@@ -127,6 +127,32 @@ Adding an already existing series resets it."
 
 ;;;; Watch
 
+;;;;; Watch region
+
+(defun st--watch-region (start-series start-season start-episode end-series end-season end-episode watch)
+  "Watch from start-episode of start-season of start-series to end-episode of end-season of end-series."
+
+  (let ((series1 (--find-index (= start-series (alist-get 'id it)) st--data))
+        (series2 (--find-index (= end-series (alist-get 'id it)) st--data)))
+    (->> st--data
+      (--map-indexed
+       (progn
+         (setq series-index it-index)
+         (setf (alist-get 'episodes it)
+               (--map-when (and (or (> series-index series1)
+                                    (and (= series-index series1)
+                                         (or (and (= (alist-get 'season it) start-season)
+                                                  (>= (alist-get 'episode it) start-episode))
+                                             (> (alist-get 'season it) start-season))))
+                                (or (< series-index series2)
+                                    (and (= series-index series2)
+                                         (or (and (= (alist-get 'season it) end-season)
+                                                  (< (alist-get 'episode it) end-episode))
+                                             (< (alist-get 'season it) end-season)))))
+                           (progn
+                             (setf (alist-get 'watched it) watch)
+                             it)
+                           (alist-get 'episodes it))))))))
 ;;;;; Watch episode
 
 (defun st--watch-episode (id seasonN episodeN watch)
