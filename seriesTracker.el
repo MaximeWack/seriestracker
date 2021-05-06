@@ -710,6 +710,20 @@ Erase first then redraw the whole buffer."
 
 ;;;; (un)Watch episodes
 
+(defun st-watch-region (start end &optional watch)
+  (interactive "r")
+
+  (let ((start-series (get-text-property start 'st-series))
+        (start-season (get-text-property start 'st-season))
+        (start-episode (get-text-property start 'st-episode))
+        (end-series (get-text-property end 'st-series))
+        (end-season (get-text-property end 'st-season))
+        (end-episode (get-text-property end 'st-episode)))
+    (st--watch-region start-series start-season start-episode end-series end-season end-episode (not watch)))
+
+  (st--refresh)
+  )
+
 (defun st-toggle-watch ()
   "Toggle watch at point.
 The element under the cursor is used to decide whether to watch or unwatch."
