@@ -255,6 +255,14 @@ Adding an already existing series resets it."
   '((t (:foreground "DimGrey" :strike-through t)))
   "Face for watched episodes")
 
+;;;; Check in ST buffer
+
+(defun st--inbuffer ()
+  "Check if we are in the st buffer in st mode."
+
+  (and (string-equal (buffer-name) "st")
+       (string-equal mode-name "st")))
+
 ;;;; Draw buffer
 
 (defun st--refresh ()
@@ -344,30 +352,32 @@ Erase first then redraw the whole buffer."
 
   (interactive)
 
-  (if (and (string-equal (buffer-name) "st") (string-equal mode-name "st"))
-      (let ((series (get-text-property (point) 'st-series))
-            (season (get-text-property (point) 'st-season))
-            (episode (get-text-property (point) 'st-episode)))
-        (cond (episode (goto-char (previous-single-property-change (point) 'st-season)))
-              (season (goto-char (previous-single-property-change (point) 'st-series)))))
-    (message "Not in st buffer!")))
+  (unless (st--inbuffer) (error "Not in st buffer!"))
+
+  (let ((series (get-text-property (point) 'st-series))
+        (season (get-text-property (point) 'st-season))
+        (episode (get-text-property (point) 'st-episode)))
+    (cond (episode (goto-char (previous-single-property-change (point) 'st-season)))
+          (season (goto-char (previous-single-property-change (point) 'st-series))))))
 
 (defun st-prev ()
   "Move up in the hierarchy."
 
   (interactive)
 
+  (unless (st--inbuffer) (error "Not in st buffer!"))
+
   (setq disable-point-adjustment t)
 
-  (if (and (string-equal (buffer-name) "st") (string-equal mode-name "st"))
-      (let ((series (get-text-property (point) 'st-series))
-            (season (get-text-property (point) 'st-season))
-            (episode (get-text-property (point) 'st-episode)))
-        (goto-char (previous-single-property-change (point) 'st-season nil (point-min))))
-    (message "Not in st buffer!"))
+  (let ((series (get-text-property (point) 'st-series))
+        (season (get-text-property (point) 'st-season))
+        (episode (get-text-property (point) 'st-episode)))
+    (goto-char (previous-single-property-change (point) 'st-season nil (point-min))))
+
   (when (and (= 1 (point))
              (invisible-p 1))
     (st-next))
+
   (when (invisible-p (point)) (st-prev)))
 
 (defun st-next ()
@@ -375,14 +385,15 @@ Erase first then redraw the whole buffer."
 
   (interactive)
 
+  (unless (st--inbuffer) (error "Not in st buffer!"))
+
   (setq disable-point-adjustment t)
 
-  (if (and (string-equal (buffer-name) "st") (string-equal mode-name "st"))
-      (let ((series (get-text-property (point) 'st-series))
-            (season (get-text-property (point) 'st-season))
-            (episode (get-text-property (point) 'st-episode)))
-        (goto-char (next-single-property-change (point) 'st-season nil (point-max))))
-    (message "Not in st buffer!"))
+  (let ((series (get-text-property (point) 'st-series))
+        (season (get-text-property (point) 'st-season))
+        (episode (get-text-property (point) 'st-episode)))
+    (goto-char (next-single-property-change (point) 'st-season nil (point-max))))
+
   (when (invisible-p (point)) (st-next)))
 
 (defun st--next-any ()
@@ -390,30 +401,32 @@ Erase first then redraw the whole buffer."
 
   (setq disable-point-adjustment t)
 
-  (if (and (string-equal (buffer-name) "st") (string-equal mode-name "st"))
-      (let ((series (get-text-property (point) 'st-series))
-            (season (get-text-property (point) 'st-season))
-            (episode (get-text-property (point) 'st-episode)))
-        (goto-char (next-single-property-change (point) 'st-season nil (point-max))))
-    (message "Not in st buffer!")))
+  (unless (st--inbuffer) (error "Not in st buffer!"))
+
+  (let ((series (get-text-property (point) 'st-series))
+        (season (get-text-property (point) 'st-season))
+        (episode (get-text-property (point) 'st-episode)))
+    (goto-char (next-single-property-change (point) 'st-season nil (point-max)))))
 
 (defun st-prev-same ()
   "Move up in the hierarchy."
 
   (interactive)
 
+  (unless (st--inbuffer) (error "Not in st buffer!"))
+
   (setq disable-point-adjustment t)
 
-  (if (and (string-equal (buffer-name) "st") (string-equal mode-name "st"))
-      (let ((series (get-text-property (point) 'st-series))
-            (season (get-text-property (point) 'st-season))
-            (episode (get-text-property (point) 'st-episode)))
-        (cond ((or episode season) (goto-char (previous-single-property-change (point) 'st-season nil (point-min))))
-              (series (goto-char (previous-single-property-change (point) 'st-series nil (point-min))))))
-    (message "Not in st buffer!"))
+  (let ((series (get-text-property (point) 'st-series))
+        (season (get-text-property (point) 'st-season))
+        (episode (get-text-property (point) 'st-episode)))
+    (cond ((or episode season) (goto-char (previous-single-property-change (point) 'st-season nil (point-min))))
+          (series (goto-char (previous-single-property-change (point) 'st-series nil (point-min))))))
+
   (when (and (= 1 (point))
              (invisible-p 1))
     (st-next))
+
   (when (invisible-p (point)) (st-prev-same)))
 
 (defun st-next-same ()
@@ -421,17 +434,19 @@ Erase first then redraw the whole buffer."
 
   (interactive)
 
+  (unless (st--inbuffer) (error "Not in st buffer!"))
+
   (setq disable-point-adjustment t)
 
-  (if (and (string-equal (buffer-name) "st") (string-equal mode-name "st"))
-      (progn (when (= 1 (point))
-               (goto-char 2))
-             (let ((series (get-text-property (point) 'st-series))
-                   (season (get-text-property (point) 'st-season))
-                   (episode (get-text-property (point) 'st-episode)))
-               (cond ((or episode season) (goto-char (next-single-property-change (point) 'st-season nil (point-max))))
-                     (series (goto-char (next-single-property-change (point) 'st-series nil (point-max)))))))
-    (message "Not in st buffer!"))
+  (when (= 1 (point))
+    (goto-char 2))
+
+  (let ((series (get-text-property (point) 'st-series))
+        (season (get-text-property (point) 'st-season))
+        (episode (get-text-property (point) 'st-episode)))
+    (cond ((or episode season) (goto-char (next-single-property-change (point) 'st-season nil (point-max))))
+          (series (goto-char (next-single-property-change (point) 'st-series nil (point-max))))))
+
   (when (invisible-p (point)) (st-next-same)))
 
 ;;;; Folding
@@ -441,14 +456,27 @@ Erase first then redraw the whole buffer."
 
   (interactive)
 
-  (if (and (string-equal (buffer-name) "st") (string-equal mode-name "st"))
-      (let ((series (get-text-property (point) 'st-series))
-            (season (get-text-property (point) 'st-season))
-            (episode (get-text-property (point) 'st-episode)))
-        (cond (episode (st-fold-episodes))
-              (season (st-fold-season))
-              (t (st-fold-series))))
-    (message "Not in st buffer!")))
+  (unless (st--inbuffer) (error "Not in st buffer!"))
+
+  (let ((series (get-text-property (point) 'st-series))
+        (season (get-text-property (point) 'st-season))
+        (episode (get-text-property (point) 'st-episode)))
+    (cond (episode (st-fold-episodes))
+          (season (st-fold-season))
+          (t (st-fold-series)))))
+
+(defun st-unfold-at-point ()
+  "Unfold the section at point."
+
+  (interactive)
+
+  (unless (st--inbuffer) (error "Not in st buffer!"))
+
+  (let ((series (get-text-property (point) 'st-series))
+        (season (get-text-property (point) 'st-season))
+        (episode (get-text-property (point) 'st-episode)))
+    (cond (season (st-unfold-season))
+          (t (st-unfold-series)))))
 
 (defun st-fold-episodes ()
   "Fold the episodes at point."
@@ -467,6 +495,13 @@ Erase first then redraw the whole buffer."
          (overlay (make-overlay fold-start fold-end)))
     (overlay-put overlay 'invisible 'st-season)))
 
+(defun st-unfold-season ()
+  "Fold the season at point."
+
+  (let ((fold-start (next-single-property-change (point) 'st-episode))
+        (fold-end (next-single-property-change (point) 'st-season)))
+    (remove-overlays fold-start fold-end 'invisible 'st-season)))
+
 (defun st-fold-series ()
   "Fold the series at point."
 
@@ -474,26 +509,6 @@ Erase first then redraw the whole buffer."
          (fold-end (next-single-property-change (point) 'st-series nil (point-max)))
          (overlay (when (and fold-start fold-end) (make-overlay fold-start fold-end))))
     (when overlay (overlay-put overlay 'invisible 'st-series))))
-
-(defun st-unfold-at-point ()
-  "Unfold the section at point."
-
-  (interactive)
-
-  (if (and (string-equal (buffer-name) "st") (string-equal mode-name "st"))
-      (let ((series (get-text-property (point) 'st-series))
-            (season (get-text-property (point) 'st-season))
-            (episode (get-text-property (point) 'st-episode)))
-        (cond (season (st-unfold-season))
-              (t (st-unfold-series))))
-    (message "Not in st buffer!")))
-
-(defun st-unfold-season ()
-  "Fold the season at point."
-
-  (let ((fold-start (next-single-property-change (point) 'st-episode))
-        (fold-end (next-single-property-change (point) 'st-season)))
-    (remove-overlays fold-start fold-end 'invisible 'st-season)))
 
 (defun st-unfold-series ()
   "Fold the series at point."
@@ -511,43 +526,39 @@ Erase first then redraw the whole buffer."
 
   (interactive)
 
+  (unless (st--inbuffer) (error "Not in st buffer!"))
+
   (cond ((eq fold-cycle 'st-all-folded)
-         (st-unfold-all-series)
+         (st--unfold-all-series)
          (setq fold-cycle 'st-series-folded))
         ((eq fold-cycle 'st-series-folded)
-         (st-unfold-all)
+         (st--unfold-all)
          (setq fold-cycle 'st-all-unfolded))
         ((eq fold-cycle 'st-all-unfolded)
-         (st-fold-all)
+         (st--fold-all)
          (setq fold-cycle 'st-all-folded))))
 
-(defun st-unfold-all ()
+(defun st--unfold-all ()
   "Unfold everything."
-
-  (interactive)
 
   (remove-overlays (point-min) (point-max) 'invisible 'st-series)
   (remove-overlays (point-min) (point-max) 'invisible 'st-season))
 
-(defun st-fold-all ()
+(defun st--fold-all ()
   "Fold everything."
 
-  (interactive)
-
   (save-excursion
-    (st-unfold-all)
+    (st--unfold-all)
     (goto-char 1)
     (while (< (point)
               (point-max))
       (st-fold-at-point)
       (st--next-any))))
 
-(defun st-unfold-all-series ()
+(defun st--unfold-all-series ()
   "Unfold all series."
 
-  (interactive)
-
-  (st-fold-all)
+  (st--fold-all)
   (remove-overlays (point-min) (point-max) 'invisible 'st-series))
 
 ;;;; Transient
