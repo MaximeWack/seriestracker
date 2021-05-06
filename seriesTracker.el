@@ -283,65 +283,59 @@ Erase first then redraw the whole buffer."
 (defun st--draw-series (series)
   "Print the series id and name."
 
-  (let ((id (alist-get 'id series))
-        (name (alist-get 'name series))
-        (finished (string-equal "Ended" (alist-get 'status series)))
-        (episodes (alist-get 'episodes series)))
-    (let ((start (point)))
-      (insert (concat name "\n"))
-      (set-text-properties start (point)
-                           `(st-series ,id
-                             st-season nil
-                             st-episode nil))
-      (if finished
-          (put-text-property start (point) 'face 'st-finished-series)
-        (put-text-property start (point) 'face 'st-series))
-      (when (--all? (alist-get 'watched it)
-                    (alist-get 'episodes series))
-        (put-text-property start (point) 'invisible 'st-watched)))
+  (let* ((id (alist-get 'id series))
+         (name (alist-get 'name series))
+         (episodes (alist-get 'episodes series))
+         (st-face (if (string-equal "Ended" (alist-get 'status series))
+                      'st-finished-series
+                    'st-series))
+         (st-watched (if (--all? (alist-get 'watched it)
+                                 episodes)
+                         'st-watched
+                       nil)))
+    (insert (propertize (concat name "\n")
+                        'st-series id
+                        'st-season nil
+                        'st-episode nil
+                        'face st-face
+                        'invisible st-watched))
+
     (--each episodes (st--draw-episode series it))))
 
 (defun st--draw-episode (series episode)
   "Print the episode id, S**E**, and name."
 
-  (let ((id (alist-get 'id series))
-        (season (alist-get 'season episode))
-        (episode (alist-get 'episode episode))
-        (name (alist-get 'name episode))
-        (air_date (alist-get 'air_date episode))
-        (watched (alist-get 'watched episode)))
-    (when (= episode 1)
-      (let ((start (point)))
-        (insert (concat "Season " (int-to-string season) "\n"))
-        (set-text-properties start (point)
-                             `(face st-season
-                                    st-series ,id
-                                    st-season ,season
-                                    st-episode nil))
-        (when (--all? (alist-get 'watched it)
-                      (--filter (= season (alist-get 'season it))
-                                (alist-get 'episodes series)))
-          (put-text-property start (point) 'invisible 'st-watched))))
-    (let ((start (point)))
-      (insert air_date)
-      (let ((end-date (point)))
-        (insert (concat " " (format "%02d" episode) " - " name "\n"))
-        (set-text-properties start (point)
-                             `(face default
-                                    st-series ,id
-                                    st-season ,season
-                                    st-episode ,episode))
-        (if (time-less-p (date-to-time air_date)
-                         (current-time))
-            (put-text-property start end-date 'face '(t ((:foreground "MediumSpringGreen"))))
-          (put-text-property start end-date 'face '(t ((:foreground "firebrick"))))))
-      (when watched
-        (set-text-properties start (point)
-                             `(face st-watched
-                                    st-series ,id
-                                    st-season ,season
-                                    st-episode ,episode
-                                    invisible st-watched))))))
+  (let* ((id (alist-get 'id series))
+         (seasonN (alist-get 'season episode))
+         (episodeN (alist-get 'episode episode))
+         (name (alist-get 'name episode))
+         (air_date (alist-get 'air_date episode))
+         (watched (alist-get 'watched episode))
+         (st-watched (if watched 'st-watched nil))
+         (st-date-face (if (time-less-p (date-to-time air_date) (current-time))
+                           '(t ((:foreground "MediumSpringGreen")))
+                         '(t ((:foreground "firebrick")))))
+         (start (point)))
+    (when (= episodeN 1)
+      (setq start (+ start 8 (length (int-to-string seasonN))))
+      (let ((st-season-watched (if (--all? (alist-get 'watched it)
+                                           (--filter (= seasonN (alist-get 'season it))
+                                                     (alist-get 'episodes series)))
+                                   'st-watched
+                                 nil)))
+        (insert (propertize (concat "Season " (int-to-string seasonN) "\n")
+                            'face 'st-season
+                            'st-series id
+                            'st-season seasonN
+                            'st-episode nil
+                            'invisible st-season-watched))))
+    (insert (propertize (concat air_date " " (format "%02d" episodeN) " - " name "\n")
+                        'st-series id
+                        'st-season seasonN
+                        'st-episode episodeN
+                        'invisible st-watched))
+    (put-text-property start (+ start 19) 'face st-date-face)
+    (when watched (put-text-property start (point) 'face 'st-watched))))
 
 ;;;; Movements
 
