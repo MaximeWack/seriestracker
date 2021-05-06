@@ -561,12 +561,11 @@ Erase first then redraw the whole buffer."
 
   ["Series"
    :if-mode st-mode
-   [("a" "Search and add a series" st-search)
-    ("d" "Delete a series" st-remove)]
-   [("ww" "Watch at point" st-watch)
-    ("wu" "Watch up to point" st-watch-up)
-    ("u" "Unwatch at point" st-unwatch)]
-   [("U" "Update and refresh the buffer" st-update)]]
+   [("A" "Search and add a series" st-search)
+    ("D" "Delete a series" st-remove)]
+   [("w" "Toggle watch at point" st-toggle-watch)
+    ("u" "Watch up to point" st-watch-up)
+    ] [("U" "Update and refresh the buffer" st-update)]]
 
   ["Display"
    :if-mode st-mode
@@ -886,8 +885,9 @@ The element under the cursor is used to decide whether to watch or unwatch."
 
   (local-set-key "h" 'st-dispatch)
   (local-set-key "U" 'st-update)
-  (local-set-key "a" 'st-search)
+  (local-set-key "A" 'st-search)
   (local-set-key "w" 'st-toggle-watch)
+  (local-set-key "u" 'st-watch-up)
   (local-set-key [tab] 'st-cycle))
 
 ;;; Postamble
