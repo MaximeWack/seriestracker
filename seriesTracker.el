@@ -431,7 +431,8 @@ Erase first then redraw the whole buffer."
         (episode (get-text-property (point) 'st-episode)))
     (cond (episode (st-fold-episodes))
           (season (st-fold-season))
-          (t (st-fold-series)))))
+          (t (st-fold-series)))
+    (when (invisible-p (point)) (st--move 'prev))))
 
 (defun st-unfold-at-point ()
   "Unfold the section at point."
