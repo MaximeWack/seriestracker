@@ -161,29 +161,14 @@ Adding an already existing series resets it."
 (defun st--watch-episode (id seasonN episodeN watch)
   "Watch EPISODEN of SEASONN in series ID."
 
-  (->> st--data
-    (--map-when (= id (alist-get 'id it))
-                (setf (alist-get 'episodes it)
-                      (--map-when (and (= seasonN (alist-get 'season it))
-                                       (= episodeN (alist-get 'episode it)))
-                                  (progn
-                                    (setf (alist-get 'watched it) watch)
-                                    it)
-                                  (alist-get 'episodes it))))))
+  (st--watch-region id seasonN episodeN id seasonN episodeN watch))
 
 ;;;;; Watch season
 
 (defun st--watch-season (id seasonN watch)
   "Watch all episode in a season."
 
-  (->> st--data
-    (--map-when (= id (alist-get 'id it))
-                (setf (alist-get 'episodes it)
-                      (--map-when (= seasonN (alist-get 'season it))
-                                  (progn
-                                    (setf (alist-get 'watched it) watch)
-                                    it)
-                                  (alist-get 'episodes it))))))
+  (st--watch-region id seasonN 1 id (1+ seasonN) 0 watch))
 
 ;;;;; Watch series
 
@@ -202,16 +187,7 @@ Adding an already existing series resets it."
 (defun st--watch-up (id seasonN episodeN)
   "Watch all episodes up to EPISODEN of SEASON in series ID."
 
-  (->> st--data
-    (--map-when (= id (alist-get 'id it))
-                (setf (alist-get 'episodes it)
-                      (--map-when (or (< (alist-get 'season it) seasonN)
-                                      (and (= (alist-get 'season it) seasonN)
-                                           (<= (alist-get 'episode it) episodeN)))
-                                  (progn
-                                    (setf (alist-get 'watched it) t)
-                                    it)
-                                  (alist-get 'episodes it))))))
+  (st--watch-region id 1 1 id seasonN episodeN t))
 
 ;;;; Query updates
 
