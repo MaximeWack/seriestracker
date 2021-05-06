@@ -360,94 +360,62 @@ Erase first then redraw the whole buffer."
     (cond (episode (goto-char (previous-single-property-change (point) 'st-season)))
           (season (goto-char (previous-single-property-change (point) 'st-series))))))
 
-(defun st-prev ()
-  "Move up in the hierarchy."
-
-  (interactive)
+(defun st--move (dir &optional same any)
+  "Move in the hierarchy"
 
   (unless (st--inbuffer) (error "Not in st buffer!"))
 
   (setq disable-point-adjustment t)
 
-  (let ((series (get-text-property (point) 'st-series))
-        (season (get-text-property (point) 'st-season))
-        (episode (get-text-property (point) 'st-episode)))
-    (goto-char (previous-single-property-change (point) 'st-season nil (point-min))))
+  (let* ((series (get-text-property (point) 'st-series))
+         (season (get-text-property (point) 'st-season))
+         (episode (get-text-property (point) 'st-episode))
+         (level (if (and same (not (or season episode))) 'st-series 'st-season))
+         (dest (if (eq dir 'prev)
+                   (previous-single-property-change (point) level nil (point-min))
+                 (next-single-property-change (point) level nil (point-max)))))
+    (goto-char dest))
 
-  (when (and (= 1 (point))
-             (invisible-p 1))
-    (st-next))
+  (when (eq dir 'prev)
+    (when (and (= 1 (point))
+               (invisible-p 1))
+      (st--move 'next)))
 
-  (when (invisible-p (point)) (st-prev)))
+  (unless any
+    (when (invisible-p (point)) (st--move dir same))))
+
+(defun st-prev ()
+  "Move to the previous visible node"
+
+  (interactive)
+
+  (st--move 'prev))
 
 (defun st-next ()
-  "Move up in the hierarchy."
+  "Move to the next visible node"
 
   (interactive)
 
-  (unless (st--inbuffer) (error "Not in st buffer!"))
-
-  (setq disable-point-adjustment t)
-
-  (let ((series (get-text-property (point) 'st-series))
-        (season (get-text-property (point) 'st-season))
-        (episode (get-text-property (point) 'st-episode)))
-    (goto-char (next-single-property-change (point) 'st-season nil (point-max))))
-
-  (when (invisible-p (point)) (st-next)))
+  (st--move 'next))
 
 (defun st--next-any ()
-  "Move up in the hierarchy, including invisible headings."
+  "Move to the next node."
 
-  (setq disable-point-adjustment t)
-
-  (unless (st--inbuffer) (error "Not in st buffer!"))
-
-  (let ((series (get-text-property (point) 'st-series))
-        (season (get-text-property (point) 'st-season))
-        (episode (get-text-property (point) 'st-episode)))
-    (goto-char (next-single-property-change (point) 'st-season nil (point-max)))))
+  (st--move 'next nil t))
 
 (defun st-prev-same ()
-  "Move up in the hierarchy."
+  "Move to the previous visible node of the same level."
 
   (interactive)
 
-  (unless (st--inbuffer) (error "Not in st buffer!"))
-
-  (setq disable-point-adjustment t)
-
-  (let ((series (get-text-property (point) 'st-series))
-        (season (get-text-property (point) 'st-season))
-        (episode (get-text-property (point) 'st-episode)))
-    (cond ((or episode season) (goto-char (previous-single-property-change (point) 'st-season nil (point-min))))
-          (series (goto-char (previous-single-property-change (point) 'st-series nil (point-min))))))
-
-  (when (and (= 1 (point))
-             (invisible-p 1))
-    (st-next))
-
-  (when (invisible-p (point)) (st-prev-same)))
+  (st--move 'prev t))
 
 (defun st-next-same ()
-  "Move up in the hierarchy."
+  "Move to the next visible node of the same level."
 
   (interactive)
 
-  (unless (st--inbuffer) (error "Not in st buffer!"))
-
-  (setq disable-point-adjustment t)
-
-  (when (= 1 (point))
-    (goto-char 2))
-
-  (let ((series (get-text-property (point) 'st-series))
-        (season (get-text-property (point) 'st-season))
-        (episode (get-text-property (point) 'st-episode)))
-    (cond ((or episode season) (goto-char (next-single-property-change (point) 'st-season nil (point-max))))
-          (series (goto-char (next-single-property-change (point) 'st-series nil (point-max))))))
-
-  (when (invisible-p (point)) (st-next-same)))
+  (st--move 'next t))
 
 ;;;; Folding
 
