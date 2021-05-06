@@ -647,7 +647,9 @@ Erase first then redraw the whole buffer."
 
   (if (-contains? buffer-invisibility-spec 'st-watched)
       (when (string-equal st-show-watched "show") (remove-from-invisibility-spec 'st-watched))
-    (when (string-equal st-show-watched "hide") (add-to-invisibility-spec 'st-watched))))
+    (when (string-equal st-show-watched "hide")
+      (add-to-invisibility-spec 'st-watched)
+      (when (invisible-p (point)) (st-next)))))
 
 (transient-define-infix st-infix-sorting ()
   :class 'st-transient-variable:choice
