@@ -55,6 +55,13 @@ returns '(1 3)"
     (move-beginning-of-line 1)
     (json-read-object)))
 
+;;;; --each-when
+
+(defmacro --each-when (list cond &rest body)
+  "--each, but with a condition"
+  `(--each ,list
+     (when ,cond ,@body)))
+
 ;;; episodate.com API
 
 ;;;; search
@@ -132,25 +139,23 @@ Adding an already existing series resets it."
 
   (let ((series1 (--find-index (= start-series (alist-get 'id it)) st--data))
         (series2 (--find-index (= end-series (alist-get 'id it)) st--data)))
-    (->> st--data
-      (--map-indexed
-       (progn
-         (setq series-index it-index)
-         (setf (alist-get 'episodes it)
-               (--map-when (and (or (> series-index series1)
-                                    (and (= series-index series1)
-                                         (or (and (= (alist-get 'season it) start-season)
-                                                  (>= (alist-get 'episode it) start-episode))
-                                             (> (alist-get 'season it) start-season))))
-                                (or (< series-index series2)
-                                    (and (= series-index series2)
-                                         (or (and (= (alist-get 'season it) end-season)
-                                                  (< (alist-get 'episode it) end-episode))
-                                             (< (alist-get 'season it) end-season)))))
-                           (progn
-                             (setf (alist-get 'watched it) watch)
-                             it)
-                           (alist-get 'episodes it))))))))
+    (--each
+        st--data
+      (setq series-index it-index)
+      (--each-when
+       (alist-get 'episodes it)
+       (and (or (> series-index series1)
+                (and (= series-index series1)
+                     (or (> (alist-get 'season it) start-season)
+                         (and (= (alist-get 'season it) start-season)
+                              (>= (alist-get 'episode it) start-episode)))))
+            (or (< series-index series2)
+                (and (= series-index series2)
+                     (or (< (alist-get 'season it) end-season)
+                         (and (= (alist-get 'season it) end-season)
+                              (< (alist-get 'episode it) end-episode))))))
+       (setf (alist-get 'watched it) watch)))))
+
 ;;;;; Watch episode
 
 (defun st--watch-episode (id seasonN episodeN watch)
@@ -185,13 +190,12 @@ Adding an already existing series resets it."
 (defun st--watch-series (id watch)
   "Watch all episodes in series ID."
 
-  (->> st--data
-    (--map-when (= id (alist-get 'id it))
-                (setf (alist-get 'episodes it)
-                      (--map (progn
-                               (setf (alist-get 'watched it) watch)
-                               it)
-                             (alist-get 'episodes it))))))
+  (--each-when
+   st--data
+   (= id (alist-get 'id it))
+   (--each
+       (alist-get 'episodes it)
+     (setf (alist-get 'watched it) watch))))
 
 ;;;;; Watch all episodes up to episode
 
@@ -214,9 +218,10 @@ Adding an already existing series resets it."
 (defun st--update ()
   "Update all non-finished shows."
 
-  (->> st--data
-    (--map-when (string-equal "Running" (alist-get 'status it))
-                (st--update-series it))))
+  (--each-when
+   st--data
+   (string-equal "Running" (alist-get 'status it))
+   (st--update-series it)))
 
 (defun st--update-series (series)
   "Update the SERIES."
