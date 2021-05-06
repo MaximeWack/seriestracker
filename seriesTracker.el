@@ -66,15 +66,14 @@ returns '(1 3)"
          (url-retrieve-synchronously (concat "https://www.episodate.com/api/search?q=" name)))
     st--getJSON
     (st--utils-alist-select '(tv_shows))
-    car
-    cdr
+    cdar
     (st--utils-array-select '(id name start_date status network permalink))))
 
 ;;;; series
 
 (defun st--episodes (series)
   (setf (alist-get 'episodes series)
-        (mapcar (lambda (x) x) (alist-get 'episodes series)))
+        (--map it (alist-get 'episodes series)))
   series)
 
 (defun st--series (id)
@@ -91,8 +90,7 @@ returns '(1 3)"
 
 ;;;; Data model
 
-(defvar st--data
-  nil
+(defvar st--data nil
   "Internal data containing followed series and episode.
 
 Of the form :
@@ -115,7 +113,7 @@ Adding an already existing series resets it."
   (setq st--data
         (--> st--data
           (--remove (= id (alist-get 'id it)) it)
-          (-snoc it (--> (st--series id))))))
+          (-snoc it (st--series id)))))
 
 ;;;;; Remove series
 
