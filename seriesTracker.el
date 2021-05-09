@@ -622,7 +622,8 @@ Erase first then redraw the whole buffer."
 
 (defun st--apply-sort ()
   (cond ((string-equal st-sorting-type "alpha") (st-sort-alpha))
-        ((string-equal st-sorting-type "next") (st-sort-next))))
+        ((string-equal st-sorting-type "next") (st-sort-next)))
+  (st--refresh))
 
 (transient-define-infix st-infix-savefile ()
   :class 'st-transient-variable
@@ -652,8 +653,7 @@ Erase first then redraw the whole buffer."
          (nametoadd (completing-read "Options: " names-list))
          (toadd (alist-get 'id (-find (lambda (series) (string-equal nametoadd (alist-get 'permalink series))) series-list))))
     (st--add toadd)
-    (st--apply-sort)
-    (st--refresh)))
+    (st--apply-sort)))
 
 ;;;; Remove series
 
@@ -828,9 +828,7 @@ The element under the cursor is used to decide whether to watch or unwatch."
     (< (first-next-date a)
        (first-next-date b)))
 
-  (setq st--data (-sort 'comp st--data))
-
-  (st--refresh))
+  (setq st--data (-sort 'comp st--data)))
 
 (defun st-sort-alpha ()
   "Sort alphabetically."
@@ -841,9 +839,7 @@ The element under the cursor is used to decide whether to watch or unwatch."
     (string< (alist-get 'name a)
              (alist-get 'name b)))
 
-  (setq st--data (-sort 'comp st--data))
-
-  (st--refresh))
+  (setq st--data (-sort 'comp st--data)))
 
 ;;;; Create mode
 
@@ -863,8 +859,7 @@ The element under the cursor is used to decide whether to watch or unwatch."
   (switch-to-buffer "st")
   (st-mode)
   (st-load)
-  (st--apply-watched)
-  (st--refresh))
+  (st--apply-watched))
 
 (define-derived-mode st-mode special-mode "st"
   "Series tracking with episodate.com."
