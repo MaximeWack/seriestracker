@@ -273,12 +273,12 @@ Adding an already existing series resets it."
     (st--draw-buffer)
     (goto-line line))
 
-  (cond ((eq fold-cycle 'st-all-folded)
-         (st-fold-all))
-        ((eq fold-cycle 'st-all-unfolded)
-         (st-unfold-all))
-        ((eq fold-cycle 'st-series-folded)
-         (st-unfold-all-series))))
+  (cond ((eq st--fold-cycle 'st-all-folded)
+         (st--fold-all))
+        ((eq st--fold-cycle 'st-all-unfolded)
+         (st--unfold-all))
+        ((eq st--fold-cycle 'st-series-folded)
+         (st--unfold-all-series))))
 
 (defun st--draw-buffer ()
   "Draw the buffer.
@@ -490,9 +490,9 @@ Erase first then redraw the whole buffer."
         (fold-end (next-single-property-change (point) 'st-series)))
     (remove-overlays fold-start fold-end 'invisible 'st-series)))
 
-;;;;; Cycle folding
+;;;; Cycle folding
 
-(defvar fold-cycle 'st-all-folded)
+(defvar st--fold-cycle 'st-all-folded)
 
 (defun st-cycle ()
   "Cycle folding."
@@ -501,15 +501,15 @@ Erase first then redraw the whole buffer."
 
   (st--inbuffer)
 
-  (cond ((eq fold-cycle 'st-all-folded)
+  (cond ((eq st--fold-cycle 'st-all-folded)
          (st--unfold-all-series)
-         (setq fold-cycle 'st-series-folded))
-        ((eq fold-cycle 'st-series-folded)
+         (setq st--fold-cycle 'st-series-folded))
+        ((eq st--fold-cycle 'st-series-folded)
          (st--unfold-all)
-         (setq fold-cycle 'st-all-unfolded))
-        ((eq fold-cycle 'st-all-unfolded)
+         (setq st--fold-cycle 'st-all-unfolded))
+        ((eq st--fold-cycle 'st-all-unfolded)
          (st--fold-all)
-         (setq fold-cycle 'st-all-folded))))
+         (setq st--fold-cycle 'st-all-folded))))
 
 (defun st--unfold-all ()
   "Unfold everything."
