@@ -415,8 +415,8 @@ Erase first then redraw the whole buffer."
 
 ;;;; Folding
 
-(defun st-fold-at-point ()
-  "Fold the section at point."
+(defun st-fold-at-point (&optional unfold)
+  "(un)Fold the section at point."
 
   (interactive)
 
@@ -425,70 +425,48 @@ Erase first then redraw the whole buffer."
   (let ((series (get-text-property (point) 'st-series))
         (season (get-text-property (point) 'st-season))
         (episode (get-text-property (point) 'st-episode)))
-    (cond (episode (st-fold-episodes))
-          (season (st-fold-season))
-          (t (st-fold-series)))))
+    (cond (episode (st-fold-episodes unfold))
+          (season (st-fold-season unfold))
+          (t (st-fold-series unfold)))))
 
 (defun st-unfold-at-point ()
   "Unfold the section at point."
 
   (interactive)
 
-  (st--inbuffer)
+  (st-fold-at-point t))
 
-  (let ((series (get-text-property (point) 'st-series))
-        (season (get-text-property (point) 'st-season))
-        (episode (get-text-property (point) 'st-episode)))
-    (cond (episode (st-unfold-episodes))
-          (season (st-unfold-season))
-          (t (st-unfold-series)))))
-
-(defun st-fold-episodes ()
-  "Fold the episodes at point."
-
-  (let* ((season-start (previous-single-property-change (point) 'st-season))
-         (fold-start (next-single-property-change season-start 'st-episode))
-         (fold-end (next-single-property-change (point) 'st-season nil (point-max)))
-         (overlay (make-overlay fold-start fold-end)))
-    (overlay-put overlay 'invisible 'st-season)))
-
-(defun st-unfold-episodes ()
-  "Unfold the episodes at point."
+(defun st-fold-episodes (&optional unfold)
+  "(un)Fold the episodes at point."
 
   (let* ((season-start (previous-single-property-change (point) 'st-season))
          (fold-start (next-single-property-change season-start 'st-episode))
          (fold-end (next-single-property-change (point) 'st-season nil (point-max))))
-    (remove-overlays fold-start fold-end 'invisible 'st-season)))
 
-(defun st-fold-season ()
-  "Fold the season at point."
+    (if unfold
+        (remove-overlays fold-start fold-end 'invisible 'st-season)
+      (overlay-put (make-overlay fold-start fold-end) 'invisible 'st-season))))
+
+(defun st-fold-season (&optional unfold)
+  "(un)Fold the season at point."
 
   (let* ((fold-start (next-single-property-change (point) 'st-episode))
-         (fold-end (next-single-property-change (point) 'st-season nil (point-max)))
-         (overlay (make-overlay fold-start fold-end)))
-    (overlay-put overlay 'invisible 'st-season)))
+         (fold-end (next-single-property-change (point) 'st-season nil (point-max))))
 
-(defun st-unfold-season ()
-  "Fold the season at point."
+    (if unfold
+        (remove-overlays fold-start fold-end 'invisible 'st-season)
+      (overlay-put (make-overlay fold-start fold-end) 'invisible 'st-season))))
 
-  (let ((fold-start (next-single-property-change (point) 'st-episode))
-        (fold-end (next-single-property-change (point) 'st-season)))
-    (remove-overlays fold-start fold-end 'invisible 'st-season)))
-
-(defun st-fold-series ()
+(defun st-fold-series (&optional unfold)
   "Fold the series at point."
 
   (let* ((fold-start (next-single-property-change (point) 'st-season))
-         (fold-end (next-single-property-change (point) 'st-series nil (point-max)))
-         (overlay (when (and fold-start fold-end) (make-overlay fold-start fold-end))))
-    (when overlay (overlay-put overlay 'invisible 'st-series))))
+         (fold-end (next-single-property-change (point) 'st-series nil (point-max))))
 
-(defun st-unfold-series ()
-  "Fold the series at point."
-
-  (let ((fold-start (next-single-property-change (point) 'st-season))
-        (fold-end (next-single-property-change (point) 'st-series)))
-    (remove-overlays fold-start fold-end 'invisible 'st-series)))
+    (if unfold
+        (remove-overlays fold-start fold-end 'invisible 'st-series)
+      (when (and fold-start fold-end)
+        (overlay-put (make-overlay fold-start fold-end) 'invisible 'st-series)))))
 
 ;;;; Cycle folding
 
