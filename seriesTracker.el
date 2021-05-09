@@ -672,6 +672,8 @@ Erase first then redraw the whole buffer."
 
 ;;;; (un)Watch episodes
 
+;;;;; Update appearance watched region
+
 (defun st--update-watched-region (start end &optional watch)
   (let ((startline (line-number-at-pos start))
         (endline (1- (line-number-at-pos end))))
@@ -699,6 +701,8 @@ Erase first then redraw the whole buffer."
             (put-text-property start (+ start 19) 'face '(t ((:foreground "MediumSpringGreen"))))
           (put-text-property start (+ start 19) 'face '(t ((:foreground "firebrick")))))) )))
 
+;;;;; Toggle watch
+
 (defun st-toggle-watch ()
   "Toggle watch at point.
 The element under the cursor is used to decide whether to watch or unwatch."
@@ -709,6 +713,8 @@ The element under the cursor is used to decide whether to watch or unwatch."
          (watched (get-char-property-and-overlay pos 'invisible))
          (watch (not (-contains? watched 'st-watched))))
     (st-watch watch)))
+
+;;;;; Dispatch (un)watch
 
 (defun st-watch (watch)
   "Watch at point. If UNWATCH, unwatch at point."
@@ -723,6 +729,8 @@ The element under the cursor is used to decide whether to watch or unwatch."
           (t (st-watch-series series watch))))
   (forward-line))
 
+;;;;; Region
+
 (defun st-watch-region (start end &optional watch)
 
   (let ((start-series (get-text-property start 'st-series))
@@ -734,6 +742,8 @@ The element under the cursor is used to decide whether to watch or unwatch."
 
     (st--watch-region start-series start-season start-episode end-series end-season end-episode watch)
     (st--update-watched-region start end watch)))
+
+;;;;; Episode
 
 (defun st-watch-episode (id seasonN episodeN watch)
   "Watch an episode."
@@ -753,6 +763,8 @@ The element under the cursor is used to decide whether to watch or unwatch."
 
   (st--watch-episode id seasonN episodeN watch))
 
+;;;;; Season
+
 (defun st-watch-season (id seasonN watch)
 
   (let* ((start-season (previous-single-property-change (1+ (point)) 'st-season))
@@ -767,6 +779,7 @@ The element under the cursor is used to decide whether to watch or unwatch."
       (put-text-property start end 'face 'default)))
 
   (st--watch-season id seasonN watch))
+;;;;; Series
 
 (defun st-watch-series (id watch)
   "Watch all episode in a series."
@@ -783,6 +796,7 @@ The element under the cursor is used to decide whether to watch or unwatch."
       (put-text-property start end 'face 'default)))
 
   (st--watch-series id watch))
+;;;;; Up
 
 (defun st-watch-up ()
   "Watch up to episode at point."
