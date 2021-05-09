@@ -882,18 +882,18 @@ The element under the cursor is used to decide whether to watch or unwatch."
 
   ;; keymap
 
-  (local-set-key "d" 'previous-line)
-  (local-set-key "s" 'next-line)
+  (local-set-key "p" 'previous-line)
+  (local-set-key "n" 'next-line)
 
-  (local-set-key "ð" 'st-prev)
-  (local-set-key "ß" 'st-next)
+  (local-set-key "C-p" 'st-prev)
+  (local-set-key "C-n" 'st-next)
 
-  (local-set-key "Þ" 'st-up)
-  (local-set-key "Ð" 'st-prev-same)
-  (local-set-key "ẞ" 'st-next-same)
+  (local-set-key "C-u" 'st-up)
+  (local-set-key "C-b" 'st-prev-same)
+  (local-set-key "C-f" 'st-next-same)
 
-  (local-set-key "þ" 'st-fold-at-point)
-  (local-set-key "®" 'st-unfold-at-point)
+  (local-set-key "C-d" 'st-fold-at-point)
+  (local-set-key "C-e" 'st-unfold-at-point)
 
   (local-set-key "h" 'st-dispatch)
   (local-set-key "U" 'st-update)
