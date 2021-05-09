@@ -672,19 +672,32 @@ Erase first then redraw the whole buffer."
 
 ;;;; (un)Watch episodes
 
-(defun st-watch-region (start end &optional watch)
-  (interactive "r")
+(defun st--update-watched-region (start end &optional watch)
+  (let ((startline (line-number-at-pos start))
+        (endline (1- (line-number-at-pos end))))
 
-  (let ((start-series (get-text-property start 'st-series))
-        (start-season (get-text-property start 'st-season))
-        (start-episode (get-text-property start 'st-episode))
-        (end-series (get-text-property end 'st-series))
-        (end-season (get-text-property end 'st-season))
-        (end-episode (get-text-property end 'st-episode)))
-    (st--watch-region start-series start-season start-episode end-series end-season end-episode (not watch)))
+    (save-excursion
+      (--each
+          (number-sequence startline endline)
+        (st--update-watched-line it watch)))))
 
-  (st--refresh)
-  )
+(defun st--update-watched-line (linum watch)
+  (goto-line linum)
+
+  (let ((start (previous-single-property-change (1+ (point)) 'st-episode))
+        (end (next-single-property-change (point) 'st-episode))
+        (episode (get-text-property (point) 'st-episode)))
+    (when episode
+      (if watch
+          (progn
+            (put-text-property start end 'invisible 'st-watched)
+            (put-text-property start end 'face 'st-watched))
+        (put-text-property start end 'invisible nil)
+        (put-text-property start end 'face 'default)
+        (if (time-less-p (date-to-time (buffer-substring start (+ start 19)))
+                         (current-time))
+            (put-text-property start (+ start 19) 'face '(t ((:foreground "MediumSpringGreen"))))
+          (put-text-property start (+ start 19) 'face '(t ((:foreground "firebrick")))))) )))
 
 (defun st-toggle-watch ()
   "Toggle watch at point.
@@ -692,23 +705,35 @@ The element under the cursor is used to decide whether to watch or unwatch."
 
   (interactive)
 
-  (let* ((watched (get-char-property-and-overlay (point) 'invisible))
+  (let* ((pos (if (region-active-p) (region-beginning) (point)))
+         (watched (get-char-property-and-overlay pos 'invisible))
          (watch (not (-contains? watched 'st-watched))))
     (st-watch watch)))
 
 (defun st-watch (watch)
   "Watch at point. If UNWATCH, unwatch at point."
 
-  (interactive)
-
   (let ((inhibit-read-only t)
         (series (get-text-property (point) 'st-series))
         (season (get-text-property (point) 'st-season))
         (episode (get-text-property (point) 'st-episode)))
-    (cond (episode (st-watch-episode series season episode watch))
+    (cond ((region-active-p) (st-watch-region (region-beginning) (region-end) watch))
+          (episode (st-watch-episode series season episode watch))
           (season (st-watch-season series season watch))
           (t (st-watch-series series watch))))
   (forward-line))
+
+(defun st-watch-region (start end &optional watch)
+
+  (let ((start-series (get-text-property start 'st-series))
+        (start-season (get-text-property start 'st-season))
+        (start-episode (get-text-property start 'st-episode))
+        (end-series (get-text-property end 'st-series))
+        (end-season (get-text-property end 'st-season))
+        (end-episode (get-text-property end 'st-episode)))
+
+    (st--watch-region start-series start-season start-episode end-series end-season end-episode watch)
+    (st--update-watched-region start end watch)))
 
 (defun st-watch-episode (id seasonN episodeN watch)
   "Watch an episode."
