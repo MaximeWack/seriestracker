@@ -260,8 +260,9 @@ Adding an already existing series resets it."
 (defun st--inbuffer ()
   "Check if we are in the st buffer in st mode."
 
-  (and (string-equal (buffer-name) "st")
-       (string-equal mode-name "st")))
+  (unless (and (string-equal (buffer-name) "st")
+               (string-equal mode-name "st"))
+    (error "Not in st buffer")))
 
 ;;;; Draw buffer
 
@@ -352,7 +353,7 @@ Erase first then redraw the whole buffer."
 
   (interactive)
 
-  (unless (st--inbuffer) (error "Not in st buffer!"))
+  (st--inbuffer)
 
   (let ((series (get-text-property (point) 'st-series))
         (season (get-text-property (point) 'st-season))
@@ -363,7 +364,7 @@ Erase first then redraw the whole buffer."
 (defun st--move (dir &optional same any)
   "Move in the hierarchy"
 
-  (unless (st--inbuffer) (error "Not in st buffer!"))
+  (st--inbuffer)
 
   (setq disable-point-adjustment t)
 
@@ -424,7 +425,7 @@ Erase first then redraw the whole buffer."
 
   (interactive)
 
-  (unless (st--inbuffer) (error "Not in st buffer!"))
+  (st--inbuffer)
 
   (let ((series (get-text-property (point) 'st-series))
         (season (get-text-property (point) 'st-season))
@@ -439,7 +440,7 @@ Erase first then redraw the whole buffer."
 
   (interactive)
 
-  (unless (st--inbuffer) (error "Not in st buffer!"))
+  (st--inbuffer)
 
   (let ((series (get-text-property (point) 'st-series))
         (season (get-text-property (point) 'st-season))
@@ -495,7 +496,7 @@ Erase first then redraw the whole buffer."
 
   (interactive)
 
-  (unless (st--inbuffer) (error "Not in st buffer!"))
+  (st--inbuffer)
 
   (cond ((eq fold-cycle 'st-all-folded)
          (st--unfold-all-series)
