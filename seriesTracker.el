@@ -399,11 +399,6 @@ Erase first then redraw the whole buffer."
 
   (st--move 'next))
 
-(defun st--next-any ()
-  "Move to the next node."
-
-  (st--move 'next nil t))
-
 (defun st-prev-same ()
   "Move to the previous visible node of the same level."
 
@@ -523,7 +518,7 @@ Erase first then redraw the whole buffer."
     (while (< (point)
               (point-max))
       (st-fold-at-point)
-      (st--next-any))))
+      (st--move 'next nil t))))
 
 (defun st--unfold-all-series ()
   "Unfold all series."
