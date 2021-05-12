@@ -151,9 +151,9 @@ Adding an already existing series resets it."
                               (>= (alist-get 'episode it) start-episode)))))
             (or (< series-index series2)
                 (and (= series-index series2)
-                     (or (< (alist-get 'season it) end-season)
-                         (and (= (alist-get 'season it) end-season)
-                              (< (alist-get 'episode it) end-episode))))))
+                     (or (< (alist-get 'season it) (or end-season (1+ start-season)))
+                         (and (= (alist-get 'season it) (or end-season (1+ start-season)))
+                              (< (alist-get 'episode it) (or end-episode (1+ start-episode))))))))
        (setf (alist-get 'watched it) watch)))))
 
 ;;;;; Watch season
