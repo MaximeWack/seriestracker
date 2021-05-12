@@ -348,6 +348,25 @@ Erase first then redraw the whole buffer."
 
 ;;;; Movements
 
+(defun st-prev-line ()
+  "Move one visible line up."
+
+  (interactive)
+
+  (st--inbuffer)
+
+  (setq disable-point-adjustment t)
+
+  (forward-line -1)
+
+  (while (and (invisible-p (point))
+              (> (point) 1))
+    (forward-line -1))
+
+  (when (and (= 1 (point))
+               (invisible-p 1))
+      (st--move 'next)))
+
 (defun st-up ()
   "Move up in the hierarchy."
 
@@ -879,10 +898,11 @@ The element under the cursor is used to decide whether to watch or unwatch."
   "Series tracking with episodate.com."
 
   (setq-local buffer-invisibility-spec '(t st-series st-season))
+  (setq-local max-lisp-eval-depth 10000)
 
   ;; keymap
 
-  (local-set-key "p" 'previous-line)
+  (local-set-key "p" 'st-prev-line)
   (local-set-key "n" 'next-line)
 
   (local-set-key "C-p" 'st-prev)
