@@ -670,7 +670,7 @@ Erase first then redraw the whole buffer."
   (let ((inhibit-read-only t)
         (series (get-text-property (point) 'st-series))
         (start (previous-single-property-change (1+ (point)) 'st-series))
-        (end (next-single-property-change (point) 'st-series)))
+        (end (next-single-property-change (point) 'st-series nil (point-max))))
     (when (y-or-n-p "Are you sure you want to delete this series? ")
       (st--remove series)
       (delete-region start end))))
@@ -692,7 +692,7 @@ Erase first then redraw the whole buffer."
   (goto-line linum)
 
   (let ((start (previous-single-property-change (1+ (point)) 'st-episode))
-        (end (next-single-property-change (point) 'st-episode))
+        (end (next-single-property-change (point) 'st-episode nil (point-max)))
         (episode (get-text-property (point) 'st-episode)))
     (when episode
       (if watch
@@ -763,8 +763,8 @@ The element under the cursor is used to decide whether to watch or unwatch."
 (defun st-watch-season (id seasonN watch)
 
   (let* ((start-season (previous-single-property-change (1+ (point)) 'st-season))
-         (start (next-single-property-change (1+ (point)) 'st-episode))
-         (end (next-single-property-change start 'st-season)))
+         (start (next-single-property-change (1+ (point)) 'st-episode nil (point-max)))
+         (end (next-single-property-change start 'st-season nil (point-max))))
 
     (st--watch-season id seasonN watch)
     (st--update-watched-region start end watch)))
@@ -775,8 +775,8 @@ The element under the cursor is used to decide whether to watch or unwatch."
   "Watch all episode in a series."
 
   (let* ((start-series (previous-single-property-change (1+ (point)) 'st-series))
-         (start (next-single-property-change (1+ (point)) 'st-episode))
-         (end (next-single-property-change start 'st-series)))
+         (start (next-single-property-change (1+ (point)) 'st-episode nil (point-max)))
+         (end (next-single-property-change start 'st-series nil (point-max))))
 
     (st--watch-series id watch)
     (st--update-watched-region start end watch)))
@@ -793,9 +793,9 @@ The element under the cursor is used to decide whether to watch or unwatch."
          (season (get-text-property (point) 'st-season))
          (episode (get-text-property (point) 'st-episode))
          (start-series (previous-single-property-change (1+ (point)) 'st-series))
-         (start-season (next-single-property-change start-series 'st-season))
-         (start (next-single-property-change start-season 'st-episode))
-         (end (next-single-property-change (1+ (point)) 'st-episode)))
+         (start-season (next-single-property-change start-series 'st-season nil (point-max)))
+         (start (next-single-property-change start-season 'st-episode nil (point-max)))
+         (end (next-single-property-change (1+ (point)) 'st-episode nil (point-max))))
 
     (st-watch-region start end t)))
 
