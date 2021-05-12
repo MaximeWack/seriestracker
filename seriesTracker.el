@@ -156,13 +156,6 @@ Adding an already existing series resets it."
                               (< (alist-get 'episode it) end-episode))))))
        (setf (alist-get 'watched it) watch)))))
 
-;;;;; Watch episode
-
-(defun st--watch-episode (id seasonN episodeN watch)
-  "Watch EPISODEN of SEASONN in series ID."
-
-  (st--watch-region id seasonN episodeN id seasonN episodeN watch))
-
 ;;;;; Watch season
 
 (defun st--watch-season (id seasonN watch)
@@ -181,13 +174,6 @@ Adding an already existing series resets it."
    (--each
        (alist-get 'episodes it)
      (setf (alist-get 'watched it) watch))))
-
-;;;;; Watch all episodes up to episode
-
-(defun st--watch-up (id seasonN episodeN)
-  "Watch all episodes up to EPISODEN of SEASON in series ID."
-
-  (st--watch-region id 1 1 id seasonN episodeN t))
 
 ;;;; Query updates
 
@@ -736,7 +722,7 @@ The element under the cursor is used to decide whether to watch or unwatch."
 ;;;;; Dispatch (un)watch
 
 (defun st-watch (watch)
-  "Watch at point. If UNWATCH, unwatch at point."
+  "WATCH at point."
 
   (let ((inhibit-read-only t)
         (series (get-text-property (point) 'st-series))
@@ -768,19 +754,9 @@ The element under the cursor is used to decide whether to watch or unwatch."
   "Watch an episode."
 
   (let ((start (previous-single-property-change (1+ (point)) 'st-episode))
-        (end (next-single-property-change (point) 'st-episode)))
-    (if watch
-        (progn
-          (put-text-property start end 'invisible 'st-watched)
-          (put-text-property start end 'face 'st-watched))
-      (put-text-property start end 'invisible nil)
-      (put-text-property start end 'face 'default)
-      (if (time-less-p (date-to-time (buffer-substring start (+ start 19)))
-                       (current-time))
-          (put-text-property start (+ start 19) 'face '(t ((:foreground "MediumSpringGreen"))))
-        (put-text-property start (+ start 19) 'face '(t ((:foreground "firebrick")))))))
+        (end (next-single-property-change (point) 'st-episode nil (point-max))))
 
-  (st--watch-episode id seasonN episodeN watch))
+    (st-watch-region start end watch)))
 
 ;;;;; Season
 
@@ -790,14 +766,9 @@ The element under the cursor is used to decide whether to watch or unwatch."
          (start (next-single-property-change (1+ (point)) 'st-episode))
          (end (next-single-property-change start 'st-season)))
 
-    (if watch
-        (progn
-          (put-text-property start-season end 'invisible 'st-watched)
-          (put-text-property start end 'face 'st-watched))
-      (put-text-property start-season end 'invisible nil)
-      (put-text-property start end 'face 'default)))
+    (st--watch-season id seasonN watch)
+    (st--update-watched-region start end watch)))
 
-  (st--watch-season id seasonN watch))
 ;;;;; Series
 
 (defun st-watch-series (id watch)
@@ -807,14 +778,9 @@ The element under the cursor is used to decide whether to watch or unwatch."
          (start (next-single-property-change (1+ (point)) 'st-episode))
          (end (next-single-property-change start 'st-series)))
 
-    (if watch
-        (progn
-          (put-text-property start-series end 'invisible 'st-watched)
-          (put-text-property start end 'face 'st-watched))
-      (put-text-property start-series end 'invisible nil)
-      (put-text-property start end 'face 'default)))
+    (st--watch-series id watch)
+    (st--update-watched-region start end watch)))
 
-  (st--watch-series id watch))
 ;;;;; Up
 
 (defun st-watch-up ()
@@ -830,14 +796,8 @@ The element under the cursor is used to decide whether to watch or unwatch."
          (start-season (next-single-property-change start-series 'st-season))
          (start (next-single-property-change start-season 'st-episode))
          (end (next-single-property-change (1+ (point)) 'st-episode)))
-    (when episode
-      (st--watch-up series season episode)
-      (unless (= 1 season) (put-text-property start-season start 'invisible 'st-watched))
-      (put-text-property start end 'invisible 'st-watched)
-      (put-text-property start end 'face 'st-watched)))
 
-  (forward-line))
-
+    (st-watch-region start end t)))
 
 ;;;; Sort series
 
