@@ -137,24 +137,29 @@ Adding an already existing series resets it."
 (defun st--watch-region (start-series start-season start-episode end-series end-season end-episode watch)
   "Watch from start-episode of start-season of start-series to end-episode of end-season of end-series."
 
-  (let ((series1 (--find-index (= start-series (alist-get 'id it)) st--data))
-        (series2 (--find-index (= end-series (alist-get 'id it)) st--data)))
+  (let* ((series1 (--find-index (= start-series (alist-get 'id it)) st--data))
+         (series2 (if end-series
+                      (--find-index (= end-series (alist-get 'id it)) st--data)
+                    (1+ series1))))
     (--each
         st--data
       (setq series-index it-index)
-      (--each-when
-       (alist-get 'episodes it)
-       (and (or (> series-index series1)
-                (and (= series-index series1)
-                     (or (> (alist-get 'season it) start-season)
-                         (and (= (alist-get 'season it) start-season)
-                              (>= (alist-get 'episode it) start-episode)))))
-            (or (< series-index series2)
-                (and (= series-index series2)
-                     (or (< (alist-get 'season it) (or end-season (1+ start-season)))
-                         (and (= (alist-get 'season it) (or end-season (1+ start-season)))
-                              (< (alist-get 'episode it) (or end-episode (1+ start-episode))))))))
-       (setf (alist-get 'watched it) watch)))))
+      (setf (alist-get 'episodes it)
+            (--map-when
+             (and (or (> series-index series1)
+                      (and (= series-index series1)
+                           (or (> (alist-get 'season it) start-season)
+                               (and (= (alist-get 'season it) start-season)
+                                    (>= (alist-get 'episode it) start-episode)))))
+                  (or (< series-index series2)
+                      (and (= series-index series2)
+                           (or (< (alist-get 'season it) (or end-season 0))
+                               (and (= (alist-get 'season it) (or end-season 0))
+                                    (< (alist-get 'episode it) (or end-episode 0)))))))
+             (progn
+               (setf (alist-get 'watched it) watch)
+               it)
+             (alist-get 'episodes it))))))
 
 ;;;;; Watch season
 
@@ -680,8 +685,11 @@ Erase first then redraw the whole buffer."
 ;;;;; Update appearance watched region
 
 (defun st--update-watched-region (start end &optional watch)
-  (let ((startline (line-number-at-pos start))
-        (endline (1- (line-number-at-pos end))))
+  (let* ((startline (line-number-at-pos start))
+         (endline1 (line-number-at-pos end))
+         (endline (if (= (line-number-at-pos (point-max)) endline1)
+                      endline1
+                    (1- endline1))))
 
     (save-excursion
       (--each
