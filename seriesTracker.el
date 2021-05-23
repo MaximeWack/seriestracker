@@ -277,8 +277,7 @@ Erase first then redraw the whole buffer."
 
   (let ((inhibit-read-only t))
     (erase-buffer)
-    (-each st--data 'st--draw-series)
-    (delete-char -1)))
+    (-each st--data 'st--draw-series)))
 
 (defun st--draw-series (series)
   "Print the series id and name."
@@ -686,10 +685,7 @@ Erase first then redraw the whole buffer."
 
 (defun st--update-watched-region (start end &optional watch)
   (let* ((startline (line-number-at-pos start))
-         (endline1 (line-number-at-pos end))
-         (endline (if (= (line-number-at-pos (point-max)) endline1)
-                      endline1
-                    (1- endline1))))
+         (endline (1- (line-number-at-pos end))))
 
     (save-excursion
       (--each
@@ -697,22 +693,40 @@ Erase first then redraw the whole buffer."
         (st--update-watched-line it watch)))))
 
 (defun st--update-watched-line (linum watch)
-  (goto-line linum)
 
-  (let ((start (previous-single-property-change (1+ (point)) 'st-episode))
-        (end (next-single-property-change (point) 'st-episode nil (point-max)))
-        (episode (get-text-property (point) 'st-episode)))
-    (when episode
-      (if watch
-          (progn
-            (put-text-property start end 'invisible 'st-watched)
-            (put-text-property start end 'face 'st-watched))
-        (put-text-property start end 'invisible nil)
-        (put-text-property start end 'face 'default)
-        (if (time-less-p (date-to-time (buffer-substring start (+ start 19)))
-                         (current-time))
-            (put-text-property start (+ start 19) 'face '(t ((:foreground "MediumSpringGreen"))))
-          (put-text-property start (+ start 19) 'face '(t ((:foreground "firebrick")))))) )))
+  (goto-char (point-min))
+  (forward-line (1- linum))
+
+  (let ((episode (get-text-property (point) 'st-episode))
+        (season (get-text-property (point) 'st-season))
+        (series (get-text-property (point) 'st-series))
+        (start (progn (move-beginning-of-line nil) (point)))
+        (end (progn (forward-line 1) (point))))
+    (cond (episode
+           (if watch
+               (progn
+                 (put-text-property start end 'invisible 'st-watched)
+                 (put-text-property start end 'face 'st-watched))
+             (put-text-property start end 'invisible nil)
+             (put-text-property start end 'face 'default)
+             (if (time-less-p (date-to-time (buffer-substring start (+ start 19)))
+                              (current-time))
+                 (put-text-property start (+ start 19) 'face '(t ((:foreground "MediumSpringGreen"))))
+               (put-text-property start (+ start 19) 'face '(t ((:foreground "firebrick")))))))
+          (season
+           (if (--all? (alist-get 'watched it)
+                       (->> st--data
+                         (--find (= series (alist-get 'id it)))
+                         (alist-get 'episodes)
+                         (--filter (= season (alist-get 'season it)))))
+               (put-text-property start end 'invisible 'st-watched)
+             (put-text-property start end 'invisible nil)))
+          (series
+           (if (--all? (alist-get 'watched it)
+                       (alist-get 'episodes (--find (= series (alist-get 'id it))
+                                                      st--data)))
+              (put-text-property start end 'invisible 'st-watched)
+             (put-text-property start end 'invisible nil))))))
 
 ;;;;; Toggle watch
 
@@ -775,7 +789,7 @@ The element under the cursor is used to decide whether to watch or unwatch."
          (end (next-single-property-change start 'st-season nil (point-max))))
 
     (st--watch-season id seasonN watch)
-    (st--update-watched-region start end watch)))
+    (st--update-watched-region start-season end watch)))
 
 ;;;;; Series
 
@@ -787,7 +801,7 @@ The element under the cursor is used to decide whether to watch or unwatch."
          (end (next-single-property-change start 'st-series nil (point-max))))
 
     (st--watch-series id watch)
-    (st--update-watched-region start end watch)))
+    (st--update-watched-region start-series end watch)))
 
 ;;;;; Up
 
