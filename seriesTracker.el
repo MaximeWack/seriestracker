@@ -210,8 +210,7 @@ Adding an already existing series resets it."
 
 ;;;; Load/save data
 
-(defvar st--file
-  "~/.emacs.d/st.el"
+(defvar st--file "~/.emacs.d/st.el"
   "Location of the save file")
 
 (defun st--save ()
@@ -222,7 +221,7 @@ Adding an already existing series resets it."
 
 (defun st--load ()
   (with-temp-buffer
-    (insert-file-contents st--file)
+    (insert-file-contents st--file t)
     (cl-assert (eq (point) (point-min)))
     (setq st--data (read (current-buffer)))))
 
@@ -873,7 +872,9 @@ The element under the cursor is used to decide whether to watch or unwatch."
 
   (switch-to-buffer "st")
   (st-mode)
+  (unless st--file (setq st--file "~/.emacs.d/st.el"))
   (st-load)
+  (st--update)
   (st--apply-watched))
 
 (define-derived-mode st-mode special-mode "st"
