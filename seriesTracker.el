@@ -662,6 +662,19 @@ Erase first then redraw the whole buffer."
   (st--load)
   (st--refresh))
 
+;;;; Quit
+
+(defun st-quit ()
+  "Save the db and close the buffer."
+
+  (interactive)
+
+  (st--inbuffer)
+
+  (st--save)
+  (kill-buffer-and-window)
+  (setq st--data nil))
+
 ;;;; Add series
 
 (defun st-search ()
@@ -917,6 +930,7 @@ The element under the cursor is used to decide whether to watch or unwatch."
   (local-set-key "w" 'st-toggle-watch)
   (local-set-key "u" 'st-watch-up)
   (local-set-key "W" 'st-toggle-display-watched)
+  (local-set-key "q" 'st-quit)
   (local-set-key [tab] 'st-cycle))
 
 ;;; Postamble
