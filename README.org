@@ -1,0 +1,43 @@
+seriesTracker helps you keep track of the tv shows you watch and always know when new releases get out.
+
+It makes use of the API provided by [[https://www.episodate.com][Episodate]]. Many thanks to them!
+
+* Install
+
+Clone this repo.
+
+* Configure
+
+#+begin_src elisp
+(use-package seriesTracker
+  :load-path "~/Projects/seriesTracker"
+
+  :config ;;These are the default values
+  (setq st--file "~/.emacs.d/st.el"
+        st--fold-cycle 'st-all-folded ;; can also be 'st-all-unfolded or 'st-series-folded. Will deternine the folding at startup
+        st-show-watched "hide" ;; whether to hide or "show" the watched episodes
+        st-sorting-type "next")) ;; or "alpha" for alphabetic sort
+#+end_src>
+
+* Usage
+
+Run ~st~ to start *seriesTracker*.
+
+Press ~A~ to search for a series and add it to the tracker.
+
+The controls are outline-like :
+- ~p/n~ to move by line
+- ~C-p/n~ to move by header
+- ~C-u~ to go up a level
+- ~C-b/f~ to move by header of the same level
+- ~C-d/e~ to un/fold
+- ~TAB~ to cycle visibility
+
+
+Press ~w~ to watch the episode/season/series under point, or a visual selection. You can also press ~u~ to watch all episodes up to the one under point.
+Press ~W~ to toggle displaying episodes that have already been watched.
+
+You can also access a transient popup /à la/ magit by pressing ~h~. In addition to being a cheatsheet, it allows you to manually save/load, as well as set the savefile. You can also set the sorting strategy there (alphabetically or by next episode to watch).
+
+Although you can manually update the database by pressing ~U~, running ~st~ updates on startup.
+Quitting with ~q~ autosaves to ~st--file~.
