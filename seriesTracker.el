@@ -638,6 +638,19 @@ Erase first then redraw the whole buffer."
   :variable 'st--file
   :description "Save file")
 
+;;;; Toggle displaying watched
+
+(defun st-toggle-display-watched ()
+  "Toggle displaying watched episodes."
+
+  (interactive)
+
+  (if (string-equal st-show-watched "show")
+      (progn (setq st-show-watched "hide")
+             (add-to-invisibility-spec 'st-watched))
+    (setq st-show-watched "show")
+    (remove-from-invisibility-spec 'st-watched)))
+
 ;;;; Load/save data
 
 (defun st-save ()
@@ -903,6 +916,7 @@ The element under the cursor is used to decide whether to watch or unwatch."
   (local-set-key "A" 'st-search)
   (local-set-key "w" 'st-toggle-watch)
   (local-set-key "u" 'st-watch-up)
+  (local-set-key "W" 'st-toggle-display-watched)
   (local-set-key [tab] 'st-cycle))
 
 ;;; Postamble
