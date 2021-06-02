@@ -2,6 +2,8 @@ seriesTracker helps you keep track of the tv shows you watch and always know whe
 
 It makes use of the API provided by [[https://www.episodate.com][Episodate]]. Many thanks to them!
 
+[[file:screenshot.png]]
+
 * Install
 
 Clone this repo.
