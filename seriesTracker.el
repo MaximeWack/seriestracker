@@ -180,6 +180,23 @@ Adding an already existing series resets it."
        (alist-get 'episodes it)
      (setf (alist-get 'watched it) watch))))
 
+;;;; Notes
+
+;;;;; Add note
+
+(defun st--add-note (id seasonN episodeN note)
+  "Add a NOTE to EPISODEN of SEASONN in series ID."
+
+  (when episodeN
+    (->> st--data
+      (--map-when (= id (alist-get 'id it))
+                  (setf (alist-get 'episodes it)
+                        (--map-when (and (= seasonN (alist-get 'season it))
+                                         (= episodeN (alist-get 'episode it)))
+                                    (progn (setf (alist-get 'note it) note)
+                                           it)
+                                    (alist-get 'episodes it)))))))
+
 ;;;; Query updates
 
 (defun st--update ()
