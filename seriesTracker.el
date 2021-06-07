@@ -552,7 +552,8 @@ Erase first then redraw the whole buffer."
     ("D" "Delete a series" st-remove)]
    [("w" "Toggle watch at point" st-toggle-watch)
     ("u" "Watch up to point" st-watch-up)
-    ] [("U" "Update and refresh the buffer" st-update)]]
+    ("N" "Add/remove a note from an episode" st-add-note)]
+   [("U" "Update and refresh the buffer" st-update)]]
 
   ["Display"
    :if-mode st-mode
@@ -563,8 +564,7 @@ Erase first then redraw the whole buffer."
    :if-mode st-mode
    [("s" "Save database" st-save)
     ("l" "Load database" st-load)
-    ("f" st-infix-savefile)]]
-  )
+    ("f" st-infix-savefile)]])
 
 (defclass st-transient-variable (transient-variable)
   ((variable :initarg :variable)))
@@ -967,6 +967,7 @@ The element under the cursor is used to decide whether to watch or unwatch."
   (local-set-key "w" 'st-toggle-watch)
   (local-set-key "u" 'st-watch-up)
   (local-set-key "W" 'st-toggle-display-watched)
+  (local-set-key "N" 'st-add-note)
   (local-set-key "q" 'st-quit)
   (local-set-key [tab] 'st-cycle))
 
