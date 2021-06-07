@@ -398,12 +398,16 @@ Erase first then redraw the whole buffer."
 
   (interactive)
 
+  (st--inbuffer)
+
   (st--move 'prev))
 
 (defun st-next ()
   "Move to the next visible node"
 
   (interactive)
+
+  (st--inbuffer)
 
   (st--move 'next))
 
@@ -412,12 +416,16 @@ Erase first then redraw the whole buffer."
 
   (interactive)
 
+  (st--inbuffer)
+
   (st--move 'prev t))
 
 (defun st-next-same ()
   "Move to the next visible node of the same level."
 
   (interactive)
+
+  (st--inbuffer)
 
   (st--move 'next t))
 
@@ -441,6 +449,8 @@ Erase first then redraw the whole buffer."
   "Unfold the section at point."
 
   (interactive)
+
+  (st--inbuffer)
 
   (st-fold-at-point t))
 
@@ -645,6 +655,8 @@ Erase first then redraw the whole buffer."
 
   (interactive)
 
+  (st--inbuffer)
+
   (if (string-equal st-show-watched "show")
       (progn (setq st-show-watched "hide")
              (add-to-invisibility-spec 'st-watched))
@@ -655,10 +667,16 @@ Erase first then redraw the whole buffer."
 
 (defun st-save ()
   (interactive)
+
+  (st--inbuffer)
+
   (st--save))
 
 (defun st-load ()
   (interactive)
+
+  (st--inbuffer)
+
   (st--load)
   (st--refresh))
 
@@ -682,6 +700,8 @@ Erase first then redraw the whole buffer."
 
   (interactive)
 
+  (st--inbuffer)
+
   (let* ((searchterm (read-from-minibuffer "Search: "))
          (series-list (st--search searchterm))
          (names-list (st--utils-array-pull 'permalink series-list))
@@ -696,6 +716,8 @@ Erase first then redraw the whole buffer."
   "Remove series at point."
 
   (interactive)
+
+  (st--inbuffer)
 
   (let ((inhibit-read-only t)
         (series (get-text-property (point) 'st-series))
@@ -761,6 +783,8 @@ Erase first then redraw the whole buffer."
 The element under the cursor is used to decide whether to watch or unwatch."
 
   (interactive)
+
+  (st--inbuffer)
 
   (let* ((pos (if (region-active-p) (region-beginning) (point)))
          (watched (get-char-property-and-overlay pos 'invisible))
@@ -836,6 +860,8 @@ The element under the cursor is used to decide whether to watch or unwatch."
 
   (interactive)
 
+  (st--inbuffer)
+
   (let* ((inhibit-read-only t)
          (series (get-text-property (point) 'st-series))
          (season (get-text-property (point) 'st-season))
@@ -853,6 +879,8 @@ The element under the cursor is used to decide whether to watch or unwatch."
   "Sort series by date of next episode to watch."
 
   (interactive)
+
+  (st--inbuffer)
 
   (defun first-next-date (series)
     (let ((dates (->> series
@@ -876,6 +904,8 @@ The element under the cursor is used to decide whether to watch or unwatch."
 
   (interactive)
 
+  (st--inbuffer)
+
   (defun comp (a b)
     (string< (alist-get 'name a)
              (alist-get 'name b)))
@@ -888,6 +918,8 @@ The element under the cursor is used to decide whether to watch or unwatch."
   "Update the db and refresh the buffer."
 
   (interactive)
+
+  (st--inbuffer)
 
   (st--update)
   (st--refresh))
