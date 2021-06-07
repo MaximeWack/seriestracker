@@ -899,8 +899,9 @@ The element under the cursor is used to decide whether to watch or unwatch."
   (switch-to-buffer "st")
   (st-mode)
   (unless st--file (setq st--file "~/.emacs.d/st.el"))
-  (st-load)
+  (st--load)
   (st--update)
+  (st--refresh)
   (st--apply-watched))
 
 (define-derived-mode st-mode special-mode "st"
