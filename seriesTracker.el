@@ -863,6 +863,25 @@ The element under the cursor is used to decide whether to watch or unwatch."
 
     (st-watch-region start end t)))
 
+;;;; Notes
+
+(defun st-add-note ()
+  "Add a note on the episode at point."
+
+  (interactive)
+
+  (st--inbuffer)
+
+  (unless (get-text-property (point) 'st-episode)
+    (error "Cannot put a note on a series or season!"))
+
+  (let* ((series (get-text-property (point) 'st-series))
+         (season (get-text-property (point) 'st-season))
+         (episode (get-text-property (point) 'st-episode))
+         (note (read-from-minibuffer "Note: "))
+         (note (if (string-equal "" note) nil note)))
+    (st--add-note series season episode note)))
+
 ;;;; Sort series
 
 (defun st-sort-next ()
