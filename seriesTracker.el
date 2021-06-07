@@ -672,8 +672,9 @@ Erase first then redraw the whole buffer."
   (st--inbuffer)
 
   (st--save)
-  (kill-buffer-and-window)
-  (setq st--data nil))
+  (setq st--data nil)
+
+  (kill-buffer-and-window))
 
 ;;;; Add series
 
