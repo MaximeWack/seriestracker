@@ -258,10 +258,6 @@ Adding an already existing series resets it."
   '((t (:height 1.7 :weight bold :foreground "MediumPurple")))
   "Face for seasons")
 
-(defface st-watched
-  '((t (:foreground "DimGrey" :strike-through t)))
-  "Face for watched episodes")
-
 ;;;; Check in ST buffer
 
 (defun st--inbuffer ()
@@ -326,10 +322,20 @@ Erase first then redraw the whole buffer."
          (name (alist-get 'name episode))
          (air_date (alist-get 'air_date episode))
          (watched (alist-get 'watched episode))
+         (note (alist-get 'note episode))
          (st-watched (if watched 'st-watched nil))
-         (st-date-face (if (time-less-p (date-to-time air_date) (current-time))
-                           '(t ((:foreground "MediumSpringGreen")))
-                         '(t ((:foreground "firebrick")))))
+         (st-date-face `(:foreground ,(if watched
+                                               "DimGrey"
+                                             (if (time-less-p (date-to-time air_date) (current-time))
+                                                 "MediumSpringGreen"
+                                               "firebrick"))
+                                          :strike-through ,watched
+                                          :weight ,(if note 'bold 'normal)))
+         (st-text-face `(:foreground ,(if watched
+                                              "DimGrey"
+                                            "white")
+                                         :strike-through ,watched
+                                         :weight ,(if note 'bold 'normal)))
          (start (point)))
     (when (= episodeN 1)
       (setq start (+ start 8 (length (int-to-string seasonN))))
@@ -345,12 +351,12 @@ Erase first then redraw the whole buffer."
                             'st-episode nil
                             'invisible st-season-watched))))
     (insert (propertize (concat air_date " " (format "%02d" episodeN) " - " name "\n")
+                        'face st-text-face
                         'st-series id
                         'st-season seasonN
                         'st-episode episodeN
                         'invisible st-watched))
-    (put-text-property start (+ start 19) 'face st-date-face)
-    (when watched (put-text-property start (point) 'face 'st-watched))))
+    (put-text-property start (+ start 19) 'face st-date-face)))
 
 ;;;; Movements
 
