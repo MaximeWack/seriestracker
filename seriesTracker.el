@@ -757,7 +757,7 @@ The selected sorting strategy is applied after adding the new series."
 
   (let ((inhibit-read-only t)
         (series (get-text-property (point) 'st-series))
-        (start (previous-single-property-change (1+ (point)) 'st-series))
+        (start (previous-single-property-change (1+ (point)) 'st-series nil (point-min)))
         (end (next-single-property-change (point) 'st-series nil (point-max))))
     (when (y-or-n-p "Are you sure you want to delete this series? ")
       (st--remove series)
