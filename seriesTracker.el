@@ -745,22 +745,32 @@ Erase first then redraw the whole buffer."
   (goto-char (point-min))
   (forward-line (1- linum))
 
-  (let ((episode (get-text-property (point) 'st-episode))
-        (season (get-text-property (point) 'st-season))
-        (series (get-text-property (point) 'st-series))
-        (start (progn (move-beginning-of-line nil) (point)))
-        (end (progn (forward-line 1) (point))))
+  (let* ((episode (get-text-property (point) 'st-episode))
+         (season (get-text-property (point) 'st-season))
+         (series (get-text-property (point) 'st-series))
+         (note (plist-get
+                (get-text-property (point) 'face)
+                :weight))
+         (start (progn (move-beginning-of-line nil) (point)))
+         (end (progn (forward-line 1) (point)))
+         (st-date-face `(:foreground ,(if watch
+                                          "DimGrey"
+                                        (if (time-less-p (date-to-time (buffer-substring start (+ start 19))) (current-time))
+                                            "MediumSpringGreen"
+                                          "firebrick"))
+                                     :strike-through ,watch
+                                     :weight ,note))
+         (st-text-face `(:foreground ,(if watch
+                                          "DimGrey"
+                                        "white")
+                                     :strike-through ,watch
+                                     :weight ,note)))
     (cond (episode
            (if watch
-               (progn
-                 (put-text-property start end 'invisible 'st-watched)
-                 (put-text-property start end 'face 'st-watched))
-             (put-text-property start end 'invisible nil)
-             (put-text-property start end 'face 'default)
-             (if (time-less-p (date-to-time (buffer-substring start (+ start 19)))
-                              (current-time))
-                 (put-text-property start (+ start 19) 'face '(t ((:foreground "MediumSpringGreen"))))
-               (put-text-property start (+ start 19) 'face '(t ((:foreground "firebrick")))))))
+               (put-text-property start end 'invisible 'st-watched)
+             (put-text-property start end 'invisible nil))
+           (put-text-property start end 'face st-text-face)
+           (put-text-property start (+ start 19) 'face st-date-face))
           (season
            (if (--all? (alist-get 'watched it)
                        (->> st--data
@@ -772,8 +782,8 @@ Erase first then redraw the whole buffer."
           (series
            (if (--all? (alist-get 'watched it)
                        (alist-get 'episodes (--find (= series (alist-get 'id it))
-                                                      st--data)))
-              (put-text-property start end 'invisible 'st-watched)
+                                                    st--data)))
+               (put-text-property start end 'invisible 'st-watched)
              (put-text-property start end 'invisible nil))))))
 
 ;;;;; Toggle watch
