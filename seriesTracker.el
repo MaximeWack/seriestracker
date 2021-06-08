@@ -355,6 +355,7 @@ Erase first then redraw the whole buffer."
                         'st-series id
                         'st-season seasonN
                         'st-episode episodeN
+                        'help-echo note
                         'invisible st-watched))
     (put-text-property start (+ start 19) 'face st-date-face)))
 
