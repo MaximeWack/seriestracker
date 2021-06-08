@@ -895,9 +895,29 @@ The element under the cursor is used to decide whether to watch or unwatch."
   (let* ((series (get-text-property (point) 'st-series))
          (season (get-text-property (point) 'st-season))
          (episode (get-text-property (point) 'st-episode))
+         (watch (get-text-property (point) 'invisible))
+         (start (progn (move-beginning-of-line nil) (point)))
+         (end (progn (forward-line 1) (point)))
          (note (read-from-minibuffer "Note: "))
-         (note (if (string-equal "" note) nil note)))
-    (st--add-note series season episode note)))
+         (note (if (string-equal "" note) nil note))
+         (st-date-face `(:foreground ,(if watch
+                                          "DimGrey"
+                                        (if (time-less-p (date-to-time (buffer-substring start (+ start 19))) (current-time))
+                                            "MediumSpringGreen"
+                                          "firebrick"))
+                                     :strike-through ,watch
+                                     :weight ,(if note 'bold 'normal)))
+         (st-text-face `(:foreground ,(if watch
+                                          "DimGrey"
+                                        "white")
+                                     :strike-through ,watch
+                                     :weight ,(if note 'bold 'normal)))
+         (inhibit-read-only t))
+
+    (st--add-note series season episode note)
+    (put-text-property start end 'face st-text-face)
+    (put-text-property start (+ start 19) 'face st-date-face)
+    (put-text-property start end 'help-echo note))))
 
 ;;;; Sort series
 
