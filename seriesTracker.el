@@ -740,7 +740,9 @@ The selected sorting strategy is applied after adding the new series."
          (series-list (st--search searchterm))
          (names-list (st--utils-array-pull 'permalink series-list))
          (nametoadd (completing-read "Options: " names-list))
-         (toadd (alist-get 'id (-find (lambda (series) (string-equal nametoadd (alist-get 'permalink series))) series-list))))
+         (toadd (alist-get 'id (--find
+                                (string-equal nametoadd (alist-get 'permalink it))
+                                series-list))))
     (st--add toadd)
     (st--apply-sort)))
 
