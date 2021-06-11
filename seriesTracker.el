@@ -80,7 +80,7 @@ returns '(1 3)"
 ;;;; --each-when
 
 (defmacro --each-when (list cond &rest body)
-  "--each, but apply a COND to the LIST before executing BODY."
+  "`--each', but apply a COND to the LIST before executing BODY."
   `(--each ,list
      (when ,cond ,@body)))
 
@@ -138,7 +138,7 @@ episodes props are season, episode, name, and air_date.")
 ;;;;; Add series
 
 (defun st--add (id)
-  "Add series with ID to st--data.
+  "Add series with ID to `st--data'.
 Adding an already existing series resets it."
 
   (setq st--data
@@ -149,7 +149,7 @@ Adding an already existing series resets it."
 ;;;;; Remove series
 
 (defun st--remove (id)
-  "Remove series with ID from st--data."
+  "Remove series with ID from `st--data'."
 
   (setq st--data
         (--remove (= id (alist-get 'id it)) st--data)))
@@ -238,7 +238,7 @@ Adding an already existing series resets it."
   "Location of the save file.")
 
 (defun st--save ()
-  "Save the database to st--file."
+  "Save the database to `st--file'."
 
   (with-temp-file st--file
     (let ((print-level nil)
@@ -246,7 +246,7 @@ Adding an already existing series resets it."
       (prin1 st--data (current-buffer)))))
 
 (defun st--load ()
-  "Load the database from st--file."
+  "Load the database from `st--file'."
 
   (with-temp-buffer
     (insert-file-contents st--file t)
@@ -601,17 +601,17 @@ and ANY to go to any header even if hidden."
    (action :initarg :action)))
 
 (cl-defmethod transient-init-value ((obj st-transient-variable))
-  "Method to initialise the value of an st-transient-variable OBJ."
+  "Method to initialise the value of an `st-transient-variable' OBJ."
 
   (oset obj value (eval (oref obj variable))))
 
 (cl-defmethod transient-infix-read ((obj st-transient-variable))
-  "Method to read a new value for an st-transient-variable OBJ."
+  "Method to read a new value for an `st-transient-variable' OBJ."
 
   (read-from-minibuffer "Save file: " (oref obj value)))
 
 (cl-defmethod transient-infix-read ((obj st-transient-variable:choice))
-  "Method to read a new value for an st-transient-variable:choice OBJ."
+  "Method to read a new value for an `st-transient-variable:choice' OBJ."
 
   (let ((choices (oref obj choices)))
     (if-let* ((value (oref obj value))
@@ -620,20 +620,20 @@ and ANY to go to any header even if hidden."
       (car choices))))
 
 (cl-defmethod transient-infix-set ((obj st-transient-variable) value)
-  "Method to set VALUE for an st-transient-variable OBJ."
+  "Method to set VALUE for an `st-transient-variable' OBJ."
 
   (oset obj value value)
   (set (oref obj variable) value))
 
 (cl-defmethod transient-infix-set ((obj st-transient-variable:choice) value)
-  "Method to set VALUE for an st-transient-variable:choice OBJ."
+  "Method to set VALUE for an `st-transient-variable:choice' OBJ."
 
   (oset obj value value)
   (set (oref obj variable) value)
   (funcall (oref obj action)))
 
 (cl-defmethod transient-format-value ((obj st-transient-variable))
-  "Method to format the value of an st-transient-variable OBJ."
+  "Method to format the value of an `st-transient-variable' OBJ."
 
   (let ((value (oref obj value)))
     (concat
@@ -642,7 +642,7 @@ and ANY to go to any header even if hidden."
      (propertize ")" 'face 'transient-inactive-value))))
 
 (cl-defmethod transient-format-value ((obj st-transient-variable:choice))
-  "Method to form the value of an st-transient-variable:choice OBJ."
+  "Method to form the value of an `st-transient-variable:choice' OBJ."
 
   (let* ((variable (oref obj variable))
          (choices  (oref obj choices))
