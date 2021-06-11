@@ -268,19 +268,23 @@ Adding an already existing series resets it."
 
 (defface st-series
   '((t (:height 1.9 :weight bold :foreground "DeepSkyBlue")))
-  "Face for series names")
+  "Face for series names"
+  :group 'st-faces)
 
 (defface st-finished-series
   '((t (:height 2.0 :weight bold :foreground "DimGrey")))
-  "Face for finished series names")
+  "Face for finished series names"
+  :group 'st-faces)
 
 (defface st-season
   '((t (:height 1.7 :weight bold :foreground "MediumPurple")))
-  "Face for seasons")
+  "Face for seasons"
+  :group 'st-faces)
 
 (defface st-watched
   '((t (:foreground "DimGrey" :strike-through t)))
-  "Face for watched episodes")
+  "Face for watched episodes"
+  :group 'st-faces)
 
 ;;;; Check in ST buffer
 
@@ -296,9 +300,10 @@ Adding an already existing series resets it."
 (defun st--refresh ()
   "Refresh the st buffer."
 
-  (let ((line (line-number-at-pos)))
+  (let ((linum (line-number-at-pos)))
     (st--draw-buffer)
-    (goto-line line))
+    (goto-char (point-min))
+    (forward-line (1- linum)))
 
   (cond ((eq st--fold-cycle 'st-all-folded)
          (st--fold-all))
@@ -402,8 +407,7 @@ If first episode of a season, print the season number."
 
   (st--inbuffer)
 
-  (let ((series (get-text-property (point) 'st-series))
-        (season (get-text-property (point) 'st-season))
+  (let ((season (get-text-property (point) 'st-season))
         (episode (get-text-property (point) 'st-episode)))
     (cond (episode (goto-char (previous-single-property-change (point) 'st-season)))
           (season (goto-char (previous-single-property-change (point) 'st-series))))))
@@ -417,8 +421,7 @@ and ANY to go to any header even if hidden."
 
   (setq disable-point-adjustment t)
 
-  (let* ((series (get-text-property (point) 'st-series))
-         (season (get-text-property (point) 'st-season))
+  (let* ((season (get-text-property (point) 'st-season))
          (episode (get-text-property (point) 'st-episode))
          (level (if (and same (not (or season episode))) 'st-series 'st-season))
          (dest (if (eq dir 'prev)
@@ -479,8 +482,7 @@ and ANY to go to any header even if hidden."
 
   (st--inbuffer)
 
-  (let ((series (get-text-property (point) 'st-series))
-        (season (get-text-property (point) 'st-season))
+  (let ((season (get-text-property (point) 'st-season))
         (episode (get-text-property (point) 'st-episode)))
     (cond (episode (st-fold-episodes unfold))
           (season (st-fold-season unfold))
@@ -652,8 +654,7 @@ and ANY to go to any header even if hidden."
 (cl-defmethod transient-format-value ((obj st-transient-variable:choice))
   "Method to form the value of an `st-transient-variable:choice' OBJ."
 
-  (let* ((variable (oref obj variable))
-         (choices  (oref obj choices))
+  (let* ((choices  (oref obj choices))
          (value    (oref obj value)))
     (concat
      (propertize "[" 'face 'transient-inactive-value)
@@ -869,7 +870,7 @@ The element under the cursor is used to decide whether to watch or unwatch."
         (season (get-text-property (point) 'st-season))
         (episode (get-text-property (point) 'st-episode)))
     (cond ((region-active-p) (st-watch-region (region-beginning) (region-end) watch))
-          (episode (st-watch-episode series season episode watch))
+          (episode (st-watch-episode watch))
           (season (st-watch-season series season watch))
           (t (st-watch-series series watch))))
   (forward-line))
@@ -891,8 +892,8 @@ The element under the cursor is used to decide whether to watch or unwatch."
 
 ;;;;; Episode
 
-(defun st-watch-episode (id seasonN episodeN watch)
-  "WATCH EPISODEN of SEASONN in series ID."
+(defun st-watch-episode (watch)
+  "WATCH the episode at point."
 
   (let ((start (previous-single-property-change (1+ (point)) 'st-episode))
         (end (next-single-property-change (point) 'st-episode nil (point-max))))
@@ -933,9 +934,6 @@ The element under the cursor is used to decide whether to watch or unwatch."
   (st--inbuffer)
 
   (let* ((inhibit-read-only t)
-         (series (get-text-property (point) 'st-series))
-         (season (get-text-property (point) 'st-season))
-         (episode (get-text-property (point) 'st-episode))
          (start-series (previous-single-property-change (1+ (point)) 'st-series))
          (start-season (next-single-property-change start-series 'st-season nil (point-max)))
          (start (next-single-property-change start-season 'st-episode nil (point-max)))
