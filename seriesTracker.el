@@ -17,11 +17,20 @@
 
 ;; Author: Maxime Wack <contact at maximewack dot com>
 ;; Version: 1.1
-;; Package-Requires: ((dash "2.12.1") (transient "0.3.2"))
+;; Package-Requires: ((dash "2.12.1") (transient "0.3.2") (emacs "26.1"))
 ;; Keywords: multimedia
 ;; URL: https://www.github.com/MaximeWack/seriesTracker
 
 ;;; Commentary:
+
+;; seriesTracker implements a major mode (st) for tracking TV shows.
+;; TV shows data (episode list, release dates, etc.)
+;; are sourced from the free database hosted at episodate.com
+;; The mode presents an outlined list of tracked shows,
+;; their episodes and release dates, and enables the user
+;; to see when new episodes for their favorite shows get released,
+;; and track their progress in watching a series.
+
 ;;; Code:
 
 ;;; Requirements
@@ -234,7 +243,7 @@ Adding an already existing series resets it."
 
 ;;;; Load/save data
 
-(defvar st--file "~/.emacs.d/st.el"
+(defvar st--file (concat user-emacs-directory "st.el")
   "Location of the save file.")
 
 (defun st--save ()
@@ -588,8 +597,7 @@ and ANY to go to any header even if hidden."
    :if-mode st-mode
    [("s" "Save database" st-save)
     ("l" "Load database" st-load)
-    ("f" st-infix-savefile)]]
-  )
+    ("f" st-infix-savefile)]])
 
 (defclass st-transient-variable (transient-variable)
   ((variable :initarg :variable)))
@@ -993,7 +1001,7 @@ The element under the cursor is used to decide whether to watch or unwatch."
 
   (switch-to-buffer "st")
   (st-mode)
-  (unless st--file (setq st--file "~/.emacs.d/st.el"))
+  (unless st--file (setq st--file (concat user-emacs-directory "st.el")))
   (st--load)
   (st--update)
   (st--refresh)
