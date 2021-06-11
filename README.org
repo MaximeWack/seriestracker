@@ -6,14 +6,23 @@ It makes use of the API provided by [[https://www.episodate.com][Episodate]]. Ma
 
 * Install
 
+** Manual install
+
 Clone this repo.
+
+#+begin_src elisp
+(use-package seriesTracker
+  :load-path "/path/to/seriesTracker")
+#+end_src>
+
+** MELPA
+
+Package submission is underway.
 
 * Configure
 
 #+begin_src elisp
 (use-package seriesTracker
-  :load-path "~/Projects/seriesTracker"
-
   :config ;;These are the default values
   (setq st--file "~/.emacs.d/st.el"
         st--fold-cycle 'st-all-folded ;; can also be 'st-all-unfolded or 'st-series-folded. Will deternine the folding at startup

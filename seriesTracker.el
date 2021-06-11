@@ -1,6 +1,36 @@
 ;;; seriesTracker.el --- Series tracker -*- lexical-binding: t; -*-
-;; Package-Requires: ((dash "2.12.1"))
+
+;; Copyright 2021 Maxime Wack
+
+;; This program is free software: you can redistribute it and/or modify
+;; it under the terms of the GNU General Public License as published by
+;; the Free Software Foundation, either version 3 of the License, or
+;; (at your option) any later version.
+
+;; This program is distributed in the hope that it will be useful,
+;; but WITHOUT ANY WARRANTY; without even the implied warranty of
+;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+;; GNU General Public License for more details.
+
+;; You should have received a copy of the GNU General Public License
+;; along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+;; Author: Maxime Wack <contact at maximewack dot com>
+;; Version: 1.1
+;; Package-Requires: ((dash "2.12.1") (transient "0.3.2") (emacs "26.1"))
+;; Keywords: multimedia
+;; URL: https://www.github.com/MaximeWack/seriesTracker
+
 ;;; Commentary:
+
+;; seriesTracker implements a major mode (st) for tracking TV shows.
+;; TV shows data (episode list, release dates, etc.)
+;; are sourced from the free database hosted at episodate.com
+;; The mode presents an outlined list of tracked shows,
+;; their episodes and release dates, and enables the user
+;; to see when new episodes for their favorite shows get released,
+;; and track their progress in watching a series.
+
 ;;; Code:
 
 ;;; Requirements
@@ -15,7 +45,8 @@
 ;;;; alist-select
 
 (defun st--utils-alist-select (fields alist)
-  "Keep only FIELDS in ALIST by constructing a new alist containing only these elements.
+  "Keep only FIELDS in ALIST.
+This is done by constructing a new alist containing only these elements.
 
 alist-select '(a c) '((a .1) (b , \"b\") (c . c)
 returns '((a . 1) (c . c))"
@@ -58,7 +89,7 @@ returns '(1 3)"
 ;;;; --each-when
 
 (defmacro --each-when (list cond &rest body)
-  "--each, but with a condition"
+  "`--each', but apply a COND to the LIST before executing BODY."
   `(--each ,list
      (when ,cond ,@body)))
 
@@ -79,6 +110,8 @@ returns '(1 3)"
 ;;;; series
 
 (defun st--episodes (series)
+  "Transform the episodes of SERIES from a vector to a list."
+
   (setf (alist-get 'episodes series)
         (--map it (alist-get 'episodes series)))
   series)
@@ -102,8 +135,8 @@ returns '(1 3)"
 
 Of the form :
 
-'(((id . seriesId) (props . value) (…) (episodes ((id . episodeId) (watched . t) (props.value) (…))
-                                                 ((id . episodeId) (watched . nil) (props.value) (…)))))
+'(((id . seriesId) (…) (episodes ((id . episodeId) (watched . t)  (…))
+                                 ((id . episodeId) (watched)  (…)))))
   ((id . seriesId) (…) (episodes ((id . episodeId) (…))
                                  ((id . episodeId) (…)))))
 
@@ -114,7 +147,7 @@ episodes props are season, episode, name, and air_date.")
 ;;;;; Add series
 
 (defun st--add (id)
-  "Add series with ID to st--data.
+  "Add series with ID to `st--data'.
 Adding an already existing series resets it."
 
   (setq st--data
@@ -125,7 +158,7 @@ Adding an already existing series resets it."
 ;;;;; Remove series
 
 (defun st--remove (id)
-  "Remove series with ID from st--data."
+  "Remove series with ID from `st--data'."
 
   (setq st--data
         (--remove (= id (alist-get 'id it)) st--data)))
@@ -135,7 +168,7 @@ Adding an already existing series resets it."
 ;;;;; Watch region
 
 (defun st--watch-region (start-series start-season start-episode end-series end-season end-episode watch)
-  "Watch from start-episode of start-season of start-series to end-episode of end-season of end-series."
+  "WATCH from START-EPISODE of START-SEASON of START-SERIES to END-EPISODE of END-SEASON of END-SERIES."
 
   (let* ((series1 (--find-index (= start-series (alist-get 'id it)) st--data))
          (series2 (if end-series
@@ -164,14 +197,14 @@ Adding an already existing series resets it."
 ;;;;; Watch season
 
 (defun st--watch-season (id seasonN watch)
-  "Watch all episode in a season."
+  "WATCH all episodes in SEASONN of series ID."
 
   (st--watch-region id seasonN 1 id (1+ seasonN) 0 watch))
 
 ;;;;; Watch series
 
 (defun st--watch-series (id watch)
-  "Watch all episodes in series ID."
+  "WATCH all episodes in series ID."
 
   (--each-when
    st--data
@@ -183,7 +216,7 @@ Adding an already existing series resets it."
 ;;;; Query updates
 
 (defun st--update ()
-  "Update all non-finished shows."
+  "Update all non-finished series."
 
   (--each-when
    st--data
@@ -210,16 +243,20 @@ Adding an already existing series resets it."
 
 ;;;; Load/save data
 
-(defvar st--file "~/.emacs.d/st.el"
-  "Location of the save file")
+(defvar st--file (concat user-emacs-directory "st.el")
+  "Location of the save file.")
 
 (defun st--save ()
+  "Save the database to `st--file'."
+
   (with-temp-file st--file
     (let ((print-level nil)
           (print-length nil))
       (prin1 st--data (current-buffer)))))
 
 (defun st--load ()
+  "Load the database from `st--file'."
+
   (with-temp-buffer
     (insert-file-contents st--file t)
     (cl-assert (eq (point) (point-min)))
@@ -231,19 +268,23 @@ Adding an already existing series resets it."
 
 (defface st-series
   '((t (:height 1.9 :weight bold :foreground "DeepSkyBlue")))
-  "Face for series names")
+  "Face for series names"
+  :group 'st-faces)
 
 (defface st-finished-series
   '((t (:height 2.0 :weight bold :foreground "DimGrey")))
-  "Face for finished series names")
+  "Face for finished series names"
+  :group 'st-faces)
 
 (defface st-season
   '((t (:height 1.7 :weight bold :foreground "MediumPurple")))
-  "Face for seasons")
+  "Face for seasons"
+  :group 'st-faces)
 
 (defface st-watched
   '((t (:foreground "DimGrey" :strike-through t)))
-  "Face for watched episodes")
+  "Face for watched episodes"
+  :group 'st-faces)
 
 ;;;; Check in ST buffer
 
@@ -259,9 +300,10 @@ Adding an already existing series resets it."
 (defun st--refresh ()
   "Refresh the st buffer."
 
-  (let ((line (line-number-at-pos)))
+  (let ((linum (line-number-at-pos)))
     (st--draw-buffer)
-    (goto-line line))
+    (goto-char (point-min))
+    (forward-line (1- linum)))
 
   (cond ((eq st--fold-cycle 'st-all-folded)
          (st--fold-all))
@@ -279,7 +321,7 @@ Erase first then redraw the whole buffer."
     (-each st--data 'st--draw-series)))
 
 (defun st--draw-series (series)
-  "Print the series id and name."
+  "Print the SERIES id and name."
 
   (let* ((id (alist-get 'id series))
          (name (alist-get 'name series))
@@ -301,7 +343,9 @@ Erase first then redraw the whole buffer."
     (--each episodes (st--draw-episode series it))))
 
 (defun st--draw-episode (series episode)
-  "Print the episode id, S**E**, and name."
+  "Print EPISODE from SERIES.
+Print the time stamp, then episode number, and episode name.
+If first episode of a season, print the season number."
 
   (let* ((id (alist-get 'id series))
          (seasonN (alist-get 'season episode))
@@ -363,21 +407,21 @@ Erase first then redraw the whole buffer."
 
   (st--inbuffer)
 
-  (let ((series (get-text-property (point) 'st-series))
-        (season (get-text-property (point) 'st-season))
+  (let ((season (get-text-property (point) 'st-season))
         (episode (get-text-property (point) 'st-episode)))
     (cond (episode (goto-char (previous-single-property-change (point) 'st-season)))
           (season (goto-char (previous-single-property-change (point) 'st-series))))))
 
 (defun st--move (dir &optional same any)
-  "Move in the hierarchy"
+  "Move in direction DIR in the hierarchy.
+Use SAME to navigate between same-level headers,
+and ANY to go to any header even if hidden."
 
   (st--inbuffer)
 
   (setq disable-point-adjustment t)
 
-  (let* ((series (get-text-property (point) 'st-series))
-         (season (get-text-property (point) 'st-season))
+  (let* ((season (get-text-property (point) 'st-season))
          (episode (get-text-property (point) 'st-episode))
          (level (if (and same (not (or season episode))) 'st-series 'st-season))
          (dest (if (eq dir 'prev)
@@ -394,16 +438,20 @@ Erase first then redraw the whole buffer."
     (when (invisible-p (point)) (st--move dir same))))
 
 (defun st-prev ()
-  "Move to the previous visible node"
+  "Move to the previous visible node."
 
   (interactive)
+
+  (st--inbuffer)
 
   (st--move 'prev))
 
 (defun st-next ()
-  "Move to the next visible node"
+  "Move to the next visible node."
 
   (interactive)
+
+  (st--inbuffer)
 
   (st--move 'next))
 
@@ -412,6 +460,8 @@ Erase first then redraw the whole buffer."
 
   (interactive)
 
+  (st--inbuffer)
+
   (st--move 'prev t))
 
 (defun st-next-same ()
@@ -419,19 +469,20 @@ Erase first then redraw the whole buffer."
 
   (interactive)
 
+  (st--inbuffer)
+
   (st--move 'next t))
 
 ;;;; Folding
 
 (defun st-fold-at-point (&optional unfold)
-  "(un)Fold the section at point."
+  "Fold or UNFOLD the section at point."
 
   (interactive)
 
   (st--inbuffer)
 
-  (let ((series (get-text-property (point) 'st-series))
-        (season (get-text-property (point) 'st-season))
+  (let ((season (get-text-property (point) 'st-season))
         (episode (get-text-property (point) 'st-episode)))
     (cond (episode (st-fold-episodes unfold))
           (season (st-fold-season unfold))
@@ -442,10 +493,12 @@ Erase first then redraw the whole buffer."
 
   (interactive)
 
+  (st--inbuffer)
+
   (st-fold-at-point t))
 
 (defun st-fold-episodes (&optional unfold)
-  "(un)Fold the episodes at point."
+  "Fold or UNFOLD the episodes at point."
 
   (let* ((season-start (previous-single-property-change (point) 'st-season))
          (fold-start (next-single-property-change season-start 'st-episode))
@@ -456,7 +509,7 @@ Erase first then redraw the whole buffer."
       (overlay-put (make-overlay fold-start fold-end) 'invisible 'st-season))))
 
 (defun st-fold-season (&optional unfold)
-  "(un)Fold the season at point."
+  "Fold or UNFOLD the season at point."
 
   (let* ((fold-start (next-single-property-change (point) 'st-episode))
          (fold-end (next-single-property-change (point) 'st-season nil (point-max))))
@@ -466,7 +519,7 @@ Erase first then redraw the whole buffer."
       (overlay-put (make-overlay fold-start fold-end) 'invisible 'st-season))))
 
 (defun st-fold-series (&optional unfold)
-  "Fold the series at point."
+  "Fold or UNFOLD the series at point."
 
   (let* ((fold-start (next-single-property-change (point) 'st-season))
          (fold-end (next-single-property-change (point) 'st-series nil (point-max))))
@@ -546,8 +599,7 @@ Erase first then redraw the whole buffer."
    :if-mode st-mode
    [("s" "Save database" st-save)
     ("l" "Load database" st-load)
-    ("f" st-infix-savefile)]]
-  )
+    ("f" st-infix-savefile)]])
 
 (defclass st-transient-variable (transient-variable)
   ((variable :initarg :variable)))
@@ -559,12 +611,18 @@ Erase first then redraw the whole buffer."
    (action :initarg :action)))
 
 (cl-defmethod transient-init-value ((obj st-transient-variable))
+  "Method to initialise the value of an `st-transient-variable' OBJ."
+
   (oset obj value (eval (oref obj variable))))
 
 (cl-defmethod transient-infix-read ((obj st-transient-variable))
+  "Method to read a new value for an `st-transient-variable' OBJ."
+
   (read-from-minibuffer "Save file: " (oref obj value)))
 
 (cl-defmethod transient-infix-read ((obj st-transient-variable:choice))
+  "Method to read a new value for an `st-transient-variable:choice' OBJ."
+
   (let ((choices (oref obj choices)))
     (if-let* ((value (oref obj value))
               (notlast (cadr (member value choices))))
@@ -572,15 +630,21 @@ Erase first then redraw the whole buffer."
       (car choices))))
 
 (cl-defmethod transient-infix-set ((obj st-transient-variable) value)
+  "Method to set VALUE for an `st-transient-variable' OBJ."
+
   (oset obj value value)
   (set (oref obj variable) value))
 
 (cl-defmethod transient-infix-set ((obj st-transient-variable:choice) value)
+  "Method to set VALUE for an `st-transient-variable:choice' OBJ."
+
   (oset obj value value)
   (set (oref obj variable) value)
   (funcall (oref obj action)))
 
 (cl-defmethod transient-format-value ((obj st-transient-variable))
+  "Method to format the value of an `st-transient-variable' OBJ."
+
   (let ((value (oref obj value)))
     (concat
      (propertize "(" 'face 'transient-inactive-value)
@@ -588,8 +652,9 @@ Erase first then redraw the whole buffer."
      (propertize ")" 'face 'transient-inactive-value))))
 
 (cl-defmethod transient-format-value ((obj st-transient-variable:choice))
-  (let* ((variable (oref obj variable))
-         (choices  (oref obj choices))
+  "Method to form the value of an `st-transient-variable:choice' OBJ."
+
+  (let* ((choices  (oref obj choices))
          (value    (oref obj value)))
     (concat
      (propertize "[" 'face 'transient-inactive-value)
@@ -629,6 +694,8 @@ Erase first then redraw the whole buffer."
   :action 'st--apply-sort)
 
 (defun st--apply-sort ()
+  "Apply the selected sorting strategy and refresh the buffer."
+
   (cond ((string-equal st-sorting-type "alpha") (st-sort-alpha))
         ((string-equal st-sorting-type "next") (st-sort-next)))
   (st--refresh))
@@ -645,6 +712,8 @@ Erase first then redraw the whole buffer."
 
   (interactive)
 
+  (st--inbuffer)
+
   (if (string-equal st-show-watched "show")
       (progn (setq st-show-watched "hide")
              (add-to-invisibility-spec 'st-watched))
@@ -654,11 +723,21 @@ Erase first then redraw the whole buffer."
 ;;;; Load/save data
 
 (defun st-save ()
+  "Save the database."
+
   (interactive)
+
+  (st--inbuffer)
+
   (st--save))
 
 (defun st-load ()
+  "Load the database and refresh the buffer."
+
   (interactive)
+
+  (st--inbuffer)
+
   (st--load)
   (st--refresh))
 
@@ -672,20 +751,28 @@ Erase first then redraw the whole buffer."
   (st--inbuffer)
 
   (st--save)
-  (kill-buffer-and-window)
-  (setq st--data nil))
+  (setq st--data nil)
+
+  (kill-buffer-and-window))
 
 ;;;; Add series
 
 (defun st-search ()
+  "Search for a series, and add the selected series to the database.
+The searchterm is read from the minibuffer.
+The selected sorting strategy is applied after adding the new series."
 
   (interactive)
+
+  (st--inbuffer)
 
   (let* ((searchterm (read-from-minibuffer "Search: "))
          (series-list (st--search searchterm))
          (names-list (st--utils-array-pull 'permalink series-list))
          (nametoadd (completing-read "Options: " names-list))
-         (toadd (alist-get 'id (-find (lambda (series) (string-equal nametoadd (alist-get 'permalink series))) series-list))))
+         (toadd (alist-get 'id (--find
+                                (string-equal nametoadd (alist-get 'permalink it))
+                                series-list))))
     (st--add toadd)
     (st--apply-sort)))
 
@@ -696,9 +783,11 @@ Erase first then redraw the whole buffer."
 
   (interactive)
 
+  (st--inbuffer)
+
   (let ((inhibit-read-only t)
         (series (get-text-property (point) 'st-series))
-        (start (previous-single-property-change (1+ (point)) 'st-series))
+        (start (previous-single-property-change (1+ (point)) 'st-series nil (point-min)))
         (end (next-single-property-change (point) 'st-series nil (point-max))))
     (when (y-or-n-p "Are you sure you want to delete this series? ")
       (st--remove series)
@@ -709,6 +798,8 @@ Erase first then redraw the whole buffer."
 ;;;;; Update appearance watched region
 
 (defun st--update-watched-region (start end &optional watch)
+  "Update the buffer for change in WATCH between START and END."
+
   (let* ((startline (line-number-at-pos start))
          (endline (1- (line-number-at-pos end))))
 
@@ -718,6 +809,7 @@ Erase first then redraw the whole buffer."
         (st--update-watched-line it watch)))))
 
 (defun st--update-watched-line (linum watch)
+  "Update a single line LINUM for WATCH status."
 
   (goto-char (point-min))
   (forward-line (1- linum))
@@ -761,6 +853,8 @@ The element under the cursor is used to decide whether to watch or unwatch."
 
   (interactive)
 
+  (st--inbuffer)
+
   (let* ((pos (if (region-active-p) (region-beginning) (point)))
          (watched (get-char-property-and-overlay pos 'invisible))
          (watch (not (-contains? watched 'st-watched))))
@@ -776,7 +870,7 @@ The element under the cursor is used to decide whether to watch or unwatch."
         (season (get-text-property (point) 'st-season))
         (episode (get-text-property (point) 'st-episode)))
     (cond ((region-active-p) (st-watch-region (region-beginning) (region-end) watch))
-          (episode (st-watch-episode series season episode watch))
+          (episode (st-watch-episode watch))
           (season (st-watch-season series season watch))
           (t (st-watch-series series watch))))
   (forward-line))
@@ -784,6 +878,7 @@ The element under the cursor is used to decide whether to watch or unwatch."
 ;;;;; Region
 
 (defun st-watch-region (start end &optional watch)
+  "WATCH region from START to END positions in the buffer."
 
   (let ((start-series (get-text-property start 'st-series))
         (start-season (get-text-property start 'st-season))
@@ -797,8 +892,8 @@ The element under the cursor is used to decide whether to watch or unwatch."
 
 ;;;;; Episode
 
-(defun st-watch-episode (id seasonN episodeN watch)
-  "Watch an episode."
+(defun st-watch-episode (watch)
+  "WATCH the episode at point."
 
   (let ((start (previous-single-property-change (1+ (point)) 'st-episode))
         (end (next-single-property-change (point) 'st-episode nil (point-max))))
@@ -808,6 +903,7 @@ The element under the cursor is used to decide whether to watch or unwatch."
 ;;;;; Season
 
 (defun st-watch-season (id seasonN watch)
+  "WATCH SEASONN of series ID."
 
   (let* ((start-season (previous-single-property-change (1+ (point)) 'st-season))
          (start (next-single-property-change (1+ (point)) 'st-episode nil (point-max)))
@@ -819,7 +915,7 @@ The element under the cursor is used to decide whether to watch or unwatch."
 ;;;;; Series
 
 (defun st-watch-series (id watch)
-  "Watch all episode in a series."
+  "WATCH all episodes in series ID."
 
   (let* ((start-series (previous-single-property-change (1+ (point)) 'st-series))
          (start (next-single-property-change (1+ (point)) 'st-episode nil (point-max)))
@@ -835,10 +931,9 @@ The element under the cursor is used to decide whether to watch or unwatch."
 
   (interactive)
 
+  (st--inbuffer)
+
   (let* ((inhibit-read-only t)
-         (series (get-text-property (point) 'st-series))
-         (season (get-text-property (point) 'st-season))
-         (episode (get-text-property (point) 'st-episode))
          (start-series (previous-single-property-change (1+ (point)) 'st-series))
          (start-season (next-single-property-change start-series 'st-season nil (point-max)))
          (start (next-single-property-change start-season 'st-episode nil (point-max)))
@@ -852,6 +947,8 @@ The element under the cursor is used to decide whether to watch or unwatch."
   "Sort series by date of next episode to watch."
 
   (interactive)
+
+  (st--inbuffer)
 
   (defun first-next-date (series)
     (let ((dates (->> series
@@ -875,6 +972,8 @@ The element under the cursor is used to decide whether to watch or unwatch."
 
   (interactive)
 
+  (st--inbuffer)
+
   (defun comp (a b)
     (string< (alist-get 'name a)
              (alist-get 'name b)))
@@ -888,19 +987,22 @@ The element under the cursor is used to decide whether to watch or unwatch."
 
   (interactive)
 
+  (st--inbuffer)
+
   (st--update)
   (st--refresh))
 
 (defun st ()
-  "Run ST"
+  "Run ST."
 
   (interactive)
 
   (switch-to-buffer "st")
   (st-mode)
-  (unless st--file (setq st--file "~/.emacs.d/st.el"))
-  (st-load)
+  (unless st--file (setq st--file (concat user-emacs-directory "st.el")))
+  (st--load)
   (st--update)
+  (st--refresh)
   (st--apply-watched))
 
 (define-derived-mode st-mode special-mode "st"
