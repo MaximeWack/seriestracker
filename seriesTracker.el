@@ -378,7 +378,20 @@ Erase first then redraw the whole buffer."
 
   (when (and (= 1 (point))
                (invisible-p 1))
-      (st--move 'next)))
+    (st--move 'next))
+
+  (st--display-note))
+
+(defun st-next-line ()
+  "Move one visible line down."
+
+  (interactive)
+
+  (st--inbuffer)
+
+  (next-line)
+
+  (st--display-note))
 
 (defun st-up ()
   "Move up in the hierarchy."
@@ -918,7 +931,22 @@ The element under the cursor is used to decide whether to watch or unwatch."
     (st--add-note series season episode note)
     (put-text-property start end 'face st-text-face)
     (put-text-property start (+ start 19) 'face st-date-face)
-    (put-text-property start end 'help-echo note))))
+    (put-text-property start end 'help-echo note)))
+
+(defun st--display-note ()
+  "Display the note at point, if existing, in the minibuffer."
+
+  (let* ((series (get-text-property (point) 'st-series))
+         (season (get-text-property (point) 'st-season))
+         (episode (get-text-property (point) 'st-episode))
+         (note (when episode
+                 (->> st--data
+                   (--find (= series (alist-get 'id it)))
+                   (alist-get 'episodes)
+                   (--find (and (= season (alist-get 'season it))
+                                (= episode (alist-get 'episode it))))
+                   (alist-get 'note)))))
+    (and note (message note))))
 
 ;;;; Sort series
 
@@ -987,7 +1015,7 @@ The element under the cursor is used to decide whether to watch or unwatch."
   ;; keymap
 
   (local-set-key "p" 'st-prev-line)
-  (local-set-key "n" 'next-line)
+  (local-set-key "n" 'st-next-line)
 
   (local-set-key "C-p" 'st-prev)
   (local-set-key "C-n" 'st-next)
