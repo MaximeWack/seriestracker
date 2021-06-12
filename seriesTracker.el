@@ -214,11 +214,18 @@ Adding an already existing series resets it."
          (newEp (alist-get 'episodes new))
          (status (alist-get 'status new))
          (watched (--find-indices (alist-get 'watched it) (alist-get 'episodes series)))
-         (newEps (--map-indexed (if (-contains? watched it-index)
-                                    (progn
-                                      (setf (alist-get 'watched it) t)
-                                      it)
-                                  it) newEp)))
+         (noted (--find-indices (alist-get 'note it) (alist-get 'episodes series)))
+         (notes (-zip noted
+                      (st--utils-array-pull 'note (-select-by-indices noted (alist-get 'episodes series)))))
+         (newEps (->> newEp
+                   (--map-indexed (if (-contains? watched it-index)
+                                      (progn
+                                        (setf (alist-get 'watched it) t)
+                                        it)
+                                    it))
+                   (--map-indexed (progn
+                                    (setf (alist-get 'note it) (alist-get it-index notes))
+                                    it)))))
 
     (when (string-equal status "Ended") (setf (alist-get 'status series) "Ended"))
     (setf (alist-get 'episodes series) newEps)
