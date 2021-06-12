@@ -16,7 +16,7 @@
 ;; along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 ;; Author: Maxime Wack <contact at maximewack dot com>
-;; Version: 1.1
+;; Version: 1.2.0
 ;; Package-Requires: ((dash "2.12.1") (transient "0.3.2") (emacs "26.1"))
 ;; Keywords: multimedia
 ;; URL: https://www.github.com/MaximeWack/seriesTracker
