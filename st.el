@@ -266,18 +266,23 @@ Adding an already existing series resets it."
 ;;;; Faces
 
 (defface st-series
-  '((t (:height 1.9 :weight bold :foreground "DeepSkyBlue")))
+  '((t (:inherit outline-1)))
   "Face for series names"
   :group 'st-faces)
 
 (defface st-finished-series
-  '((t (:height 2.0 :weight bold :foreground "DimGrey")))
+  '((t (:inherit (shadow outline-1))))
   "Face for finished series names"
   :group 'st-faces)
 
 (defface st-season
-  '((t (:height 1.7 :weight bold :foreground "MediumPurple")))
+  '((t (:inherit outline-2)))
   "Face for seasons"
+  :group 'st-faces)
+
+(defface st-watched
+  '((t (:inherit shadow :strike-through t)))
+  "Face for watched episodes"
   :group 'st-faces)
 
 ;;;; Check in ST buffer
@@ -342,18 +347,16 @@ If first episode of a season, print the season number."
          (watched (alist-get 'watched episode))
          (note (alist-get 'note episode))
          (st-watched (if watched 'st-watched nil))
-         (st-date-face `(:foreground ,(if watched
-                                               "DimGrey"
-                                             (if (time-less-p (date-to-time air_date) (current-time))
-                                                 "MediumSpringGreen"
-                                               "firebrick"))
-                                          :strike-through ,watched
-                                          :weight ,(if note 'bold 'normal)))
-         (st-text-face `(:foreground ,(if watched
-                                              "DimGrey"
-                                            "white")
-                                         :strike-through ,watched
-                                         :weight ,(if note 'bold 'normal)))
+         (st-date-face `(:inherit ,(if watched
+                                       'st-watched
+                                     (if (time-less-p (date-to-time air_date) (current-time))
+                                         'success
+                                       'error))
+                                  :weight ,(if note 'bold 'normal)))
+         (st-text-face `(:inherit ,(if watched
+                                       'st-watched
+                                     'default)
+                                  :weight ,(if note 'bold 'normal)))
          (start (point)))
     (when (= episodeN 1)
       (setq start (+ start 8 (length (int-to-string seasonN))))
@@ -755,18 +758,16 @@ The selected sorting strategy is applied after adding the new series."
          (start (progn (move-beginning-of-line nil) (point)))
          (end (progn (forward-line 1) (point)))
          (st-date-face (when episode
-                         `(:foreground ,(if watch
-                                            "DimGrey"
-                                          (if (time-less-p (date-to-time (buffer-substring start (+ start 19))) (current-time))
-                                              "MediumSpringGreen"
-                                            "firebrick"))
-                                       :strike-through ,watch
-                                       :weight ,note)))
-         (st-text-face `(:foreground ,(if watch
-                                          "DimGrey"
-                                        "white")
-                                     :strike-through ,watch
-                                     :weight ,note)))
+                         `(:inherit ,(if watch
+                                         'st-watched
+                                       (if (time-less-p (date-to-time (buffer-substring start (+ start 19))) (current-time))
+                                           'success
+                                         'error))
+                                    :weight ,note)))
+         (st-text-face `(:inherit ,(if watch
+                                       'st-watched
+                                     'default)
+                                  :weight ,note)))
     (cond (episode
            (if watch
                (put-text-property start end 'invisible 'st-watched)
@@ -884,18 +885,16 @@ The element under the cursor is used to decide whether to watch or unwatch."
          (end (progn (forward-line 1) (point)))
          (note (read-from-minibuffer "Note: "))
          (note (if (string-equal "" note) nil note))
-         (st-date-face `(:foreground ,(if watch
-                                          "DimGrey"
-                                        (if (time-less-p (date-to-time (buffer-substring start (+ start 19))) (current-time))
-                                            "MediumSpringGreen"
-                                          "firebrick"))
-                                     :strike-through ,watch
-                                     :weight ,(if note 'bold 'normal)))
-         (st-text-face `(:foreground ,(if watch
-                                          "DimGrey"
-                                        "white")
-                                     :strike-through ,watch
-                                     :weight ,(if note 'bold 'normal)))
+         (st-date-face `(:inherit ,(if watch
+                                       'st-watched
+                                     (if (time-less-p (date-to-time (buffer-substring start (+ start 19))) (current-time))
+                                         'success
+                                       'error))
+                                  :weight ,(if note 'bold 'normal)))
+         (st-text-face `(:inherit ,(if watch
+                                       'st-watched
+                                     'default)
+                                  :weight ,(if note 'bold 'normal)))
          (inhibit-read-only t))
     (st--add-note series season episode note)
     (put-text-property start end 'face st-text-face)
