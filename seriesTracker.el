@@ -16,7 +16,7 @@
 ;; along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 ;; Author: Maxime Wack <contact at maximewack dot com>
-;; Version: 1.1
+;; Version: 1.2.0
 ;; Package-Requires: ((dash "2.12.1") (transient "0.3.2") (emacs "26.1"))
 ;; Keywords: multimedia
 ;; URL: https://www.github.com/MaximeWack/seriesTracker
@@ -213,6 +213,23 @@ Adding an already existing series resets it."
        (alist-get 'episodes it)
      (setf (alist-get 'watched it) watch))))
 
+;;;; Notes
+
+;;;;; Add note
+
+(defun st--add-note (id seasonN episodeN note)
+  "Add a NOTE to EPISODEN of SEASONN in series ID."
+
+  (when episodeN
+    (->> st--data
+      (--map-when (= id (alist-get 'id it))
+                  (setf (alist-get 'episodes it)
+                        (--map-when (and (= seasonN (alist-get 'season it))
+                                         (= episodeN (alist-get 'episode it)))
+                                    (progn (setf (alist-get 'note it) note)
+                                           it)
+                                    (alist-get 'episodes it)))))))
+
 ;;;; Query updates
 
 (defun st--update ()
@@ -230,11 +247,18 @@ Adding an already existing series resets it."
          (newEp (alist-get 'episodes new))
          (status (alist-get 'status new))
          (watched (--find-indices (alist-get 'watched it) (alist-get 'episodes series)))
-         (newEps (--map-indexed (if (-contains? watched it-index)
-                                    (progn
-                                      (setf (alist-get 'watched it) t)
-                                      it)
-                                  it) newEp)))
+         (noted (--find-indices (alist-get 'note it) (alist-get 'episodes series)))
+         (notes (-zip noted
+                      (st--utils-array-pull 'note (-select-by-indices noted (alist-get 'episodes series)))))
+         (newEps (->> newEp
+                   (--map-indexed (if (-contains? watched it-index)
+                                      (progn
+                                        (setf (alist-get 'watched it) t)
+                                        it)
+                                    it))
+                   (--map-indexed (progn
+                                    (setf (alist-get 'note it) (alist-get it-index notes))
+                                    it)))))
 
     (when (string-equal status "Ended") (setf (alist-get 'status series) "Ended"))
     (setf (alist-get 'episodes series) newEps)
@@ -279,11 +303,6 @@ Adding an already existing series resets it."
 (defface st-season
   '((t (:height 1.7 :weight bold :foreground "MediumPurple")))
   "Face for seasons"
-  :group 'st-faces)
-
-(defface st-watched
-  '((t (:foreground "DimGrey" :strike-through t)))
-  "Face for watched episodes"
   :group 'st-faces)
 
 ;;;; Check in ST buffer
@@ -353,10 +372,20 @@ If first episode of a season, print the season number."
          (name (alist-get 'name episode))
          (air_date (alist-get 'air_date episode))
          (watched (alist-get 'watched episode))
+         (note (alist-get 'note episode))
          (st-watched (if watched 'st-watched nil))
-         (st-date-face (if (time-less-p (date-to-time air_date) (current-time))
-                           '(t ((:foreground "MediumSpringGreen")))
-                         '(t ((:foreground "firebrick")))))
+         (st-date-face `(:foreground ,(if watched
+                                               "DimGrey"
+                                             (if (time-less-p (date-to-time air_date) (current-time))
+                                                 "MediumSpringGreen"
+                                               "firebrick"))
+                                          :strike-through ,watched
+                                          :weight ,(if note 'bold 'normal)))
+         (st-text-face `(:foreground ,(if watched
+                                              "DimGrey"
+                                            "white")
+                                         :strike-through ,watched
+                                         :weight ,(if note 'bold 'normal)))
          (start (point)))
     (when (= episodeN 1)
       (setq start (+ start 8 (length (int-to-string seasonN))))
@@ -372,12 +401,13 @@ If first episode of a season, print the season number."
                             'st-episode nil
                             'invisible st-season-watched))))
     (insert (propertize (concat air_date " " (format "%02d" episodeN) " - " name "\n")
+                        'face st-text-face
                         'st-series id
                         'st-season seasonN
                         'st-episode episodeN
+                        'help-echo note
                         'invisible st-watched))
-    (put-text-property start (+ start 19) 'face st-date-face)
-    (when watched (put-text-property start (point) 'face 'st-watched))))
+    (put-text-property start (+ start 19) 'face st-date-face)))
 
 ;;;; Movements
 
@@ -398,7 +428,20 @@ If first episode of a season, print the season number."
 
   (when (and (= 1 (point))
                (invisible-p 1))
-      (st--move 'next)))
+    (st--move 'next))
+
+  (st--display-note))
+
+(defun st-next-line ()
+  "Move one visible line down."
+
+  (interactive)
+
+  (st--inbuffer)
+
+  (next-line)
+
+  (st--display-note))
 
 (defun st-up ()
   "Move up in the hierarchy."
@@ -588,7 +631,8 @@ and ANY to go to any header even if hidden."
     ("D" "Delete a series" st-remove)]
    [("w" "Toggle watch at point" st-toggle-watch)
     ("u" "Watch up to point" st-watch-up)
-    ] [("U" "Update and refresh the buffer" st-update)]]
+    ("N" "Add/remove a note from an episode" st-add-note)]
+   [("U" "Update and refresh the buffer" st-update)]]
 
   ["Display"
    :if-mode st-mode
@@ -814,22 +858,33 @@ The selected sorting strategy is applied after adding the new series."
   (goto-char (point-min))
   (forward-line (1- linum))
 
-  (let ((episode (get-text-property (point) 'st-episode))
-        (season (get-text-property (point) 'st-season))
-        (series (get-text-property (point) 'st-series))
-        (start (progn (move-beginning-of-line nil) (point)))
-        (end (progn (forward-line 1) (point))))
+  (let* ((episode (get-text-property (point) 'st-episode))
+         (season (get-text-property (point) 'st-season))
+         (series (get-text-property (point) 'st-series))
+         (note (plist-get
+                (get-text-property (point) 'face)
+                :weight))
+         (start (progn (move-beginning-of-line nil) (point)))
+         (end (progn (forward-line 1) (point)))
+         (st-date-face (when episode
+                         `(:foreground ,(if watch
+                                            "DimGrey"
+                                          (if (time-less-p (date-to-time (buffer-substring start (+ start 19))) (current-time))
+                                              "MediumSpringGreen"
+                                            "firebrick"))
+                                       :strike-through ,watch
+                                       :weight ,note)))
+         (st-text-face `(:foreground ,(if watch
+                                          "DimGrey"
+                                        "white")
+                                     :strike-through ,watch
+                                     :weight ,note)))
     (cond (episode
            (if watch
-               (progn
-                 (put-text-property start end 'invisible 'st-watched)
-                 (put-text-property start end 'face 'st-watched))
-             (put-text-property start end 'invisible nil)
-             (put-text-property start end 'face 'default)
-             (if (time-less-p (date-to-time (buffer-substring start (+ start 19)))
-                              (current-time))
-                 (put-text-property start (+ start 19) 'face '(t ((:foreground "MediumSpringGreen"))))
-               (put-text-property start (+ start 19) 'face '(t ((:foreground "firebrick")))))))
+               (put-text-property start end 'invisible 'st-watched)
+             (put-text-property start end 'invisible nil))
+           (put-text-property start end 'face st-text-face)
+           (put-text-property start (+ start 19) 'face st-date-face))
           (season
            (if (--all? (alist-get 'watched it)
                        (->> st--data
@@ -841,8 +896,8 @@ The selected sorting strategy is applied after adding the new series."
           (series
            (if (--all? (alist-get 'watched it)
                        (alist-get 'episodes (--find (= series (alist-get 'id it))
-                                                      st--data)))
-              (put-text-property start end 'invisible 'st-watched)
+                                                    st--data)))
+               (put-text-property start end 'invisible 'st-watched)
              (put-text-property start end 'invisible nil))))))
 
 ;;;;; Toggle watch
@@ -941,6 +996,60 @@ The element under the cursor is used to decide whether to watch or unwatch."
 
     (st-watch-region start end t)))
 
+;;;; Notes
+
+(defun st-add-note ()
+  "Add a note on the episode at point."
+
+  (interactive)
+
+  (st--inbuffer)
+
+  (unless (get-text-property (point) 'st-episode)
+    (error "Cannot put a note on a series or season!"))
+
+  (let* ((series (get-text-property (point) 'st-series))
+         (season (get-text-property (point) 'st-season))
+         (episode (get-text-property (point) 'st-episode))
+         (watch (get-text-property (point) 'invisible))
+         (start (progn (move-beginning-of-line nil) (point)))
+         (end (progn (forward-line 1) (point)))
+         (note (read-from-minibuffer "Note: "))
+         (note (if (string-equal "" note) nil note))
+         (st-date-face `(:foreground ,(if watch
+                                          "DimGrey"
+                                        (if (time-less-p (date-to-time (buffer-substring start (+ start 19))) (current-time))
+                                            "MediumSpringGreen"
+                                          "firebrick"))
+                                     :strike-through ,watch
+                                     :weight ,(if note 'bold 'normal)))
+         (st-text-face `(:foreground ,(if watch
+                                          "DimGrey"
+                                        "white")
+                                     :strike-through ,watch
+                                     :weight ,(if note 'bold 'normal)))
+         (inhibit-read-only t))
+
+    (st--add-note series season episode note)
+    (put-text-property start end 'face st-text-face)
+    (put-text-property start (+ start 19) 'face st-date-face)
+    (put-text-property start end 'help-echo note)))
+
+(defun st--display-note ()
+  "Display the note at point, if existing, in the minibuffer."
+
+  (let* ((series (get-text-property (point) 'st-series))
+         (season (get-text-property (point) 'st-season))
+         (episode (get-text-property (point) 'st-episode))
+         (note (when episode
+                 (->> st--data
+                   (--find (= series (alist-get 'id it)))
+                   (alist-get 'episodes)
+                   (--find (and (= season (alist-get 'season it))
+                                (= episode (alist-get 'episode it))))
+                   (alist-get 'note)))))
+    (and note (message note))))
+
 ;;;; Sort series
 
 (defun st-sort-next ()
@@ -1014,7 +1123,7 @@ The element under the cursor is used to decide whether to watch or unwatch."
   ;; keymap
 
   (local-set-key "p" 'st-prev-line)
-  (local-set-key "n" 'next-line)
+  (local-set-key "n" 'st-next-line)
 
   (local-set-key "C-p" 'st-prev)
   (local-set-key "C-n" 'st-next)
@@ -1032,6 +1141,7 @@ The element under the cursor is used to decide whether to watch or unwatch."
   (local-set-key "w" 'st-toggle-watch)
   (local-set-key "u" 'st-watch-up)
   (local-set-key "W" 'st-toggle-display-watched)
+  (local-set-key "N" 'st-add-note)
   (local-set-key "q" 'st-quit)
   (local-set-key [tab] 'st-cycle))
 
