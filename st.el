@@ -946,7 +946,7 @@ The element under the cursor is used to decide whether to watch or unwatch."
              (alist-get 'name b)))
   (setq st--data (-sort #'st--comp st--data)))
 
-;;;; Create mode
+;;;; Update
 
 (defun st-update ()
   "Update the db and refresh the buffer."
@@ -955,6 +955,43 @@ The element under the cursor is used to decide whether to watch or unwatch."
   (st--update)
   (st--refresh))
 
+;;;; Keymap
+
+(defvar st-mode-map
+  (let ((map (make-sparse-keymap)))
+    (define-key map "p" 'st-prev-line)
+    (define-key map "n" 'st-next-line)
+    (define-key map "C-p" 'st-prev)
+    (define-key map "C-n" 'st-next)
+    (define-key map "C-u" 'st-up)
+    (define-key map "C-b" 'st-prev-same)
+    (define-key map "C-f" 'st-next-same)
+    (define-key map "C-d" 'st-fold-at-point)
+    (define-key map "C-e" 'st-unfold-at-point)
+    (define-key map "h" 'st-dispatch)
+    (define-key map "U" 'st-update)
+    (define-key map "A" 'st-search)
+    (define-key map "w" 'st-toggle-watch)
+    (define-key map "u" 'st-watch-up)
+    (define-key map "W" 'st-toggle-display-watched)
+    (define-key map "N" 'st-add-note)
+    (define-key map "q" 'st-quit)
+    (define-key map [tab] 'st-cycle)
+    map)
+  "Keymap for series tracker mode.")
+
+;;;; Mode
+
+(define-derived-mode st-mode special-mode "st"
+  "Series tracking with episodate.com."
+  (setq-local buffer-invisibility-spec '(t st-series st-season))
+  (setq-local max-lisp-eval-depth 10000)
+
+  (use-local-map st-mode-map))
+
+;;; Autoload
+
+;;;###autoload
 (defun st ()
   "Run ST."
   (interactive)
@@ -965,33 +1002,6 @@ The element under the cursor is used to decide whether to watch or unwatch."
   (st--update)
   (st--refresh)
   (st--apply-watched))
-
-(define-derived-mode st-mode special-mode "st"
-  "Series tracking with episodate.com."
-  (setq-local buffer-invisibility-spec '(t st-series st-season))
-  (setq-local max-lisp-eval-depth 10000)
-
-  ;; keymap
-  (local-set-key "p" 'st-prev-line)
-  (local-set-key "n" 'st-next-line)
-  (local-set-key "C-p" 'st-prev)
-  (local-set-key "C-n" 'st-next)
-  (local-set-key "C-u" 'st-up)
-  (local-set-key "C-b" 'st-prev-same)
-  (local-set-key "C-f" 'st-next-same)
-  (local-set-key "C-d" 'st-fold-at-point)
-  (local-set-key "C-e" 'st-unfold-at-point)
-  (local-set-key "h" 'st-dispatch)
-  (local-set-key "U" 'st-update)
-  (local-set-key "A" 'st-search)
-  (local-set-key "w" 'st-toggle-watch)
-  (local-set-key "u" 'st-watch-up)
-  (local-set-key "W" 'st-toggle-display-watched)
-  (local-set-key "N" 'st-add-note)
-  (local-set-key "q" 'st-quit)
-  (local-set-key [tab] 'st-cycle))
-
-;;; Postamble
 
 (provide 'st)
 
