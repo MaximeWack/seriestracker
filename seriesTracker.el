@@ -754,13 +754,14 @@ Erase first then redraw the whole buffer."
                 :weight))
          (start (progn (move-beginning-of-line nil) (point)))
          (end (progn (forward-line 1) (point)))
-         (st-date-face `(:foreground ,(if watch
-                                          "DimGrey"
-                                        (if (time-less-p (date-to-time (buffer-substring start (+ start 19))) (current-time))
-                                            "MediumSpringGreen"
-                                          "firebrick"))
-                                     :strike-through ,watch
-                                     :weight ,note))
+         (st-date-face (when episode
+                         `(:foreground ,(if watch
+                                            "DimGrey"
+                                          (if (time-less-p (date-to-time (buffer-substring start (+ start 19))) (current-time))
+                                              "MediumSpringGreen"
+                                            "firebrick"))
+                                       :strike-through ,watch
+                                       :weight ,note)))
          (st-text-face `(:foreground ,(if watch
                                           "DimGrey"
                                         "white")
