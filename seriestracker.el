@@ -244,20 +244,20 @@ Adding an already existing series resets it."
 
 ;;;; Load/save data
 
-(defvar seriestracker--file (concat user-emacs-directory "seriestracker.el")
+(defvar seriestracker-file (concat user-emacs-directory "seriestracker.el")
   "Location of the save file.")
 
 (defun seriestracker--save ()
-  "Save the database to `seriestracker--file'."
-  (with-temp-file seriestracker--file
+  "Save the database to `seriestracker-file'."
+  (with-temp-file seriestracker-file
     (let ((print-level nil)
           (print-length nil))
       (prin1 seriestracker--data (current-buffer)))))
 
 (defun seriestracker--load ()
-  "Load the database from `seriestracker--file'."
+  "Load the database from `seriestracker-file'."
   (with-temp-buffer
-    (insert-file-contents seriestracker--file t)
+    (insert-file-contents seriestracker-file t)
     (cl-assert (eq (point) (point-min)))
     (setq seriestracker--data (read (current-buffer)))))
 
@@ -468,9 +468,9 @@ and ANY to go to any header even if hidden."
   (seriestracker--inbuffer)
   (let ((season (get-text-property (point) 'seriestracker-season))
         (episode (get-text-property (point) 'seriestracker-episode)))
-    (cond (episode (seriestracker-fold-episodes unfold))
-          (season (seriestracker-fold-season unfold))
-          (t (seriestracker-fold-series unfold)))))
+    (cond (episode (seriestracker--fold-episodes unfold))
+          (season (seriestracker--fold-season unfold))
+          (t (seriestracker--fold-series unfold)))))
 
 (defun seriestracker-unfold-at-point ()
   "Unfold the section at point."
@@ -478,7 +478,7 @@ and ANY to go to any header even if hidden."
   (seriestracker--inbuffer)
   (seriestracker-fold-at-point t))
 
-(defun seriestracker-fold-episodes (&optional unfold)
+(defun seriestracker--fold-episodes (&optional unfold)
   "Fold or UNFOLD the episodes at point."
   (let* ((season-start (previous-single-property-change (point) 'seriestracker-season))
          (fold-start (next-single-property-change season-start 'seriestracker-episode))
@@ -487,7 +487,7 @@ and ANY to go to any header even if hidden."
         (remove-overlays fold-start fold-end 'invisible 'seriestracker-season)
       (overlay-put (make-overlay fold-start fold-end) 'invisible 'seriestracker-season))))
 
-(defun seriestracker-fold-season (&optional unfold)
+(defun seriestracker--fold-season (&optional unfold)
   "Fold or UNFOLD the season at point."
   (let* ((fold-start (next-single-property-change (point) 'seriestracker-episode))
          (fold-end (next-single-property-change (point) 'seriestracker-season nil (point-max))))
@@ -495,7 +495,7 @@ and ANY to go to any header even if hidden."
         (remove-overlays fold-start fold-end 'invisible 'seriestracker-season)
       (overlay-put (make-overlay fold-start fold-end) 'invisible 'seriestracker-season))))
 
-(defun seriestracker-fold-series (&optional unfold)
+(defun seriestracker--fold-series (&optional unfold)
   "Fold or UNFOLD the series at point."
   (let* ((fold-start (next-single-property-change (point) 'seriestracker-season))
          (fold-end (next-single-property-change (point) 'seriestracker-series nil (point-max))))
@@ -560,60 +560,60 @@ and ANY to go to any header even if hidden."
    [("U" "Update and refresh the buffer" seriestracker-update)]]
   ["Display"
    :if-mode seriestracker-mode
-   [("W" seriestracker-infix-watched)
-    ("S" seriestracker-infix-sorting)]]
+   [("W" seriestracker--infix-watched)
+    ("S" seriestracker--infix-sorting)]]
   ["Load/Save"
    :if-mode seriestracker-mode
    [("s" "Save database" seriestracker-save)
     ("l" "Load database" seriestracker-load)
-    ("f" seriestracker-infix-savefile)]])
+    ("f" seriestracker--infix-savefile)]])
 
-(defclass seriestracker-transient-variable (transient-variable)
+(defclass seriestracker--transient-variable (transient-variable)
   ((variable :initarg :variable)))
 
-(defclass seriestracker-transient-variable-choice (seriestracker-transient-variable)
+(defclass seriestracker--transient-variable-choice (seriestracker--transient-variable)
   ((name :initarg :name)
    (choices :initarg :choices)
    (default :initarg :default)
    (action :initarg :action)))
 
-(cl-defmethod transient-init-value ((obj seriestracker-transient-variable))
-  "Method to initialise the value of an `seriestracker-transient-variable' OBJ."
+(cl-defmethod transient-init-value ((obj seriestracker--transient-variable))
+  "Method to initialise the value of an `seriestracker--transient-variable' OBJ."
   (oset obj value (eval (oref obj variable))))
 
-(cl-defmethod transient-infix-read ((obj seriestracker-transient-variable))
-  "Method to read a new value for an `seriestracker-transient-variable' OBJ."
+(cl-defmethod transient-infix-read ((obj seriestracker--transient-variable))
+  "Method to read a new value for an `seriestracker--transient-variable' OBJ."
   (read-from-minibuffer "Save file: " (oref obj value)))
 
-(cl-defmethod transient-infix-read ((obj seriestracker-transient-variable-choice))
-  "Method to read a new value for an `seriestracker-transient-variable-choice' OBJ."
+(cl-defmethod transient-infix-read ((obj seriestracker--transient-variable-choice))
+  "Method to read a new value for an `seriestracker--transient-variable-choice' OBJ."
   (let ((choices (oref obj choices)))
     (if-let* ((value (oref obj value))
               (notlast (cadr (member value choices))))
         (cadr (member value choices))
       (car choices))))
 
-(cl-defmethod transient-infix-set ((obj seriestracker-transient-variable) value)
-  "Method to set VALUE for an `seriestracker-transient-variable' OBJ."
+(cl-defmethod transient-infix-set ((obj seriestracker--transient-variable) value)
+  "Method to set VALUE for an `seriestracker--transient-variable' OBJ."
   (oset obj value value)
   (set (oref obj variable) value))
 
-(cl-defmethod transient-infix-set ((obj seriestracker-transient-variable-choice) value)
-  "Method to set VALUE for an `seriestracker-transient-variable-choice' OBJ."
+(cl-defmethod transient-infix-set ((obj seriestracker--transient-variable-choice) value)
+  "Method to set VALUE for an `seriestracker--transient-variable-choice' OBJ."
   (oset obj value value)
   (set (oref obj variable) value)
   (funcall (oref obj action)))
 
-(cl-defmethod transient-format-value ((obj seriestracker-transient-variable))
-  "Method to format the value of an `seriestracker-transient-variable' OBJ."
+(cl-defmethod transient-format-value ((obj seriestracker--transient-variable))
+  "Method to format the value of an `seriestracker--transient-variable' OBJ."
   (let ((value (oref obj value)))
     (concat
      (propertize "(" 'face 'transient-inactive-value)
      (propertize value 'face 'transient-value)
      (propertize ")" 'face 'transient-inactive-value))))
 
-(cl-defmethod transient-format-value ((obj seriestracker-transient-variable-choice))
-  "Method to form the value of an `seriestracker-transient-variable-choice' OBJ."
+(cl-defmethod transient-format-value ((obj seriestracker--transient-variable-choice))
+  "Method to form the value of an `seriestracker--transient-variable-choice' OBJ."
   (let* ((choices  (oref obj choices))
          (value    (oref obj value)))
     (concat
@@ -630,8 +630,8 @@ and ANY to go to any header even if hidden."
                 (propertize "|" 'face 'transient-inactive-value))
      (propertize "]" 'face 'transient-inactive-value))))
 
-(transient-define-infix seriestracker-infix-watched ()
-  :class 'seriestracker-transient-variable-choice
+(transient-define-infix seriestracker--infix-watched ()
+  :class 'seriestracker--transient-variable-choice
   :choices '("show" "hide")
   :variable 'seriestracker-show-watched
   :description "Watched"
@@ -645,8 +645,8 @@ and ANY to go to any header even if hidden."
       (add-to-invisibility-spec 'seriestracker-watched)
       (when (invisible-p (point)) (seriestracker-next)))))
 
-(transient-define-infix seriestracker-infix-sorting ()
-  :class 'seriestracker-transient-variable-choice
+(transient-define-infix seriestracker--infix-sorting ()
+  :class 'seriestracker--transient-variable-choice
   :choices '("alpha" "next")
   :variable 'seriestracker-sorting-type
   :description "Sorting"
@@ -658,9 +658,9 @@ and ANY to go to any header even if hidden."
         ((string-equal seriestracker-sorting-type "next") (seriestracker-sort-next)))
   (seriestracker--refresh))
 
-(transient-define-infix seriestracker-infix-savefile ()
-  :class 'seriestracker-transient-variable
-  :variable 'seriestracker--file
+(transient-define-infix seriestracker--infix-savefile ()
+  :class 'seriestracker--transient-variable
+  :variable 'seriestracker-file
   :description "Save file")
 
 ;;;; Toggle displaying watched
@@ -1001,7 +1001,7 @@ The element under the cursor is used to decide whether to watch or unwatch."
   (interactive)
   (switch-to-buffer "seriestracker")
   (seriestracker-mode)
-  (unless seriestracker--file (setq seriestracker--file (concat user-emacs-directory "seriestracker.el")))
+  (unless seriestracker-file (setq seriestracker-file (concat user-emacs-directory "seriestracker.el")))
   (seriestracker--load)
   (seriestracker--update)
   (seriestracker--refresh)
