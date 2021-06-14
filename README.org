@@ -1,4 +1,4 @@
-seriesTracker helps you keep track of the tv shows you watch and always know when new releases get out.
+seriestracker helps you keep track of the tv shows you watch and always know when new releases get out.
 
 It makes use of the API provided by [[https://www.episodate.com][Episodate]]. Many thanks to them!
 
@@ -11,8 +11,8 @@ It makes use of the API provided by [[https://www.episodate.com][Episodate]]. Ma
 Clone this repo.
 
 #+begin_src elisp
-(use-package seriesTracker
-  :load-path "/path/to/seriesTracker")
+(use-package seriestracker
+  :load-path "/path/to/seriestracker")
 #+end_src>
 
 ** MELPA
@@ -22,17 +22,18 @@ Package submission is underway.
 * Configure
 
 #+begin_src elisp
-(use-package seriesTracker
-  :config ;;These are the default values
-  (setq st--file "~/.emacs.d/st.el"
-        st--fold-cycle 'st-all-folded ;; can also be 'st-all-unfolded or 'st-series-folded. Will deternine the folding at startup
-        st-show-watched "hide" ;; whether to hide or "show" the watched episodes
-        st-sorting-type "next")) ;; or "alpha" for alphabetic sort
+(use-package seriestracker
+  :demand                                                   ;;To force load seriestracker
+  :config                                                   ;;These are the default
+  (setq seriestracker-file (concat user-emacs-directory "seriestracker.el"
+        seriestracker--fold-cycle 'seriestracker-all-folded ;; can also be 'seriestracker-all-unfolded or 'seriestracker-series-folded. Will deternine the folding at startup
+        seriestracker-show-watched "hide"                   ;; whether to hide or "show" the watched episodes
+        seriestracker-sorting-type "next"))                 ;; or "alpha" for alphabetic sort
 #+end_src>
 
 * Usage
 
-Run ~st~ to start *seriesTracker*.
+Run ~seriestracker~ to start *seriestracker*.
 
 Press ~A~ to search for a series and add it to the tracker.
 
@@ -45,11 +46,13 @@ The controls are outline-like :
 - ~TAB~ to cycle visibility
 
 
-Press ~w~ to watch the episode/season/series under point, or a visual selection. You can also press ~u~ to watch all episodes up to the one under point.
-Press ~W~ to toggle displaying episodes that have already been watched.
+Press ~w~ to watch the episode/season/series under point, or a visual selection. You can also press ~u~ to watch all episodes up to the one under point.  
+Press ~W~ to toggle displaying episodes that have already been watched.  
 Press ~N~ to add/remove a note on the episode under point. Notes are displayed in the minibuffer on mouse or text cursor hover.
 
-You can also access a transient popup /à la/ magit by pressing ~h~. In addition to being a cheatsheet, it allows you to manually save/load, as well as set the savefile. You can also set the sorting strategy there (alphabetically or by next episode to watch).
+You can also access a transient popup /à la/ magit by pressing ~h~.  
+In addition to being a cheatsheet, it allows you to manually save/load, as well as set the savefile.
+You can also set the sorting strategy there (alphabetically or by next episode to watch).
 
-Although you can manually update the database by pressing ~U~, running ~st~ updates on startup.
-Quitting with ~q~ autosaves to ~st--file~.
+Although you can manually update the database by pressing ~U~, running ~seriestracker~ updates on startup.  
+Quitting with ~q~ autosaves to ~seriestracker-file~.
