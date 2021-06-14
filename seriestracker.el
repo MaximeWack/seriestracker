@@ -1,4 +1,4 @@
-;;; st.el --- Series tracker -*- lexical-binding: t; -*-
+;;; seriestracker.el --- Series tracker -*- lexical-binding: t; -*-
 
 ;; Copyright 2021 Maxime Wack
 
@@ -23,7 +23,7 @@
 
 ;;; Commentary:
 
-;; seriesTracker implements a major mode (st) for tracking TV shows.
+;; seriestracker implements a major mode for tracking TV shows.
 ;; TV shows data (episode list, release dates, etc.)
 ;; are sourced from the free database hosted at episodate.com
 ;; The mode presents an outlined list of tracked shows,
@@ -44,7 +44,7 @@
 
 ;;;; alist-select
 
-(defun st--utils-alist-select (fields alist)
+(defun seriestracker--utils-alist-select (fields alist)
   "Keep only FIELDS in ALIST.
 This is done by constructing a new alist containing only these elements.
 alist-select '(a c) '((a .1) (b , \"b\") (c . c)
@@ -56,15 +56,15 @@ returns '((a . 1) (c . c))"
 
 ;;;; array-select
 
-(defun st--utils-array-select (fields array)
+(defun seriestracker--utils-array-select (fields array)
   "Keep only FIELDS in every alist in the ARRAY.
 array-select '(a c) '(((a . 1) (b . 2) (c . c)) ((a . 3) (b . 5) (c . d)))
 returns '(((a . 1) (c . c)) ((a . 3) (c . d)))"
-  (--map (st--utils-alist-select fields it) array))
+  (--map (seriestracker--utils-alist-select fields it) array))
 
 ;;;; array-pull
 
-(defun st--utils-array-pull (field array)
+(defun seriestracker--utils-array-pull (field array)
   "Keep only FIELD in every alist in the ARRAY and flatten.
 array-pull 'a '(((a . 1) (b . 2)) ((a . 3) (b . 4)))
 returns '(1 3)"
@@ -72,7 +72,7 @@ returns '(1 3)"
 
 ;;;; getJSON
 
-(defun st--getJSON (url-buffer)
+(defun seriestracker--getJSON (url-buffer)
   "Parse the JSON in the URL-BUFFER returned by url."
   (with-current-buffer url-buffer
     (goto-char (point-max))
@@ -90,37 +90,37 @@ returns '(1 3)"
 
 ;;;; search
 
-(defun st--search (name)
+(defun seriestracker--search (name)
   "Search episodate.com db for NAME."
   (->> (let ((url-request-method "GET"))
          (url-retrieve-synchronously (concat "https://www.episodate.com/api/search?q=" name)))
-    st--getJSON
-    (st--utils-alist-select '(tv_shows))
+    seriestracker--getJSON
+    (seriestracker--utils-alist-select '(tv_shows))
     cdar
-    (st--utils-array-select '(id name start_date status network permalink))))
+    (seriestracker--utils-array-select '(id name start_date status network permalink))))
 
 ;;;; series
 
-(defun st--episodes (series)
+(defun seriestracker--episodes (series)
   "Transform the episodes of SERIES from a vector to a list."
   (setf (alist-get 'episodes series)
         (--map it (alist-get 'episodes series)))
   series)
 
-(defun st--series (id)
+(defun seriestracker--series (id)
   "Get series ID info."
   (->> (let ((url-request-method "GET"))
          (url-retrieve-synchronously (concat "https://www.episodate.com/api/show-details?q=" (int-to-string id))))
-    st--getJSON
+    seriestracker--getJSON
     car
-    (st--utils-alist-select '(id name start_date status episodes))
-    st--episodes))
+    (seriestracker--utils-alist-select '(id name start_date status episodes))
+    seriestracker--episodes))
 
 ;;; Internal API
 
 ;;;; Data model
 
-(defvar st--data nil
+(defvar seriestracker--data nil
   "Internal data containing followed series and episode.
 Of the form :
 '(((id . seriesId) (…) (episodes ((id . episodeId) (watched . t)  (…))
@@ -133,33 +133,33 @@ episodes props are season, episode, name, and air_date.")
 ;;;; Add/remove
 ;;;;; Add series
 
-(defun st--add (id)
-  "Add series with ID to `st--data'.
+(defun seriestracker--add (id)
+  "Add series with ID to `seriestracker--data'.
 Adding an already existing series resets it."
-  (setq st--data
-        (--> st--data
+  (setq seriestracker--data
+        (--> seriestracker--data
           (--remove (= id (alist-get 'id it)) it)
-          (-snoc it (st--series id)))))
+          (-snoc it (seriestracker--series id)))))
 
 ;;;;; Remove series
 
-(defun st--remove (id)
-  "Remove series with ID from `st--data'."
-  (setq st--data
-        (--remove (= id (alist-get 'id it)) st--data)))
+(defun seriestracker--remove (id)
+  "Remove series with ID from `seriestracker--data'."
+  (setq seriestracker--data
+        (--remove (= id (alist-get 'id it)) seriestracker--data)))
 
 ;;;; Watch
 
 ;;;;; Watch region
 
-(defun st--watch-region (start-series start-season start-episode end-series end-season end-episode watch)
+(defun seriestracker--watch-region (start-series start-season start-episode end-series end-season end-episode watch)
   "WATCH from START-EPISODE of START-SEASON of START-SERIES to END-EPISODE of END-SEASON of END-SERIES."
-  (let* ((series1 (--find-index (= start-series (alist-get 'id it)) st--data))
+  (let* ((series1 (--find-index (= start-series (alist-get 'id it)) seriestracker--data))
          (series2 (if end-series
-                      (--find-index (= end-series (alist-get 'id it)) st--data)
+                      (--find-index (= end-series (alist-get 'id it)) seriestracker--data)
                     (1+ series1))))
     (--each
-        st--data
+        seriestracker--data
       (setq series-index it-index)
       (setf (alist-get 'episodes it)
             (--map-when
@@ -180,16 +180,16 @@ Adding an already existing series resets it."
 
 ;;;;; Watch season
 
-(defun st--watch-season (id seasonN watch)
+(defun seriestracker--watch-season (id seasonN watch)
   "WATCH all episodes in SEASONN of series ID."
-  (st--watch-region id seasonN 1 id (1+ seasonN) 0 watch))
+  (seriestracker--watch-region id seasonN 1 id (1+ seasonN) 0 watch))
 
 ;;;;; Watch series
 
-(defun st--watch-series (id watch)
+(defun seriestracker--watch-series (id watch)
   "WATCH all episodes in series ID."
   (--each-when
-   st--data
+   seriestracker--data
    (= id (alist-get 'id it))
    (--each
        (alist-get 'episodes it)
@@ -199,10 +199,10 @@ Adding an already existing series resets it."
 
 ;;;;; Add note
 
-(defun st--add-note (id seasonN episodeN note)
+(defun seriestracker--add-note (id seasonN episodeN note)
   "Add a NOTE to EPISODEN of SEASONN in series ID."
   (when episodeN
-    (->> st--data
+    (->> seriestracker--data
       (--map-when (= id (alist-get 'id it))
                   (setf (alist-get 'episodes it)
                         (--map-when (and (= seasonN (alist-get 'season it))
@@ -213,22 +213,22 @@ Adding an already existing series resets it."
 
 ;;;; Query updates
 
-(defun st--update ()
+(defun seriestracker--update ()
   "Update all non-finished series."
   (--each-when
-   st--data
+   seriestracker--data
    (string-equal "Running" (alist-get 'status it))
-   (st--update-series it)))
+   (seriestracker--update-series it)))
 
-(defun st--update-series (series)
+(defun seriestracker--update-series (series)
   "Update the SERIES."
-  (let* ((new (st--series (alist-get 'id series)))
+  (let* ((new (seriestracker--series (alist-get 'id series)))
          (newEp (alist-get 'episodes new))
          (status (alist-get 'status new))
          (watched (--find-indices (alist-get 'watched it) (alist-get 'episodes series)))
          (noted (--find-indices (alist-get 'note it) (alist-get 'episodes series)))
          (notes (-zip noted
-                      (st--utils-array-pull 'note (-select-by-indices noted (alist-get 'episodes series)))))
+                      (seriestracker--utils-array-pull 'note (-select-by-indices noted (alist-get 'episodes series)))))
          (newEps (->> newEp
                    (--map-indexed (if (-contains? watched it-index)
                                       (progn
@@ -244,98 +244,98 @@ Adding an already existing series resets it."
 
 ;;;; Load/save data
 
-(defvar st--file (concat user-emacs-directory "st.el")
+(defvar seriestracker--file (concat user-emacs-directory "seriestracker.el")
   "Location of the save file.")
 
-(defun st--save ()
-  "Save the database to `st--file'."
-  (with-temp-file st--file
+(defun seriestracker--save ()
+  "Save the database to `seriestracker--file'."
+  (with-temp-file seriestracker--file
     (let ((print-level nil)
           (print-length nil))
-      (prin1 st--data (current-buffer)))))
+      (prin1 seriestracker--data (current-buffer)))))
 
-(defun st--load ()
-  "Load the database from `st--file'."
+(defun seriestracker--load ()
+  "Load the database from `seriestracker--file'."
   (with-temp-buffer
-    (insert-file-contents st--file t)
+    (insert-file-contents seriestracker--file t)
     (cl-assert (eq (point) (point-min)))
-    (setq st--data (read (current-buffer)))))
+    (setq seriestracker--data (read (current-buffer)))))
 
 ;;; Interface
 
 ;;;; Faces
 
-(defface st-series
+(defface seriestracker-series
   '((t (:inherit outline-1)))
   "Face for series names"
-  :group 'st-faces)
+  :group 'seriestracker-faces)
 
-(defface st-finished-series
+(defface seriestracker-finished-series
   '((t (:inherit (shadow outline-1))))
   "Face for finished series names"
-  :group 'st-faces)
+  :group 'seriestracker-faces)
 
-(defface st-season
+(defface seriestracker-season
   '((t (:inherit outline-2)))
   "Face for seasons"
-  :group 'st-faces)
+  :group 'seriestracker-faces)
 
-(defface st-watched
+(defface seriestracker-watched
   '((t (:inherit shadow :strike-through t)))
   "Face for watched episodes"
-  :group 'st-faces)
+  :group 'seriestracker-faces)
 
-;;;; Check in ST buffer
+;;;; Check if in seriestracker buffer
 
-(defun st--inbuffer ()
-  "Check if we are in the st buffer in st mode."
-  (unless (and (string-equal (buffer-name) "st")
-               (string-equal mode-name "st"))
-    (error "Not in st buffer")))
+(defun seriestracker--inbuffer ()
+  "Check if we are in the seriestracker buffer in seriestracker mode."
+  (unless (and (string-equal (buffer-name) "seriestracker")
+               (string-equal mode-name "seriestracker"))
+    (error "Not in seriestracker buffer")))
 
 ;;;; Draw buffer
 
-(defun st--refresh ()
-  "Refresh the st buffer."
+(defun seriestracker--refresh ()
+  "Refresh the seriestracker buffer."
   (let ((linum (line-number-at-pos)))
-    (st--draw-buffer)
+    (seriestracker--draw-buffer)
     (goto-char (point-min))
     (forward-line (1- linum)))
-  (cond ((eq st--fold-cycle 'st-all-folded)
-         (st--fold-all))
-        ((eq st--fold-cycle 'st-all-unfolded)
-         (st--unfold-all))
-        ((eq st--fold-cycle 'st-series-folded)
-         (st--unfold-all-series))))
+  (cond ((eq seriestracker--fold-cycle 'seriestracker-all-folded)
+         (seriestracker--fold-all))
+        ((eq seriestracker--fold-cycle 'seriestracker-all-unfolded)
+         (seriestracker--unfold-all))
+        ((eq seriestracker--fold-cycle 'seriestracker-series-folded)
+         (seriestracker--unfold-all-series))))
 
-(defun st--draw-buffer ()
+(defun seriestracker--draw-buffer ()
   "Draw the buffer.
 Erase first then redraw the whole buffer."
   (let ((inhibit-read-only t))
     (erase-buffer)
-    (-each st--data 'st--draw-series)))
+    (-each seriestracker--data 'seriestracker--draw-series)))
 
-(defun st--draw-series (series)
+(defun seriestracker--draw-series (series)
   "Print the SERIES id and name."
   (let* ((id (alist-get 'id series))
          (name (alist-get 'name series))
          (episodes (alist-get 'episodes series))
-         (st-face (if (string-equal "Ended" (alist-get 'status series))
-                      'st-finished-series
-                    'st-series))
-         (st-watched (if (--all? (alist-get 'watched it)
-                                 episodes)
-                         'st-watched
-                       nil)))
+         (seriestracker-face (if (string-equal "Ended" (alist-get 'status series))
+                                 'seriestracker-finished-series
+                               'seriestracker-series))
+         (seriestracker-watched (if (--all? (alist-get 'watched it)
+                                            episodes)
+                                    'seriestracker-watched
+                                  nil)))
     (insert (propertize (concat name "\n")
-                        'st-series id
-                        'st-season nil
-                        'st-episode nil
-                        'face st-face
-                        'invisible st-watched))
-    (--each episodes (st--draw-episode series it))))
+                        'seriestracker-series id
+                        'seriestracker-season nil
+                        'seriestracker-episode nil
+                        'face seriestracker-face
+                        'invisible seriestracker-watched))
+    (--each episodes (seriestracker--draw-episode series it))))
 
-(defun st--draw-episode (series episode)
+(defun seriestracker--draw-episode (series episode)
   "Print EPISODE from SERIES.
 Print the time stamp, then episode number, and episode name.
 If first episode of a season, print the season number."
@@ -346,81 +346,81 @@ If first episode of a season, print the season number."
          (air_date (alist-get 'air_date episode))
          (watched (alist-get 'watched episode))
          (note (alist-get 'note episode))
-         (st-watched (if watched 'st-watched nil))
-         (st-date-face `(:inherit ,(if watched
-                                       'st-watched
-                                     (if (time-less-p (date-to-time air_date) (current-time))
-                                         'success
-                                       'error))
-                                  :weight ,(if note 'bold 'normal)))
-         (st-text-face `(:inherit ,(if watched
-                                       'st-watched
-                                     'default)
-                                  :weight ,(if note 'bold 'normal)))
+         (seriestracker-watched (if watched 'seriestracker-watched nil))
+         (seriestracker-date-face `(:inherit ,(if watched
+                                                  'seriestracker-watched
+                                                (if (time-less-p (date-to-time air_date) (current-time))
+                                                    'success
+                                                  'error))
+                                             :weight ,(if note 'bold 'normal)))
+         (seriestracker-text-face `(:inherit ,(if watched
+                                                  'seriestracker-watched
+                                                'default)
+                                             :weight ,(if note 'bold 'normal)))
          (start (point)))
     (when (= episodeN 1)
       (setq start (+ start 8 (length (int-to-string seasonN))))
-      (let ((st-season-watched (if (--all? (alist-get 'watched it)
-                                           (--filter (= seasonN (alist-get 'season it))
-                                                     (alist-get 'episodes series)))
-                                   'st-watched
-                                 nil)))
+      (let ((seriestracker-season-watched (if (--all? (alist-get 'watched it)
+                                                      (--filter (= seasonN (alist-get 'season it))
+                                                                (alist-get 'episodes series)))
+                                              'seriestracker-watched
+                                            nil)))
         (insert (propertize (concat "Season " (int-to-string seasonN) "\n")
-                            'face 'st-season
-                            'st-series id
-                            'st-season seasonN
-                            'st-episode nil
-                            'invisible st-season-watched))))
+                            'face 'seriestracker-season
+                            'seriestracker-series id
+                            'seriestracker-season seasonN
+                            'seriestracker-episode nil
+                            'invisible seriestracker-season-watched))))
     (insert (propertize (concat air_date " " (format "%02d" episodeN) " - " name "\n")
-                        'face st-text-face
-                        'st-series id
-                        'st-season seasonN
-                        'st-episode episodeN
+                        'face seriestracker-text-face
+                        'seriestracker-series id
+                        'seriestracker-season seasonN
+                        'seriestracker-episode episodeN
                         'help-echo note
-                        'invisible st-watched))
-    (put-text-property start (+ start 19) 'face st-date-face)))
+                        'invisible seriestracker-watched))
+    (put-text-property start (+ start 19) 'face seriestracker-date-face)))
 
 ;;;; Movements
 
-(defun st-prev-line ()
+(defun seriestracker-prev-line ()
   "Move one visible line up."
   (interactive)
-  (st--inbuffer)
+  (seriestracker--inbuffer)
   (setq disable-point-adjustment t)
   (forward-line -1)
   (while (and (invisible-p (point))
               (> (point) 1))
     (forward-line -1))
   (when (and (= 1 (point))
-               (invisible-p 1))
-    (st--move 'next))
-  (st--display-note))
+             (invisible-p 1))
+    (seriestracker--move 'next))
+  (seriestracker--display-note))
 
-(defun st-next-line ()
+(defun seriestracker-next-line ()
   "Move one visible line down."
   (interactive)
-  (st--inbuffer)
+  (seriestracker--inbuffer)
   (next-line)
-  (st--display-note))
+  (seriestracker--display-note))
 
-(defun st-up ()
+(defun seriestracker-up ()
   "Move up in the hierarchy."
   (interactive)
-  (st--inbuffer)
-  (let ((season (get-text-property (point) 'st-season))
-        (episode (get-text-property (point) 'st-episode)))
-    (cond (episode (goto-char (previous-single-property-change (point) 'st-season)))
-          (season (goto-char (previous-single-property-change (point) 'st-series))))))
+  (seriestracker--inbuffer)
+  (let ((season (get-text-property (point) 'seriestracker-season))
+        (episode (get-text-property (point) 'seriestracker-episode)))
+    (cond (episode (goto-char (previous-single-property-change (point) 'seriestracker-season)))
+          (season (goto-char (previous-single-property-change (point) 'seriestracker-series))))))
 
-(defun st--move (dir &optional same any)
+(defun seriestracker--move (dir &optional same any)
   "Move in direction DIR in the hierarchy.
 Use SAME to navigate between same-level headers,
 and ANY to go to any header even if hidden."
-  (st--inbuffer)
+  (seriestracker--inbuffer)
   (setq disable-point-adjustment t)
-  (let* ((season (get-text-property (point) 'st-season))
-         (episode (get-text-property (point) 'st-episode))
-         (level (if (and same (not (or season episode))) 'st-series 'st-season))
+  (let* ((season (get-text-property (point) 'seriestracker-season))
+         (episode (get-text-property (point) 'seriestracker-episode))
+         (level (if (and same (not (or season episode))) 'seriestracker-series 'seriestracker-season))
          (dest (if (eq dir 'prev)
                    (previous-single-property-change (point) level nil (point-min))
                  (next-single-property-change (point) level nil (point-max)))))
@@ -428,192 +428,192 @@ and ANY to go to any header even if hidden."
   (when (eq dir 'prev)
     (when (and (= 1 (point))
                (invisible-p 1))
-      (st--move 'next)))
+      (seriestracker--move 'next)))
   (unless any
-    (when (invisible-p (point)) (st--move dir same))))
+    (when (invisible-p (point)) (seriestracker--move dir same))))
 
-(defun st-prev ()
+(defun seriestracker-prev ()
   "Move to the previous visible node."
   (interactive)
-  (st--inbuffer)
-  (st--move 'prev))
+  (seriestracker--inbuffer)
+  (seriestracker--move 'prev))
 
-(defun st-next ()
+(defun seriestracker-next ()
   "Move to the next visible node."
   (interactive)
-  (st--inbuffer)
-  (st--move 'next))
+  (seriestracker--inbuffer)
+  (seriestracker--move 'next))
 
-(defun st-prev-same ()
+(defun seriestracker-prev-same ()
   "Move to the previous visible node of the same level."
   (interactive)
-  (st--inbuffer)
-  (st--move 'prev t))
+  (seriestracker--inbuffer)
+  (seriestracker--move 'prev t))
 
-(defun st-next-same ()
+(defun seriestracker-next-same ()
   "Move to the next visible node of the same level."
   (interactive)
-  (st--inbuffer)
-  (st--move 'next t))
+  (seriestracker--inbuffer)
+  (seriestracker--move 'next t))
 
 ;;;; Folding
 
-(defun st-fold-at-point (&optional unfold)
+(defun seriestracker-fold-at-point (&optional unfold)
   "Fold or UNFOLD the section at point."
   (interactive)
-  (st--inbuffer)
-  (let ((season (get-text-property (point) 'st-season))
-        (episode (get-text-property (point) 'st-episode)))
-    (cond (episode (st-fold-episodes unfold))
-          (season (st-fold-season unfold))
-          (t (st-fold-series unfold)))))
+  (seriestracker--inbuffer)
+  (let ((season (get-text-property (point) 'seriestracker-season))
+        (episode (get-text-property (point) 'seriestracker-episode)))
+    (cond (episode (seriestracker-fold-episodes unfold))
+          (season (seriestracker-fold-season unfold))
+          (t (seriestracker-fold-series unfold)))))
 
-(defun st-unfold-at-point ()
+(defun seriestracker-unfold-at-point ()
   "Unfold the section at point."
   (interactive)
-  (st--inbuffer)
-  (st-fold-at-point t))
+  (seriestracker--inbuffer)
+  (seriestracker-fold-at-point t))
 
-(defun st-fold-episodes (&optional unfold)
+(defun seriestracker-fold-episodes (&optional unfold)
   "Fold or UNFOLD the episodes at point."
-  (let* ((season-start (previous-single-property-change (point) 'st-season))
-         (fold-start (next-single-property-change season-start 'st-episode))
-         (fold-end (next-single-property-change (point) 'st-season nil (point-max))))
+  (let* ((season-start (previous-single-property-change (point) 'seriestracker-season))
+         (fold-start (next-single-property-change season-start 'seriestracker-episode))
+         (fold-end (next-single-property-change (point) 'seriestracker-season nil (point-max))))
     (if unfold
-        (remove-overlays fold-start fold-end 'invisible 'st-season)
-      (overlay-put (make-overlay fold-start fold-end) 'invisible 'st-season))))
+        (remove-overlays fold-start fold-end 'invisible 'seriestracker-season)
+      (overlay-put (make-overlay fold-start fold-end) 'invisible 'seriestracker-season))))
 
-(defun st-fold-season (&optional unfold)
+(defun seriestracker-fold-season (&optional unfold)
   "Fold or UNFOLD the season at point."
-  (let* ((fold-start (next-single-property-change (point) 'st-episode))
-         (fold-end (next-single-property-change (point) 'st-season nil (point-max))))
+  (let* ((fold-start (next-single-property-change (point) 'seriestracker-episode))
+         (fold-end (next-single-property-change (point) 'seriestracker-season nil (point-max))))
     (if unfold
-        (remove-overlays fold-start fold-end 'invisible 'st-season)
-      (overlay-put (make-overlay fold-start fold-end) 'invisible 'st-season))))
+        (remove-overlays fold-start fold-end 'invisible 'seriestracker-season)
+      (overlay-put (make-overlay fold-start fold-end) 'invisible 'seriestracker-season))))
 
-(defun st-fold-series (&optional unfold)
+(defun seriestracker-fold-series (&optional unfold)
   "Fold or UNFOLD the series at point."
-  (let* ((fold-start (next-single-property-change (point) 'st-season))
-         (fold-end (next-single-property-change (point) 'st-series nil (point-max))))
+  (let* ((fold-start (next-single-property-change (point) 'seriestracker-season))
+         (fold-end (next-single-property-change (point) 'seriestracker-series nil (point-max))))
     (if unfold
-        (remove-overlays fold-start fold-end 'invisible 'st-series)
+        (remove-overlays fold-start fold-end 'invisible 'seriestracker-series)
       (when (and fold-start fold-end)
-        (overlay-put (make-overlay fold-start fold-end) 'invisible 'st-series)))))
+        (overlay-put (make-overlay fold-start fold-end) 'invisible 'seriestracker-series)))))
 
 ;;;; Cycle folding
 
-(defvar st--fold-cycle 'st-all-folded
+(defvar seriestracker--fold-cycle 'seriestracker-all-folded
   "Current folding status.
-Can be 'st-all-folded, 'st-series-folded, or 'st-all-unfolded")
+Can be 'seriestracker-all-folded, 'seriestracker-series-folded, or 'seriestracker-all-unfolded")
 
-(defun st-cycle ()
+(defun seriestracker-cycle ()
   "Cycle folding."
   (interactive)
-  (st--inbuffer)
-  (cond ((eq st--fold-cycle 'st-all-folded)
-         (st--unfold-all-series)
-         (setq st--fold-cycle 'st-series-folded))
-        ((eq st--fold-cycle 'st-series-folded)
-         (st--unfold-all)
-         (setq st--fold-cycle 'st-all-unfolded))
-        ((eq st--fold-cycle 'st-all-unfolded)
-         (st--fold-all)
-         (setq st--fold-cycle 'st-all-folded))))
+  (seriestracker--inbuffer)
+  (cond ((eq seriestracker--fold-cycle 'seriestracker-all-folded)
+         (seriestracker--unfold-all-series)
+         (setq seriestracker--fold-cycle 'seriestracker-series-folded))
+        ((eq seriestracker--fold-cycle 'seriestracker-series-folded)
+         (seriestracker--unfold-all)
+         (setq seriestracker--fold-cycle 'seriestracker-all-unfolded))
+        ((eq seriestracker--fold-cycle 'seriestracker-all-unfolded)
+         (seriestracker--fold-all)
+         (setq seriestracker--fold-cycle 'seriestracker-all-folded))))
 
-(defun st--unfold-all ()
+(defun seriestracker--unfold-all ()
   "Unfold everything."
-  (remove-overlays (point-min) (point-max) 'invisible 'st-series)
-  (remove-overlays (point-min) (point-max) 'invisible 'st-season))
+  (remove-overlays (point-min) (point-max) 'invisible 'seriestracker-series)
+  (remove-overlays (point-min) (point-max) 'invisible 'seriestracker-season))
 
-(defun st--fold-all ()
+(defun seriestracker--fold-all ()
   "Fold everything."
   (save-excursion
-    (st--unfold-all)
+    (seriestracker--unfold-all)
     (goto-char 1)
     (while (< (point)
               (point-max))
-      (st-fold-at-point)
-      (st--move 'next nil t))))
+      (seriestracker-fold-at-point)
+      (seriestracker--move 'next nil t))))
 
-(defun st--unfold-all-series ()
+(defun seriestracker--unfold-all-series ()
   "Unfold all series."
-  (st--fold-all)
-  (remove-overlays (point-min) (point-max) 'invisible 'st-series))
+  (seriestracker--fold-all)
+  (remove-overlays (point-min) (point-max) 'invisible 'seriestracker-series))
 
 ;;;; Transient
 
-(defvar st-show-watched "hide"
+(defvar seriestracker-show-watched "hide"
   "Current strategy for dealing with watched episodes.")
 
-(defvar st-sorting-type "next"
+(defvar seriestracker-sorting-type "next"
   "Current strategy for sorting series.")
 
-(transient-define-prefix st-dispatch ()
-  "Command dispatch for st."
+(transient-define-prefix seriestracker-dispatch ()
+  "Command dispatch for seriestracker."
   ["Series"
-   :if-mode st-mode
-   [("A" "Search and add a series" st-search)
-    ("D" "Delete a series" st-remove)]
-   [("w" "Toggle watch at point" st-toggle-watch)
-    ("u" "Watch up to point" st-watch-up)
-    ("N" "Add/remove a note from an episode" st-add-note)]
-   [("U" "Update and refresh the buffer" st-update)]]
+   :if-mode seriestracker-mode
+   [("A" "Search and add a series" seriestracker-search)
+    ("D" "Delete a series" seriestracker-remove)]
+   [("w" "Toggle watch at point" seriestracker-toggle-watch)
+    ("u" "Watch up to point" seriestracker-watch-up)
+    ("N" "Add/remove a note from an episode" seriestracker-add-note)]
+   [("U" "Update and refresh the buffer" seriestracker-update)]]
   ["Display"
-   :if-mode st-mode
-   [("W" st-infix-watched)
-    ("S" st-infix-sorting)]]
+   :if-mode seriestracker-mode
+   [("W" seriestracker-infix-watched)
+    ("S" seriestracker-infix-sorting)]]
   ["Load/Save"
-   :if-mode st-mode
-   [("s" "Save database" st-save)
-    ("l" "Load database" st-load)
-    ("f" st-infix-savefile)]])
+   :if-mode seriestracker-mode
+   [("s" "Save database" seriestracker-save)
+    ("l" "Load database" seriestracker-load)
+    ("f" seriestracker-infix-savefile)]])
 
-(defclass st-transient-variable (transient-variable)
+(defclass seriestracker-transient-variable (transient-variable)
   ((variable :initarg :variable)))
 
-(defclass st-transient-variable:choice (st-transient-variable)
+(defclass seriestracker-transient-variable:choice (seriestracker-transient-variable)
   ((name :initarg :name)
    (choices :initarg :choices)
    (default :initarg :default)
    (action :initarg :action)))
 
-(cl-defmethod transient-init-value ((obj st-transient-variable))
-  "Method to initialise the value of an `st-transient-variable' OBJ."
+(cl-defmethod transient-init-value ((obj seriestracker-transient-variable))
+  "Method to initialise the value of an `seriestracker-transient-variable' OBJ."
   (oset obj value (eval (oref obj variable))))
 
-(cl-defmethod transient-infix-read ((obj st-transient-variable))
-  "Method to read a new value for an `st-transient-variable' OBJ."
+(cl-defmethod transient-infix-read ((obj seriestracker-transient-variable))
+  "Method to read a new value for an `seriestracker-transient-variable' OBJ."
   (read-from-minibuffer "Save file: " (oref obj value)))
 
-(cl-defmethod transient-infix-read ((obj st-transient-variable:choice))
-  "Method to read a new value for an `st-transient-variable:choice' OBJ."
+(cl-defmethod transient-infix-read ((obj seriestracker-transient-variable:choice))
+  "Method to read a new value for an `seriestracker-transient-variable:choice' OBJ."
   (let ((choices (oref obj choices)))
     (if-let* ((value (oref obj value))
               (notlast (cadr (member value choices))))
         (cadr (member value choices))
       (car choices))))
 
-(cl-defmethod transient-infix-set ((obj st-transient-variable) value)
-  "Method to set VALUE for an `st-transient-variable' OBJ."
+(cl-defmethod transient-infix-set ((obj seriestracker-transient-variable) value)
+  "Method to set VALUE for an `seriestracker-transient-variable' OBJ."
   (oset obj value value)
   (set (oref obj variable) value))
 
-(cl-defmethod transient-infix-set ((obj st-transient-variable:choice) value)
-  "Method to set VALUE for an `st-transient-variable:choice' OBJ."
+(cl-defmethod transient-infix-set ((obj seriestracker-transient-variable:choice) value)
+  "Method to set VALUE for an `seriestracker-transient-variable:choice' OBJ."
   (oset obj value value)
   (set (oref obj variable) value)
   (funcall (oref obj action)))
 
-(cl-defmethod transient-format-value ((obj st-transient-variable))
-  "Method to format the value of an `st-transient-variable' OBJ."
+(cl-defmethod transient-format-value ((obj seriestracker-transient-variable))
+  "Method to format the value of an `seriestracker-transient-variable' OBJ."
   (let ((value (oref obj value)))
     (concat
      (propertize "(" 'face 'transient-inactive-value)
      (propertize value 'face 'transient-value)
      (propertize ")" 'face 'transient-inactive-value))))
 
-(cl-defmethod transient-format-value ((obj st-transient-variable:choice))
-  "Method to form the value of an `st-transient-variable:choice' OBJ."
+(cl-defmethod transient-format-value ((obj seriestracker-transient-variable:choice))
+  "Method to form the value of an `seriestracker-transient-variable:choice' OBJ."
   (let* ((choices  (oref obj choices))
          (value    (oref obj value)))
     (concat
@@ -630,284 +630,284 @@ Can be 'st-all-folded, 'st-series-folded, or 'st-all-unfolded")
                 (propertize "|" 'face 'transient-inactive-value))
      (propertize "]" 'face 'transient-inactive-value))))
 
-(transient-define-infix st-infix-watched ()
-  :class 'st-transient-variable:choice
+(transient-define-infix seriestracker-infix-watched ()
+  :class 'seriestracker-transient-variable:choice
   :choices '("show" "hide")
-  :variable 'st-show-watched
+  :variable 'seriestracker-show-watched
   :description "Watched"
-  :action 'st--apply-watched)
+  :action 'seriestracker--apply-watched)
 
-(defun st--apply-watched ()
+(defun seriestracker--apply-watched ()
   "Switch visibility for watched episodes."
-  (if (-contains? buffer-invisibility-spec 'st-watched)
-      (when (string-equal st-show-watched "show") (remove-from-invisibility-spec 'st-watched))
-    (when (string-equal st-show-watched "hide")
-      (add-to-invisibility-spec 'st-watched)
-      (when (invisible-p (point)) (st-next)))))
+  (if (-contains? buffer-invisibility-spec 'seriestracker-watched)
+      (when (string-equal seriestracker-show-watched "show") (remove-from-invisibility-spec 'seriestracker-watched))
+    (when (string-equal seriestracker-show-watched "hide")
+      (add-to-invisibility-spec 'seriestracker-watched)
+      (when (invisible-p (point)) (seriestracker-next)))))
 
-(transient-define-infix st-infix-sorting ()
-  :class 'st-transient-variable:choice
+(transient-define-infix seriestracker-infix-sorting ()
+  :class 'seriestracker-transient-variable:choice
   :choices '("alpha" "next")
-  :variable 'st-sorting-type
+  :variable 'seriestracker-sorting-type
   :description "Sorting"
-  :action 'st--apply-sort)
+  :action 'seriestracker--apply-sort)
 
-(defun st--apply-sort ()
+(defun seriestracker--apply-sort ()
   "Apply the selected sorting strategy and refresh the buffer."
-  (cond ((string-equal st-sorting-type "alpha") (st-sort-alpha))
-        ((string-equal st-sorting-type "next") (st-sort-next)))
-  (st--refresh))
+  (cond ((string-equal seriestracker-sorting-type "alpha") (seriestracker-sort-alpha))
+        ((string-equal seriestracker-sorting-type "next") (seriestracker-sort-next)))
+  (seriestracker--refresh))
 
-(transient-define-infix st-infix-savefile ()
-  :class 'st-transient-variable
-  :variable 'st--file
+(transient-define-infix seriestracker-infix-savefile ()
+  :class 'seriestracker-transient-variable
+  :variable 'seriestracker--file
   :description "Save file")
 
 ;;;; Toggle displaying watched
 
-(defun st-toggle-display-watched ()
+(defun seriestracker-toggle-display-watched ()
   "Toggle displaying watched episodes."
   (interactive)
-  (st--inbuffer)
-  (if (string-equal st-show-watched "show")
-      (progn (setq st-show-watched "hide")
-             (add-to-invisibility-spec 'st-watched))
-    (setq st-show-watched "show")
-    (remove-from-invisibility-spec 'st-watched)))
+  (seriestracker--inbuffer)
+  (if (string-equal seriestracker-show-watched "show")
+      (progn (setq seriestracker-show-watched "hide")
+             (add-to-invisibility-spec 'seriestracker-watched))
+    (setq seriestracker-show-watched "show")
+    (remove-from-invisibility-spec 'seriestracker-watched)))
 
 ;;;; Load/save data
 
-(defun st-save ()
+(defun seriestracker-save ()
   "Save the database."
   (interactive)
-  (st--inbuffer)
-  (st--save))
+  (seriestracker--inbuffer)
+  (seriestracker--save))
 
-(defun st-load ()
+(defun seriestracker-load ()
   "Load the database and refresh the buffer."
   (interactive)
-  (st--inbuffer)
-  (st--load)
-  (st--refresh))
+  (seriestracker--inbuffer)
+  (seriestracker--load)
+  (seriestracker--refresh))
 
 ;;;; Quit
 
-(defun st-quit ()
+(defun seriestracker-quit ()
   "Save the db and close the buffer."
   (interactive)
-  (st--inbuffer)
-  (st--save)
-  (setq st--data nil)
+  (seriestracker--inbuffer)
+  (seriestracker--save)
+  (setq seriestracker--data nil)
   (kill-buffer-and-window))
 
 ;;;; Add series
 
-(defun st-search ()
+(defun seriestracker-search ()
   "Search for a series, and add the selected series to the database.
 The searchterm is read from the minibuffer.
 The selected sorting strategy is applied after adding the new series."
   (interactive)
-  (st--inbuffer)
+  (seriestracker--inbuffer)
   (let* ((searchterm (read-from-minibuffer "Search: "))
-         (series-list (st--search searchterm))
-         (names-list (st--utils-array-pull 'permalink series-list))
+         (series-list (seriestracker--search searchterm))
+         (names-list (seriestracker--utils-array-pull 'permalink series-list))
          (nametoadd (completing-read "Options: " names-list))
          (toadd (alist-get 'id (--find
                                 (string-equal nametoadd (alist-get 'permalink it))
                                 series-list))))
-    (st--add toadd)
-    (st--apply-sort)))
+    (seriestracker--add toadd)
+    (seriestracker--apply-sort)))
 
 ;;;; Remove series
 
-(defun st-remove ()
+(defun seriestracker-remove ()
   "Remove series at point."
   (interactive)
-  (st--inbuffer)
+  (seriestracker--inbuffer)
   (let ((inhibit-read-only t)
-        (series (get-text-property (point) 'st-series))
-        (start (previous-single-property-change (1+ (point)) 'st-series nil (point-min)))
-        (end (next-single-property-change (point) 'st-series nil (point-max))))
+        (series (get-text-property (point) 'seriestracker-series))
+        (start (previous-single-property-change (1+ (point)) 'seriestracker-series nil (point-min)))
+        (end (next-single-property-change (point) 'seriestracker-series nil (point-max))))
     (when (y-or-n-p "Are you sure you want to delete this series? ")
-      (st--remove series)
+      (seriestracker--remove series)
       (delete-region start end))))
 
 ;;;; (un)Watch episodes
 
 ;;;;; Update appearance watched region
 
-(defun st--update-watched-region (start end &optional watch)
+(defun seriestracker--update-watched-region (start end &optional watch)
   "Update the buffer for change in WATCH between START and END."
   (let* ((startline (line-number-at-pos start))
          (endline (1- (line-number-at-pos end))))
     (save-excursion
       (--each
           (number-sequence startline endline)
-        (st--update-watched-line it watch)))))
+        (seriestracker--update-watched-line it watch)))))
 
-(defun st--update-watched-line (linum watch)
+(defun seriestracker--update-watched-line (linum watch)
   "Update a single line LINUM for WATCH status."
   (goto-char (point-min))
   (forward-line (1- linum))
-  (let* ((episode (get-text-property (point) 'st-episode))
-         (season (get-text-property (point) 'st-season))
-         (series (get-text-property (point) 'st-series))
+  (let* ((episode (get-text-property (point) 'seriestracker-episode))
+         (season (get-text-property (point) 'seriestracker-season))
+         (series (get-text-property (point) 'seriestracker-series))
          (note (plist-get
                 (get-text-property (point) 'face)
                 :weight))
          (start (progn (move-beginning-of-line nil) (point)))
          (end (progn (forward-line 1) (point)))
-         (st-date-face (when episode
-                         `(:inherit ,(if watch
-                                         'st-watched
-                                       (if (time-less-p (date-to-time (buffer-substring start (+ start 19))) (current-time))
-                                           'success
-                                         'error))
-                                    :weight ,note)))
-         (st-text-face `(:inherit ,(if watch
-                                       'st-watched
-                                     'default)
-                                  :weight ,note)))
+         (seriestracker-date-face (when episode
+                                    `(:inherit ,(if watch
+                                                    'seriestracker-watched
+                                                  (if (time-less-p (date-to-time (buffer-substring start (+ start 19))) (current-time))
+                                                      'success
+                                                    'error))
+                                               :weight ,note)))
+         (seriestracker-text-face `(:inherit ,(if watch
+                                                  'seriestracker-watched
+                                                'default)
+                                             :weight ,note)))
     (cond (episode
            (if watch
-               (put-text-property start end 'invisible 'st-watched)
+               (put-text-property start end 'invisible 'seriestracker-watched)
              (put-text-property start end 'invisible nil))
-           (put-text-property start end 'face st-text-face)
-           (put-text-property start (+ start 19) 'face st-date-face))
+           (put-text-property start end 'face seriestracker-text-face)
+           (put-text-property start (+ start 19) 'face seriestracker-date-face))
           (season
            (if (--all? (alist-get 'watched it)
-                       (->> st--data
+                       (->> seriestracker--data
                          (--find (= series (alist-get 'id it)))
                          (alist-get 'episodes)
                          (--filter (= season (alist-get 'season it)))))
-               (put-text-property start end 'invisible 'st-watched)
+               (put-text-property start end 'invisible 'seriestracker-watched)
              (put-text-property start end 'invisible nil)))
           (series
            (if (--all? (alist-get 'watched it)
                        (alist-get 'episodes (--find (= series (alist-get 'id it))
-                                                    st--data)))
-               (put-text-property start end 'invisible 'st-watched)
+                                                    seriestracker--data)))
+               (put-text-property start end 'invisible 'seriestracker-watched)
              (put-text-property start end 'invisible nil))))))
 
 ;;;;; Toggle watch
 
-(defun st-toggle-watch ()
+(defun seriestracker-toggle-watch ()
   "Toggle watch at point.
 The element under the cursor is used to decide whether to watch or unwatch."
   (interactive)
-  (st--inbuffer)
+  (seriestracker--inbuffer)
   (let* ((pos (if (region-active-p) (region-beginning) (point)))
          (watched (get-char-property-and-overlay pos 'invisible))
-         (watch (not (-contains? watched 'st-watched))))
-    (st-watch watch)))
+         (watch (not (-contains? watched 'seriestracker-watched))))
+    (seriestracker-watch watch)))
 
 ;;;;; Dispatch (un)watch
 
-(defun st-watch (watch)
+(defun seriestracker-watch (watch)
   "WATCH at point."
   (let ((inhibit-read-only t)
-        (series (get-text-property (point) 'st-series))
-        (season (get-text-property (point) 'st-season))
-        (episode (get-text-property (point) 'st-episode)))
-    (cond ((region-active-p) (st-watch-region (region-beginning) (region-end) watch))
-          (episode (st-watch-episode watch))
-          (season (st-watch-season series season watch))
-          (t (st-watch-series series watch))))
+        (series (get-text-property (point) 'seriestracker-series))
+        (season (get-text-property (point) 'seriestracker-season))
+        (episode (get-text-property (point) 'seriestracker-episode)))
+    (cond ((region-active-p) (seriestracker-watch-region (region-beginning) (region-end) watch))
+          (episode (seriestracker-watch-episode watch))
+          (season (seriestracker-watch-season series season watch))
+          (t (seriestracker-watch-series series watch))))
   (forward-line))
 
 ;;;;; Region
 
-(defun st-watch-region (start end &optional watch)
+(defun seriestracker-watch-region (start end &optional watch)
   "WATCH region from START to END positions in the buffer."
-  (let ((start-series (get-text-property start 'st-series))
-        (start-season (get-text-property start 'st-season))
-        (start-episode (get-text-property start 'st-episode))
-        (end-series (get-text-property end 'st-series))
-        (end-season (get-text-property end 'st-season))
-        (end-episode (get-text-property end 'st-episode)))
-    (st--watch-region start-series start-season start-episode end-series end-season end-episode watch)
-    (st--update-watched-region start end watch)))
+  (let ((start-series (get-text-property start 'seriestracker-series))
+        (start-season (get-text-property start 'seriestracker-season))
+        (start-episode (get-text-property start 'seriestracker-episode))
+        (end-series (get-text-property end 'seriestracker-series))
+        (end-season (get-text-property end 'seriestracker-season))
+        (end-episode (get-text-property end 'seriestracker-episode)))
+    (seriestracker--watch-region start-series start-season start-episode end-series end-season end-episode watch)
+    (seriestracker--update-watched-region start end watch)))
 
 ;;;;; Episode
 
-(defun st-watch-episode (watch)
+(defun seriestracker-watch-episode (watch)
   "WATCH the episode at point."
-  (let ((start (previous-single-property-change (1+ (point)) 'st-episode))
-        (end (next-single-property-change (point) 'st-episode nil (point-max))))
-    (st-watch-region start end watch)))
+  (let ((start (previous-single-property-change (1+ (point)) 'seriestracker-episode))
+        (end (next-single-property-change (point) 'seriestracker-episode nil (point-max))))
+    (seriestracker-watch-region start end watch)))
 
 ;;;;; Season
 
-(defun st-watch-season (id seasonN watch)
+(defun seriestracker-watch-season (id seasonN watch)
   "WATCH SEASONN of series ID."
-  (let* ((start-season (previous-single-property-change (1+ (point)) 'st-season))
-         (start (next-single-property-change (1+ (point)) 'st-episode nil (point-max)))
-         (end (next-single-property-change start 'st-season nil (point-max))))
-    (st--watch-season id seasonN watch)
-    (st--update-watched-region start-season end watch)))
+  (let* ((start-season (previous-single-property-change (1+ (point)) 'seriestracker-season))
+         (start (next-single-property-change (1+ (point)) 'seriestracker-episode nil (point-max)))
+         (end (next-single-property-change start 'seriestracker-season nil (point-max))))
+    (seriestracker--watch-season id seasonN watch)
+    (seriestracker--update-watched-region start-season end watch)))
 
 ;;;;; Series
 
-(defun st-watch-series (id watch)
+(defun seriestracker-watch-series (id watch)
   "WATCH all episodes in series ID."
-  (let* ((start-series (previous-single-property-change (1+ (point)) 'st-series))
-         (start (next-single-property-change (1+ (point)) 'st-episode nil (point-max)))
-         (end (next-single-property-change start 'st-series nil (point-max))))
-    (st--watch-series id watch)
-    (st--update-watched-region start-series end watch)))
+  (let* ((start-series (previous-single-property-change (1+ (point)) 'seriestracker-series))
+         (start (next-single-property-change (1+ (point)) 'seriestracker-episode nil (point-max)))
+         (end (next-single-property-change start 'seriestracker-series nil (point-max))))
+    (seriestracker--watch-series id watch)
+    (seriestracker--update-watched-region start-series end watch)))
 
 ;;;;; Up
 
-(defun st-watch-up ()
+(defun seriestracker-watch-up ()
   "Watch up to episode at point."
   (interactive)
-  (st--inbuffer)
+  (seriestracker--inbuffer)
   (let* ((inhibit-read-only t)
-         (start-series (previous-single-property-change (1+ (point)) 'st-series))
-         (start-season (next-single-property-change start-series 'st-season nil (point-max)))
-         (start (next-single-property-change start-season 'st-episode nil (point-max)))
-         (end (next-single-property-change (1+ (point)) 'st-episode nil (point-max))))
-    (st-watch-region start end t)))
+         (start-series (previous-single-property-change (1+ (point)) 'seriestracker-series))
+         (start-season (next-single-property-change start-series 'seriestracker-season nil (point-max)))
+         (start (next-single-property-change start-season 'seriestracker-episode nil (point-max)))
+         (end (next-single-property-change (1+ (point)) 'seriestracker-episode nil (point-max))))
+    (seriestracker-watch-region start end t)))
 
 ;;;; Notes
 
-(defun st-add-note ()
+(defun seriestracker-add-note ()
   "Add a note on the episode at point."
   (interactive)
-  (st--inbuffer)
-  (unless (get-text-property (point) 'st-episode)
+  (seriestracker--inbuffer)
+  (unless (get-text-property (point) 'seriestracker-episode)
     (error "Cannot put a note on a series or season!"))
-  (let* ((series (get-text-property (point) 'st-series))
-         (season (get-text-property (point) 'st-season))
-         (episode (get-text-property (point) 'st-episode))
+  (let* ((series (get-text-property (point) 'seriestracker-series))
+         (season (get-text-property (point) 'seriestracker-season))
+         (episode (get-text-property (point) 'seriestracker-episode))
          (watch (get-text-property (point) 'invisible))
          (start (progn (move-beginning-of-line nil) (point)))
          (end (progn (forward-line 1) (point)))
          (note (read-from-minibuffer "Note: "))
          (note (if (string-equal "" note) nil note))
-         (st-date-face `(:inherit ,(if watch
-                                       'st-watched
-                                     (if (time-less-p (date-to-time (buffer-substring start (+ start 19))) (current-time))
-                                         'success
-                                       'error))
-                                  :weight ,(if note 'bold 'normal)))
-         (st-text-face `(:inherit ,(if watch
-                                       'st-watched
-                                     'default)
-                                  :weight ,(if note 'bold 'normal)))
+         (seriestracker-date-face `(:inherit ,(if watch
+                                                  'seriestracker-watched
+                                                (if (time-less-p (date-to-time (buffer-substring start (+ start 19))) (current-time))
+                                                    'success
+                                                  'error))
+                                             :weight ,(if note 'bold 'normal)))
+         (seriestracker-text-face `(:inherit ,(if watch
+                                                  'seriestracker-watched
+                                                'default)
+                                             :weight ,(if note 'bold 'normal)))
          (inhibit-read-only t))
-    (st--add-note series season episode note)
-    (put-text-property start end 'face st-text-face)
-    (put-text-property start (+ start 19) 'face st-date-face)
+    (seriestracker--add-note series season episode note)
+    (put-text-property start end 'face seriestracker-text-face)
+    (put-text-property start (+ start 19) 'face seriestracker-date-face)
     (put-text-property start end 'help-echo note)))
 
-(defun st--display-note ()
+(defun seriestracker--display-note ()
   "Display the note at point, if existing, in the minibuffer."
-  (let* ((series (get-text-property (point) 'st-series))
-         (season (get-text-property (point) 'st-season))
-         (episode (get-text-property (point) 'st-episode))
+  (let* ((series (get-text-property (point) 'seriestracker-series))
+         (season (get-text-property (point) 'seriestracker-season))
+         (episode (get-text-property (point) 'seriestracker-episode))
          (note (when episode
-                 (->> st--data
+                 (->> seriestracker--data
                    (--find (= series (alist-get 'id it)))
                    (alist-get 'episodes)
                    (--find (and (= season (alist-get 'season it))
@@ -917,91 +917,90 @@ The element under the cursor is used to decide whether to watch or unwatch."
 
 ;;;; Sort series
 
-(defun st-sort-next ()
+(defun seriestracker-sort-next ()
   "Sort series by date of next episode to watch."
   (interactive)
-  (st--inbuffer)
-  (defun st--first-next-date (series)
+  (seriestracker--inbuffer)
+  (defun seriestracker--first-next-date (series)
     (let ((dates (->> series
                    (alist-get 'episodes)
                    (--filter (not (alist-get 'watched it))))))
       (if dates
           (->> dates
-            (st--utils-array-pull 'air_date)
+            (seriestracker--utils-array-pull 'air_date)
             (--map (car (date-to-time it)))
             -min)
         0)))
-  (defun st--comp (a b)
-    (< (st--first-next-date a)
-       (st--first-next-date b)))
-  (setq st--data (-sort #'st--comp st--data)))
+  (defun seriestracker--comp (a b)
+    (< (seriestracker--first-next-date a)
+       (seriestracker--first-next-date b)))
+  (setq seriestracker--data (-sort #'seriestracker--comp seriestracker--data)))
 
-(defun st-sort-alpha ()
+(defun seriestracker-sort-alpha ()
   "Sort alphabetically."
   (interactive)
-  (st--inbuffer)
-  (defun st--comp (a b)
+  (seriestracker--inbuffer)
+  (defun seriestracker--comp (a b)
     (string< (alist-get 'name a)
              (alist-get 'name b)))
-  (setq st--data (-sort #'st--comp st--data)))
+  (setq seriestracker--data (-sort #'seriestracker--comp seriestracker--data)))
 
 ;;;; Update
 
-(defun st-update ()
+(defun seriestracker-update ()
   "Update the db and refresh the buffer."
   (interactive)
-  (st--inbuffer)
-  (st--update)
-  (st--refresh))
+  (seriestracker--inbuffer)
+  (seriestracker--update)
+  (seriestracker--refresh))
 
 ;;;; Keymap
 
-(defvar st-mode-map
+(defvar seriestracker-mode-map
   (let ((map (make-sparse-keymap)))
-    (define-key map "p" 'st-prev-line)
-    (define-key map "n" 'st-next-line)
-    (define-key map "C-p" 'st-prev)
-    (define-key map "C-n" 'st-next)
-    (define-key map "C-u" 'st-up)
-    (define-key map "C-b" 'st-prev-same)
-    (define-key map "C-f" 'st-next-same)
-    (define-key map "C-d" 'st-fold-at-point)
-    (define-key map "C-e" 'st-unfold-at-point)
-    (define-key map "h" 'st-dispatch)
-    (define-key map "U" 'st-update)
-    (define-key map "A" 'st-search)
-    (define-key map "w" 'st-toggle-watch)
-    (define-key map "u" 'st-watch-up)
-    (define-key map "W" 'st-toggle-display-watched)
-    (define-key map "N" 'st-add-note)
-    (define-key map "q" 'st-quit)
-    (define-key map [tab] 'st-cycle)
+    (define-key map "p" 'seriestracker-prev-line)
+    (define-key map "n" 'seriestracker-next-line)
+    (define-key map "C-p" 'seriestracker-prev)
+    (define-key map "C-n" 'seriestracker-next)
+    (define-key map "C-u" 'seriestracker-up)
+    (define-key map "C-b" 'seriestracker-prev-same)
+    (define-key map "C-f" 'seriestracker-next-same)
+    (define-key map "C-d" 'seriestracker-fold-at-point)
+    (define-key map "C-e" 'seriestracker-unfold-at-point)
+    (define-key map "h" 'seriestracker-dispatch)
+    (define-key map "U" 'seriestracker-update)
+    (define-key map "A" 'seriestracker-search)
+    (define-key map "w" 'seriestracker-toggle-watch)
+    (define-key map "u" 'seriestracker-watch-up)
+    (define-key map "W" 'seriestracker-toggle-display-watched)
+    (define-key map "N" 'seriestracker-add-note)
+    (define-key map "q" 'seriestracker-quit)
+    (define-key map [tab] 'seriestracker-cycle)
     map)
   "Keymap for series tracker mode.")
 
 ;;;; Mode
 
-(define-derived-mode st-mode special-mode "st"
+(define-derived-mode seriestracker-mode special-mode "seriestracker"
   "Series tracking with episodate.com."
-  (setq-local buffer-invisibility-spec '(t st-series st-season))
+  (setq-local buffer-invisibility-spec '(t seriestracker-series seriestracker-season))
   (setq-local max-lisp-eval-depth 10000)
-
-  (use-local-map st-mode-map))
+  (use-local-map seriestracker-mode-map))
 
 ;;; Autoload
 
 ;;;###autoload
-(defun st ()
-  "Run ST."
+(defun seriestracker ()
+  "Run seriestracker."
   (interactive)
-  (switch-to-buffer "st")
-  (st-mode)
-  (unless st--file (setq st--file (concat user-emacs-directory "st.el")))
-  (st--load)
-  (st--update)
-  (st--refresh)
-  (st--apply-watched))
+  (switch-to-buffer "seriestracker")
+  (seriestracker-mode)
+  (unless seriestracker--file (setq seriestracker--file (concat user-emacs-directory "seriestracker.el")))
+  (seriestracker--load)
+  (seriestracker--update)
+  (seriestracker--refresh)
+  (seriestracker--apply-watched))
 
-(provide 'st)
+(provide 'seriestracker)
 
-;;; st.el ends here
+;;; seriestracker.el ends here
