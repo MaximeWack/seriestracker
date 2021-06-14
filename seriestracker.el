@@ -79,9 +79,9 @@ returns '(1 3)"
     (move-beginning-of-line 1)
     (json-read-object)))
 
-;;;; --each-when
+;;;; seriestracker--each-when
 
-(defmacro --each-when (list cond &rest body)
+(defmacro seriestracker--each-when (list cond &rest body)
   "`--each', but apply a COND to the LIST before executing BODY."
   `(--each ,list
      (when ,cond ,@body)))
@@ -188,7 +188,7 @@ Adding an already existing series resets it."
 
 (defun seriestracker--watch-series (id watch)
   "WATCH all episodes in series ID."
-  (--each-when
+  (seriestracker--each-when
    seriestracker--data
    (= id (alist-get 'id it))
    (--each
@@ -215,7 +215,7 @@ Adding an already existing series resets it."
 
 (defun seriestracker--update ()
   "Update all non-finished series."
-  (--each-when
+  (seriestracker--each-when
    seriestracker--data
    (string-equal "Running" (alist-get 'status it))
    (seriestracker--update-series it)))
@@ -294,6 +294,10 @@ Adding an already existing series resets it."
     (error "Not in seriestracker buffer")))
 
 ;;;; Draw buffer
+
+(defvar seriestracker--fold-cycle 'seriestracker-all-folded
+  "Current folding status.
+Can be 'seriestracker-all-folded, 'seriestracker-series-folded, or 'seriestracker-all-unfolded")
 
 (defun seriestracker--refresh ()
   "Refresh the seriestracker buffer."
@@ -502,10 +506,6 @@ and ANY to go to any header even if hidden."
 
 ;;;; Cycle folding
 
-(defvar seriestracker--fold-cycle 'seriestracker-all-folded
-  "Current folding status.
-Can be 'seriestracker-all-folded, 'seriestracker-series-folded, or 'seriestracker-all-unfolded")
-
 (defun seriestracker-cycle ()
   "Cycle folding."
   (interactive)
@@ -571,7 +571,7 @@ Can be 'seriestracker-all-folded, 'seriestracker-series-folded, or 'seriestracke
 (defclass seriestracker-transient-variable (transient-variable)
   ((variable :initarg :variable)))
 
-(defclass seriestracker-transient-variable:choice (seriestracker-transient-variable)
+(defclass seriestracker-transient-variable-choice (seriestracker-transient-variable)
   ((name :initarg :name)
    (choices :initarg :choices)
    (default :initarg :default)
@@ -585,8 +585,8 @@ Can be 'seriestracker-all-folded, 'seriestracker-series-folded, or 'seriestracke
   "Method to read a new value for an `seriestracker-transient-variable' OBJ."
   (read-from-minibuffer "Save file: " (oref obj value)))
 
-(cl-defmethod transient-infix-read ((obj seriestracker-transient-variable:choice))
-  "Method to read a new value for an `seriestracker-transient-variable:choice' OBJ."
+(cl-defmethod transient-infix-read ((obj seriestracker-transient-variable-choice))
+  "Method to read a new value for an `seriestracker-transient-variable-choice' OBJ."
   (let ((choices (oref obj choices)))
     (if-let* ((value (oref obj value))
               (notlast (cadr (member value choices))))
@@ -598,8 +598,8 @@ Can be 'seriestracker-all-folded, 'seriestracker-series-folded, or 'seriestracke
   (oset obj value value)
   (set (oref obj variable) value))
 
-(cl-defmethod transient-infix-set ((obj seriestracker-transient-variable:choice) value)
-  "Method to set VALUE for an `seriestracker-transient-variable:choice' OBJ."
+(cl-defmethod transient-infix-set ((obj seriestracker-transient-variable-choice) value)
+  "Method to set VALUE for an `seriestracker-transient-variable-choice' OBJ."
   (oset obj value value)
   (set (oref obj variable) value)
   (funcall (oref obj action)))
@@ -612,8 +612,8 @@ Can be 'seriestracker-all-folded, 'seriestracker-series-folded, or 'seriestracke
      (propertize value 'face 'transient-value)
      (propertize ")" 'face 'transient-inactive-value))))
 
-(cl-defmethod transient-format-value ((obj seriestracker-transient-variable:choice))
-  "Method to form the value of an `seriestracker-transient-variable:choice' OBJ."
+(cl-defmethod transient-format-value ((obj seriestracker-transient-variable-choice))
+  "Method to form the value of an `seriestracker-transient-variable-choice' OBJ."
   (let* ((choices  (oref obj choices))
          (value    (oref obj value)))
     (concat
@@ -631,7 +631,7 @@ Can be 'seriestracker-all-folded, 'seriestracker-series-folded, or 'seriestracke
      (propertize "]" 'face 'transient-inactive-value))))
 
 (transient-define-infix seriestracker-infix-watched ()
-  :class 'seriestracker-transient-variable:choice
+  :class 'seriestracker-transient-variable-choice
   :choices '("show" "hide")
   :variable 'seriestracker-show-watched
   :description "Watched"
@@ -646,7 +646,7 @@ Can be 'seriestracker-all-folded, 'seriestracker-series-folded, or 'seriestracke
       (when (invisible-p (point)) (seriestracker-next)))))
 
 (transient-define-infix seriestracker-infix-sorting ()
-  :class 'seriestracker-transient-variable:choice
+  :class 'seriestracker-transient-variable-choice
   :choices '("alpha" "next")
   :variable 'seriestracker-sorting-type
   :description "Sorting"
@@ -917,11 +917,8 @@ The element under the cursor is used to decide whether to watch or unwatch."
 
 ;;;; Sort series
 
-(defun seriestracker-sort-next ()
-  "Sort series by date of next episode to watch."
-  (interactive)
-  (seriestracker--inbuffer)
-  (defun seriestracker--first-next-date (series)
+(defun seriestracker--first-next-date (series)
+  "Helper function to find the date for the next episode in SERIES"
     (let ((dates (->> series
                    (alist-get 'episodes)
                    (--filter (not (alist-get 'watched it))))))
@@ -931,19 +928,28 @@ The element under the cursor is used to decide whether to watch or unwatch."
             (--map (car (date-to-time it)))
             -min)
         0)))
-  (defun seriestracker--comp (a b)
+
+(defun seriestracker--comp-date (a b)
+  "Helper function to compare dates A and B."
     (< (seriestracker--first-next-date a)
        (seriestracker--first-next-date b)))
-  (setq seriestracker--data (-sort #'seriestracker--comp seriestracker--data)))
+
+(defun seriestracker-sort-next ()
+  "Sort series by date of next episode to watch."
+  (interactive)
+  (seriestracker--inbuffer)
+  (setq seriestracker--data (-sort #'seriestracker--comp-date seriestracker--data)))
+
+(defun seriestracker--comp-name (a b)
+  "Helper function to compare names A and B."
+    (string< (alist-get 'name a)
+             (alist-get 'name b)))
 
 (defun seriestracker-sort-alpha ()
   "Sort alphabetically."
   (interactive)
   (seriestracker--inbuffer)
-  (defun seriestracker--comp (a b)
-    (string< (alist-get 'name a)
-             (alist-get 'name b)))
-  (setq seriestracker--data (-sort #'seriestracker--comp seriestracker--data)))
+  (setq seriestracker--data (-sort #'seriestracker--comp-name seriestracker--data)))
 
 ;;;; Update
 
