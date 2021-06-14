@@ -258,7 +258,7 @@ Adding an already existing series resets it."
   "Load the database from `seriestracker-file'."
   (with-temp-buffer
     (insert-file-contents seriestracker-file t)
-    (cl-assert (eq (point) (point-min)))
+    (cl-assert (bobp))
     (setq seriestracker--data (read (current-buffer)))))
 
 ;;; Interface
@@ -530,8 +530,7 @@ and ANY to go to any header even if hidden."
   (save-excursion
     (seriestracker--unfold-all)
     (goto-char 1)
-    (while (< (point)
-              (point-max))
+    (while (not (eobp))
       (seriestracker-fold-at-point)
       (seriestracker--move 'next nil t))))
 
