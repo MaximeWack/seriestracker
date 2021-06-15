@@ -160,23 +160,23 @@ Adding an already existing series resets it."
                     (1+ series1))))
     (--each
         seriestracker--data
-      (setq series-index it-index)
-      (setf (alist-get 'episodes it)
-            (--map-when
-             (and (or (> series-index series1)
-                      (and (= series-index series1)
-                           (or (> (alist-get 'season it) start-season)
-                               (and (= (alist-get 'season it) start-season)
-                                    (>= (alist-get 'episode it) start-episode)))))
-                  (or (< series-index series2)
-                      (and (= series-index series2)
-                           (or (< (alist-get 'season it) (or end-season 0))
-                               (and (= (alist-get 'season it) (or end-season 0))
-                                    (< (alist-get 'episode it) (or end-episode 0)))))))
-             (progn
-               (setf (alist-get 'watched it) watch)
-               it)
-             (alist-get 'episodes it))))))
+      (let ((series-index it-index))
+           (setf (alist-get 'episodes it)
+                 (--map-when
+                  (and (or (> series-index series1)
+                           (and (= series-index series1)
+                                (or (> (alist-get 'season it) start-season)
+                                    (and (= (alist-get 'season it) start-season)
+                                         (>= (alist-get 'episode it) start-episode)))))
+                       (or (< series-index series2)
+                           (and (= series-index series2)
+                                (or (< (alist-get 'season it) (or end-season 0))
+                                    (and (= (alist-get 'season it) (or end-season 0))
+                                         (< (alist-get 'episode it) (or end-episode 0)))))))
+                  (progn
+                    (setf (alist-get 'watched it) watch)
+                    it)
+                  (alist-get 'episodes it)))))))
 
 ;;;;; Watch season
 
