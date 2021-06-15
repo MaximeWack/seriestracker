@@ -51,8 +51,7 @@ alist-select '(a c) '((a .1) (b , \"b\") (c . c)
 returns '((a . 1) (c . c))"
   (->> fields
     reverse
-    (--reduce-from (acons it (alist-get it alist) acc)
-                   nil)))
+    (--reduce-from (cons (cons it (alist-get it alist)) acc) nil)))
 
 ;;;; array-select
 
