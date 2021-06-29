@@ -403,7 +403,7 @@ If first episode of a season, print the season number."
   "Move one visible line down."
   (interactive)
   (seriestracker--inbuffer)
-  (next-line)
+  (line-move 1)
   (seriestracker--display-note))
 
 (defun seriestracker-up ()
