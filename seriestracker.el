@@ -916,7 +916,7 @@ The element under the cursor is used to decide whether to watch or unwatch."
 ;;;; Sort series
 
 (defun seriestracker--first-next-date (series)
-  "Helper function to find the date for the next episode in SERIES"
+  "Helper function to find the date for the next episode in SERIES."
     (let ((dates (->> series
                    (alist-get 'episodes)
                    (--filter (not (alist-get 'watched it))))))
