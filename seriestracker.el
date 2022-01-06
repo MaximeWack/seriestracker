@@ -173,7 +173,8 @@ Adding an already existing series resets it."
                                     (and (= (alist-get 'season it) (or end-season 0))
                                          (< (alist-get 'episode it) (or end-episode 0)))))))
                   (progn
-                    (setf (alist-get 'watched it) watch)
+                    (when (time-less-p (date-to-time (alist-get 'air_date it)) (current-time))
+                        (setf (alist-get 'watched it) watch))
                     it)
                   (alist-get 'episodes it)))))))
 
@@ -192,7 +193,8 @@ Adding an already existing series resets it."
    (= id (alist-get 'id it))
    (--each
        (alist-get 'episodes it)
-     (setf (alist-get 'watched it) watch))))
+     (when (time-less-p (date-to-time (alist-get 'air_date it)) (current-time))
+       (setf (alist-get 'watched it) watch)))))
 
 ;;;; Notes
 
@@ -755,18 +757,17 @@ The selected sorting strategy is applied after adding the new series."
                 :weight))
          (start (progn (move-beginning-of-line nil) (point)))
          (end (progn (forward-line 1) (point)))
+         (released (when episode (time-less-p (date-to-time (buffer-substring start (+ start 19))) (current-time))))
          (seriestracker-date-face (when episode
-                                    `(:inherit ,(if watch
-                                                    'seriestracker-watched
-                                                  (if (time-less-p (date-to-time (buffer-substring start (+ start 19))) (current-time))
-                                                      'success
-                                                    'error))
+                                    `(:inherit ,(cond (watch 'seriestracker-watched)
+                                                      (released 'success)
+                                                      (t 'error))
                                                :weight ,note)))
          (seriestracker-text-face `(:inherit ,(if watch
                                                   'seriestracker-watched
                                                 'default)
                                              :weight ,note)))
-    (cond (episode
+    (cond ((and episode released)
            (if watch
                (put-text-property start end 'invisible 'seriestracker-watched)
              (put-text-property start end 'invisible nil))
