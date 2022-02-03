@@ -6,24 +6,18 @@ It makes use of the API provided by [[https://www.episodate.com][Episodate]]. Ma
 
 * Install
 
-** Manual install
-
-Clone this repo.
+The package is on MELPA, but you can still install the development version by cloning this repo and specifying the ~:load-path~ in ~use-package~.
 
 #+begin_src elisp
 (use-package seriestracker
   :load-path "/path/to/seriestracker")
-#+end_src>
-
-** MELPA
-
-Package submission is underway.
+#+end_src
 
 * Configure
 
 #+begin_src elisp
 (use-package seriestracker
-  :demand                                                   ;;To force load seriestracker
+  :demand                                                   ;;To force loading seriestracker
   :config                                                   ;;These are the default
   (setq seriestracker-file (concat user-emacs-directory "seriestracker.el"
         seriestracker--fold-cycle 'seriestracker-all-folded ;; can also be 'seriestracker-all-unfolded or 'seriestracker-series-folded. Will deternine the folding at startup
