@@ -356,16 +356,18 @@ If first episode of a season, print the season number."
          (watched (alist-get 'watched episode))
          (note (alist-get 'note episode))
          (seriestracker-watched (if watched 'seriestracker-watched nil))
-         (seriestracker-date-face `(:inherit ,(if watched
-                                                  'seriestracker-watched
-                                                (if (time-less-p (date-to-time air_date) (current-time))
-                                                    'success
-                                                  'error))
-                                             :weight ,(if note 'bold 'normal)))
+         (seriestracker-date-face `(:inherit ,(cond (watched 'seriestracker-watched)
+                                                    ((time-less-p (date-to-time air_date) (current-time)) 'success)
+                                                    (t 'error))
+                                             :weight ,(if note
+                                                          'bold
+                                                        'normal)))
          (seriestracker-text-face `(:inherit ,(if watched
                                                   'seriestracker-watched
                                                 'default)
-                                             :weight ,(if note 'bold 'normal)))
+                                             :weight ,(if note
+                                                          'bold
+                                                        'normal)))
          (start (point)))
     (when (= episodeN 1)
       (setq start (+ start 8 (length (int-to-string seasonN))))
