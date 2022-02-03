@@ -89,14 +89,18 @@ returns '(1 3)"
 
 ;;;; search
 
-(defun seriestracker--search (name)
-  "Search episodate.com db for NAME."
-  (->> (let ((url-request-method "GET"))
-         (url-retrieve-synchronously (concat "https://www.episodate.com/api/search?q=" name)))
-    seriestracker--getJSON
-    (seriestracker--utils-alist-select '(tv_shows))
-    cdar
-    (seriestracker--utils-array-select '(id name start_date status network permalink))))
+(defun seriestracker--search (name &optional page acc)
+  "Search episodate.com db for NAME.
+Recursively get page PAGE, carrying results in ACC."
+  (let* ((page (or page 1))
+         (url-request-method "GET")
+         (res (url-retrieve-synchronously (concat "https://www.episodate.com/api/search?q=" name "&page=" (int-to-string page))))
+         (json (seriestracker--getJSON res))
+         (numpages (alist-get 'pages json))
+         (content (seriestracker--utils-array-select '(id permalink) (cdar (seriestracker--utils-alist-select '(tv_shows) json)))))
+    (message (concat "Fetching page " (int-to-string page) "/" (int-to-string numpages)))
+    (cond ((= page numpages) (append acc content))
+          (t (seriestracker--search name (1+ page) (append acc content))))))
 
 ;;;; series
 
