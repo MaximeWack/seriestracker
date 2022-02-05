@@ -257,7 +257,10 @@ Adding an already existing series resets it."
   (with-temp-file seriestracker-file
     (let ((print-level nil)
           (print-length nil))
-      (prin1 seriestracker--data (current-buffer)))))
+      (prin1 seriestracker--data (current-buffer))
+      (replace-string ")) " "))\n" nil 0 (point-max))
+      (replace-string " (episodes" "\n(episodes" nil 0 (point-max))
+      (lisp-indent-region 0 (point-max)))))
 
 (defun seriestracker--load ()
   "Load the database from `seriestracker-file'."
