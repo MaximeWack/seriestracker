@@ -35,6 +35,8 @@
 
 ;;; Requirements
 
+;; Libraries that we will need
+
 (require 'url)                                                                  ; used to fetch api data
 (require 'json)                                                                 ; used to parse api response
 (require 'dash)                                                                 ; threading etc.
@@ -42,7 +44,12 @@
 
 ;;; Helpers
 
+;; Some helpers to manipulate lists created from JSON data
+;; JSON produces collections of alists (an "array" here)
+
 ;;;; alist-select
+
+;; We first need a function to select fields from an alist
 
 (defun seriestracker--utils-alist-select (fields alist)
   "Keep only FIELDS in ALIST.
@@ -55,6 +62,8 @@ returns '((a . 1) (c . c))"
 
 ;;;; array-select
 
+;; Extended to an array
+
 (defun seriestracker--utils-array-select (fields array)
   "Keep only FIELDS in every alist in the ARRAY.
 array-select '(a c) '(((a . 1) (b . 2) (c . c)) ((a . 3) (b . 5) (c . d)))
@@ -63,6 +72,8 @@ returns '(((a . 1) (c . c)) ((a . 3) (c . d)))"
 
 ;;;; array-pull
 
+;; Pull ONE field from an array, as a simple list of values
+
 (defun seriestracker--utils-array-pull (field array)
   "Keep only FIELD in every alist in the ARRAY and flatten.
 array-pull 'a '(((a . 1) (b . 2)) ((a . 3) (b . 4)))
@@ -70,6 +81,8 @@ returns '(1 3)"
   (--map (alist-get field it) array))
 
 ;;;; getJSON
+
+;; Extract and parse the JSON from the returned url buffer
 
 (defun seriestracker--getJSON (url-buffer)
   "Parse the JSON in the URL-BUFFER returned by url."
@@ -80,14 +93,22 @@ returns '(1 3)"
 
 ;;;; seriestracker--each-when
 
+;; Most operations are conditional each, so we define an adequate macro
+;; We use each for its side-effects, mainly being able to setf
+
 (defmacro seriestracker--each-when (list cond &rest body)
-  "`--each', but apply a COND to the LIST before executing BODY."
+  "`--each', but check a COND before executing BODY on an element of the LIST."
   `(--each ,list
      (when ,cond ,@body)))
 
 ;;; episodate.com API
 
+;; The episodate.com API exposes two functions useful to us: search and show-details
+
 ;;;; search
+
+;; Search for a term and return all matching series
+;; to display for choice in the minibuffer and to fetch
 
 (defun seriestracker--search (name &optional page acc)
   "Search episodate.com db for NAME.
@@ -104,11 +125,16 @@ Recursively get page PAGE, carrying results in ACC."
 
 ;;;; series
 
+;; The list of episodes in a series is converted from JSON as a vector
+;; This converts all vectors to lists by simply mapping identity
+
 (defun seriestracker--episodes (series)
   "Transform the episodes of SERIES from a vector to a list."
   (setf (alist-get 'episodes series)
         (--map it (alist-get 'episodes series)))
   series)
+
+;; Fetch a series
 
 (defun seriestracker--series (id)
   "Get series ID info."
@@ -121,7 +147,12 @@ Recursively get page PAGE, carrying results in ACC."
 
 ;;; Internal API
 
+;; Here we define an API to expose our internal representation of data
+
 ;;;; Data model
+
+;; The data model is an array of series, each containing an array of episodes
+;; To the properties from the external API we will add a watched status and notes
 
 (defvar seriestracker--data nil
   "Internal data containing followed series and episode.
@@ -135,6 +166,9 @@ episodes props are season, episode, name, and air_date.")
 
 ;;;; Add/remove
 ;;;;; Add series
+
+;; A series is added by first removing it in case it is already is here
+;; then cons-ing it to the data
 
 (defun seriestracker--add (id)
   "Add series with ID to `seriestracker--data'.
@@ -153,7 +187,8 @@ Adding an already existing series resets it."
 
 ;;;; Watch
 
-;;;;; Watch region
+;; General watch-region function that will be also used to watch single episodes, whole seasons, and whole series
+;; Seasons and episodes are numbered, but series are not so we use indexes to apply to a range of series
 
 (defun seriestracker--watch-region (start-series start-season start-episode end-series end-season end-episode watch)
   "WATCH from START-EPISODE of START-SEASON of START-SERIES to END-EPISODE of END-SEASON of END-SERIES."
@@ -202,7 +237,8 @@ Adding an already existing series resets it."
 
 ;;;; Notes
 
-;;;;; Add note
+;; Notes can be added to any episode, but it must be an episode
+;; An empty note is a deleted note
 
 (defun seriestracker--add-note (id seasonN episodeN note)
   "Add a NOTE to EPISODEN of SEASONN in series ID."
@@ -218,12 +254,16 @@ Adding an already existing series resets it."
 
 ;;;; Query updates
 
+;; Call update-series on all running series
+
 (defun seriestracker--update ()
   "Update all non-finished series."
   (seriestracker--each-when
    seriestracker--data
    (string-equal "Running" (alist-get 'status it))
    (seriestracker--update-series it)))
+
+;; To update a series, it is first reset, then the watch status and notes are propagated by indices
 
 (defun seriestracker--update-series (series)
   "Update the SERIES."
@@ -249,8 +289,12 @@ Adding an already existing series resets it."
 
 ;;;; Load/save data
 
+;; Default location for the data is in the user emacs directory
+
 (defvar seriestracker-file (concat user-emacs-directory "seriestracker.el")
   "Location of the save file.")
+
+;; Save by printing a READable object to the file
 
 (defun seriestracker--save ()
   "Save the database to `seriestracker-file'."
@@ -262,6 +306,8 @@ Adding an already existing series resets it."
       (replace-string " (episodes" "\n(episodes" nil 0 (point-max))
       (lisp-indent-region 0 (point-max)))))
 
+;; Load by READing from the content of the file in a temporary buffer
+
 (defun seriestracker--load ()
   "Load the database from `seriestracker-file'."
   (with-temp-buffer
@@ -271,7 +317,14 @@ Adding an already existing series resets it."
 
 ;;; Interface
 
+;; Here we will define all user facing functions and UI elements
+
 ;;;; Faces
+
+;; Faces for series
+;; inherit from two levels of outline-mode
+;; shadowed for finished series
+;; striked through for watched episodes
 
 (defface seriestracker-series
   '((t (:inherit outline-1)))
@@ -295,6 +348,8 @@ Adding an already existing series resets it."
 
 ;;;; Check if in seriestracker buffer
 
+;; Helper function to check we are indeed in the correct buffer running the mode
+
 (defun seriestracker--inbuffer ()
   "Check if we are in the seriestracker buffer in seriestracker mode."
   (unless (and (string-equal (buffer-name) "seriestracker")
@@ -303,9 +358,13 @@ Adding an already existing series resets it."
 
 ;;;; Draw buffer
 
+;; Fold cycle status
+
 (defvar seriestracker--fold-cycle 'seriestracker-all-folded
   "Current folding status.
 Can be 'seriestracker-all-folded, 'seriestracker-series-folded, or 'seriestracker-all-unfolded")
+
+;; Store position, redraw buffer, restore position and fold cycle
 
 (defun seriestracker--refresh ()
   "Refresh the seriestracker buffer."
@@ -320,12 +379,18 @@ Can be 'seriestracker-all-folded, 'seriestracker-series-folded, or 'seriestracke
         ((eq seriestracker--fold-cycle 'seriestracker-series-folded)
          (seriestracker--unfold-all-series))))
 
+;; Erase the buffer and draw every series
+
 (defun seriestracker--draw-buffer ()
   "Draw the buffer.
 Erase first then redraw the whole buffer."
   (let ((inhibit-read-only t))
     (erase-buffer)
     (-each seriestracker--data 'seriestracker--draw-series)))
+
+;; Draw the series title, then all episodes
+;; Text properties are used to tag series, seasons and episodes, as well as the watched status and notes
+;; previous/next-single-property-change functions help navigating in the buffer
 
 (defun seriestracker--draw-series (series)
   "Print the SERIES id and name."
@@ -346,6 +411,8 @@ Erase first then redraw the whole buffer."
                         'face seriestracker-face
                         'invisible seriestracker-watched))
     (--each episodes (seriestracker--draw-episode series it))))
+
+;; Draw each episode, with the correct faces etc.
 
 (defun seriestracker--draw-episode (series episode)
   "Print EPISODE from SERIES.
@@ -396,6 +463,11 @@ If first episode of a season, print the season number."
 
 ;;;; Movements
 
+;; Move to previous line
+;; Continue backwards while landing on invisible line
+;; If reaching the beginning of the file, go to the next line
+;; Display the note at point
+
 (defun seriestracker-prev-line ()
   "Move one visible line up."
   (interactive)
@@ -410,12 +482,18 @@ If first episode of a season, print the season number."
     (seriestracker--move 'next))
   (seriestracker--display-note))
 
+;; Move to next line
+
 (defun seriestracker-next-line ()
   "Move one visible line down."
   (interactive)
   (seriestracker--inbuffer)
   (line-move 1)
   (seriestracker--display-note))
+
+;; Move up the hierarchy
+;; episode -> season
+;; season -> series
 
 (defun seriestracker-up ()
   "Move up in the hierarchy."
@@ -425,6 +503,8 @@ If first episode of a season, print the season number."
         (episode (get-text-property (point) 'seriestracker-episode)))
     (cond (episode (goto-char (previous-single-property-change (point) 'seriestracker-season)))
           (season (goto-char (previous-single-property-change (point) 'seriestracker-series))))))
+
+;; Generic function to move semantically in the hierarchy
 
 (defun seriestracker--move (dir &optional same any)
   "Move in direction DIR in the hierarchy.
@@ -446,11 +526,15 @@ and ANY to go to any header even if hidden."
   (unless any
     (when (invisible-p (point)) (seriestracker--move dir same))))
 
+;; Move to previous node
+
 (defun seriestracker-prev ()
   "Move to the previous visible node."
   (interactive)
   (seriestracker--inbuffer)
   (seriestracker--move 'prev))
+
+;; Move to next node
 
 (defun seriestracker-next ()
   "Move to the next visible node."
@@ -458,11 +542,15 @@ and ANY to go to any header even if hidden."
   (seriestracker--inbuffer)
   (seriestracker--move 'next))
 
+;; Move to previous node of the same level
+
 (defun seriestracker-prev-same ()
   "Move to the previous visible node of the same level."
   (interactive)
   (seriestracker--inbuffer)
   (seriestracker--move 'prev t))
+
+;; Move to the next node of the same level
 
 (defun seriestracker-next-same ()
   "Move to the next visible node of the same level."
@@ -471,6 +559,12 @@ and ANY to go to any header even if hidden."
   (seriestracker--move 'next t))
 
 ;;;; Folding
+
+;; Folding uses the 'invisible overlay with two values:
+;; - seriestracker-season for folding seasons
+;; - seriestracker-series for folding series
+
+;;;;; Dispatch folding
 
 (defun seriestracker-fold-at-point (&optional unfold)
   "Fold or UNFOLD the section at point."
@@ -488,6 +582,10 @@ and ANY to go to any header even if hidden."
   (seriestracker--inbuffer)
   (seriestracker-fold-at-point t))
 
+;;;;; Fold episodes
+
+;; Folding on an episode folds the season
+
 (defun seriestracker--fold-episodes (&optional unfold)
   "Fold or UNFOLD the episodes at point."
   (let* ((season-start (previous-single-property-change (point) 'seriestracker-season))
@@ -497,6 +595,8 @@ and ANY to go to any header even if hidden."
         (remove-overlays fold-start fold-end 'invisible 'seriestracker-season)
       (overlay-put (make-overlay fold-start fold-end) 'invisible 'seriestracker-season))))
 
+;;;;; Fold seasons
+
 (defun seriestracker--fold-season (&optional unfold)
   "Fold or UNFOLD the season at point."
   (let* ((fold-start (next-single-property-change (point) 'seriestracker-episode))
@@ -504,6 +604,8 @@ and ANY to go to any header even if hidden."
     (if unfold
         (remove-overlays fold-start fold-end 'invisible 'seriestracker-season)
       (overlay-put (make-overlay fold-start fold-end) 'invisible 'seriestracker-season))))
+
+;;;;; Fold series
 
 (defun seriestracker--fold-series (&optional unfold)
   "Fold or UNFOLD the series at point."
@@ -515,6 +617,8 @@ and ANY to go to any header even if hidden."
         (overlay-put (make-overlay fold-start fold-end) 'invisible 'seriestracker-series)))))
 
 ;;;; Cycle folding
+
+;; Cycle between all unfolded, seasons folded, series folded
 
 (defun seriestracker-cycle ()
   "Cycle folding."
@@ -530,10 +634,14 @@ and ANY to go to any header even if hidden."
          (seriestracker--fold-all)
          (setq seriestracker--fold-cycle 'seriestracker-all-folded))))
 
+;; Unfolding all is simply removing all overlays
+
 (defun seriestracker--unfold-all ()
   "Unfold everything."
   (remove-overlays (point-min) (point-max) 'invisible 'seriestracker-series)
   (remove-overlays (point-min) (point-max) 'invisible 'seriestracker-season))
+
+;; Folding all is unfolding all then folding everything
 
 (defun seriestracker--fold-all ()
   "Fold everything."
@@ -544,6 +652,8 @@ and ANY to go to any header even if hidden."
       (seriestracker-fold-at-point)
       (seriestracker--move 'next nil t))))
 
+;; Folding only the seasons is folding all then unfolding the series
+
 (defun seriestracker--unfold-all-series ()
   "Unfold all series."
   (seriestracker--fold-all)
@@ -551,11 +661,15 @@ and ANY to go to any header even if hidden."
 
 ;;;; Transient
 
+;;;;; Settings
+
 (defvar seriestracker-show-watched "hide"
   "Current strategy for dealing with watched episodes.")
 
 (defvar seriestracker-sorting-type "next"
   "Current strategy for sorting series.")
+
+;;;;; Transient dispatch
 
 (transient-define-prefix seriestracker-dispatch ()
   "Command dispatch for seriestracker."
@@ -686,6 +800,8 @@ and ANY to go to any header even if hidden."
 
 ;;;; Load/save data
 
+;; Interactive functions to load and save, simply call the corresponding functions in the API
+
 (defun seriestracker-save ()
   "Save the database."
   (interactive)
@@ -701,6 +817,8 @@ and ANY to go to any header even if hidden."
 
 ;;;; Quit
 
+;; Quit is saving, wiping data and killing the window
+
 (defun seriestracker-quit ()
   "Save the db and close the buffer."
   (interactive)
@@ -710,6 +828,12 @@ and ANY to go to any header even if hidden."
   (kill-buffer-and-window))
 
 ;;;; Add series
+
+;; To add series:
+;; - prompt for a search term
+;; - call the episodate API
+;; - prompt with completion for a series to add
+;; - add the series and sort
 
 (defun seriestracker-search ()
   "Search for a series, and add the selected series to the database.
@@ -729,6 +853,11 @@ The selected sorting strategy is applied after adding the new series."
 
 ;;;; Remove series
 
+;; Get the series id and name at point
+;; remove the series
+;; delete the region in the buffer
+;; move to the next series
+
 (defun seriestracker-remove ()
   "Remove series at point."
   (interactive)
@@ -745,6 +874,8 @@ The selected sorting strategy is applied after adding the new series."
 
 ;;;;; Update appearance watched region
 
+;; Update all the watched lines in the updated region
+
 (defun seriestracker--update-watched-region (start end &optional watch)
   "Update the buffer for change in WATCH between START and END."
   (let* ((startline (line-number-at-pos start))
@@ -753,6 +884,11 @@ The selected sorting strategy is applied after adding the new series."
       (--each
           (number-sequence startline endline)
         (seriestracker--update-watched-line it watch)))))
+
+;; Update a line:
+;; - update all the faces combinations for text and date
+;; - update watched face
+;; - compute if series or season all watched
 
 (defun seriestracker--update-watched-line (linum watch)
   "Update a single line LINUM for WATCH status."
@@ -799,6 +935,8 @@ The selected sorting strategy is applied after adding the new series."
 
 ;;;;; Toggle watch
 
+;; (un)watch a region
+
 (defun seriestracker-toggle-watch ()
   "Toggle watch at point.
 The element under the cursor is used to decide whether to watch or unwatch."
@@ -810,6 +948,8 @@ The element under the cursor is used to decide whether to watch or unwatch."
     (seriestracker-watch watch)))
 
 ;;;;; Dispatch (un)watch
+
+;; Dispatch (un)watch by setting start and end for watch-region
 
 (defun seriestracker-watch (watch)
   "WATCH at point."
@@ -824,6 +964,10 @@ The element under the cursor is used to decide whether to watch or unwatch."
   (forward-line))
 
 ;;;;; Region
+
+;; Watch a region from start to end:
+;; - watch with the API
+;; - update the corresponding buffer region
 
 (defun seriestracker-watch-region (start end &optional watch)
   "WATCH region from START to END positions in the buffer."
@@ -866,6 +1010,8 @@ The element under the cursor is used to decide whether to watch or unwatch."
 
 ;;;;; Up
 
+;; Special case of watching : watch the whole series up to the episode at point
+
 (defun seriestracker-watch-up ()
   "Watch up to episode at point."
   (interactive)
@@ -878,6 +1024,10 @@ The element under the cursor is used to decide whether to watch or unwatch."
     (seriestracker-watch-region start end t)))
 
 ;;;; Notes
+
+;; Read a note from the minibuffer and add it to the episode at point
+;; If the note is empty, remove the note
+;; Update the buffer by changing the text properties of the line
 
 (defun seriestracker-add-note ()
   "Add a note on the episode at point."
@@ -909,6 +1059,8 @@ The element under the cursor is used to decide whether to watch or unwatch."
     (put-text-property start (+ start 19) 'face seriestracker-date-face)
     (put-text-property start end 'help-echo note)))
 
+;; Display the note at point, if existing, in the minibuffer
+
 (defun seriestracker--display-note ()
   "Display the note at point, if existing, in the minibuffer."
   (let* ((series (get-text-property (point) 'seriestracker-series))
@@ -925,6 +1077,12 @@ The element under the cursor is used to decide whether to watch or unwatch."
 
 ;;;; Sort series
 
+;;;;; By next airing date
+
+;; Helper to get the date of the first next episode to air in a series
+;; Get all dates of unwatched episodes (if there is at all)
+;; Convert to time and get the minimum value
+
 (defun seriestracker--first-next-date (series)
   "Helper function to find the date for the next episode in SERIES."
     (let ((dates (->> series
@@ -937,10 +1095,14 @@ The element under the cursor is used to decide whether to watch or unwatch."
             -min)
         0)))
 
+;; Compare two series by their first next airing date
+
 (defun seriestracker--comp-date (a b)
   "Helper function to compare dates A and B."
     (< (seriestracker--first-next-date a)
        (seriestracker--first-next-date b)))
+
+;; Sort series by first next airing date
 
 (defun seriestracker-sort-next ()
   "Sort series by date of next episode to watch."
@@ -948,10 +1110,16 @@ The element under the cursor is used to decide whether to watch or unwatch."
   (seriestracker--inbuffer)
   (setq seriestracker--data (-sort #'seriestracker--comp-date seriestracker--data)))
 
+;;;;; By name
+
+;; Compare two series by their name
+
 (defun seriestracker--comp-name (a b)
   "Helper function to compare names A and B."
     (string< (alist-get 'name a)
              (alist-get 'name b)))
+
+;; Sort series by name
 
 (defun seriestracker-sort-alpha ()
   "Sort alphabetically."
@@ -961,6 +1129,8 @@ The element under the cursor is used to decide whether to watch or unwatch."
 
 ;;;; Update
 
+;; Update the db and refresh the buffer
+
 (defun seriestracker-update ()
   "Update the db and refresh the buffer."
   (interactive)
@@ -969,6 +1139,8 @@ The element under the cursor is used to decide whether to watch or unwatch."
   (seriestracker--refresh))
 
 ;;;; Keymap
+
+;; Define the keymap used by the mode. Use outline-like controls
 
 (defvar seriestracker-mode-map
   (let ((map (make-sparse-keymap)))
@@ -995,6 +1167,8 @@ The element under the cursor is used to decide whether to watch or unwatch."
 
 ;;;; Mode
 
+;; Define the mode as derived from special-mode
+
 (define-derived-mode seriestracker-mode special-mode "seriestracker"
   "Series tracking with episodate.com."
   (setq-local buffer-invisibility-spec '(t seriestracker-series seriestracker-season))
@@ -1002,6 +1176,8 @@ The element under the cursor is used to decide whether to watch or unwatch."
   (use-local-map seriestracker-mode-map))
 
 ;;; Autoload
+
+;; Autoload to expose (seriestracker), the entry point, after loading the package
 
 ;;;###autoload
 (defun seriestracker ()
