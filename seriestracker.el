@@ -862,11 +862,14 @@ The selected sorting strategy is applied after adding the new series."
   "Remove series at point."
   (interactive)
   (seriestracker--inbuffer)
-  (let ((inhibit-read-only t)
-        (series (get-text-property (point) 'seriestracker-series))
-        (start (previous-single-property-change (1+ (point)) 'seriestracker-series nil (point-min)))
-        (end (next-single-property-change (point) 'seriestracker-series nil (point-max))))
-    (when (y-or-n-p "Are you sure you want to delete this series? ")
+  (let* ((inhibit-read-only t)
+         (series (get-text-property (point) 'seriestracker-series))
+         (start (previous-single-property-change (1+ (point)) 'seriestracker-series nil (point-min)))
+         (end (next-single-property-change (point) 'seriestracker-series nil (point-max)))
+         (seriesname (->> seriestracker--data
+                          (--find (= series (alist-get 'id it)))
+                          (alist-get 'name))))
+    (when (y-or-n-p (concat "Are you sure you want to delete " seriesname "? "))
       (seriestracker--remove series)
       (delete-region start end))))
 
