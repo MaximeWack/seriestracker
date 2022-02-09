@@ -163,10 +163,9 @@ episodes props are season, episode, name, and air_date.")
 (defun seriestracker--add (id)
   "Add series with ID to `seriestracker--data'.
 Adding an already existing series resets it."
+  (seriestracker--remove id)
   (setq seriestracker--data
-        (--> seriestracker--data
-          (--remove (= id (alist-get 'id it)) it)
-          (-snoc it (seriestracker--series id)))))
+          (cons (seriestracker--series id) seriestracker--data)))
 
 ;;;;; Remove series
 
