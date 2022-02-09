@@ -217,24 +217,6 @@ Adding an already existing series resets it."
                     it)
                   (alist-get 'episodes it)))))))
 
-;;;;; Watch season
-
-(defun seriestracker--watch-season (id seasonN watch)
-  "WATCH all episodes in SEASONN of series ID."
-  (seriestracker--watch-region id seasonN 1 id (1+ seasonN) 0 watch))
-
-;;;;; Watch series
-
-(defun seriestracker--watch-series (id watch)
-  "WATCH all episodes in series ID."
-  (seriestracker--each-when
-   seriestracker--data
-   (= id (alist-get 'id it))
-   (--each
-       (alist-get 'episodes it)
-     (when (time-less-p (date-to-time (alist-get 'air_date it)) (current-time))
-       (setf (alist-get 'watched it) watch)))))
-
 ;;;; Notes
 
 ;; Notes can be added to any episode, but it must be an episode
@@ -956,15 +938,25 @@ The element under the cursor is used to decide whether to watch or unwatch."
 
 (defun seriestracker-watch (watch)
   "WATCH at point."
-  (let ((inhibit-read-only t)
-        (series (get-text-property (point) 'seriestracker-series))
-        (season (get-text-property (point) 'seriestracker-season))
-        (episode (get-text-property (point) 'seriestracker-episode)))
-    (cond ((region-active-p) (seriestracker-watch-region (region-beginning) (region-end) watch))
-          (episode (seriestracker-watch-episode watch))
-          (season (seriestracker-watch-season series season watch))
-          (t (seriestracker-watch-series series watch))))
-  (forward-line))
+  (let* ((inhibit-read-only t)
+         (season (get-text-property (point) 'seriestracker-season))
+         (episode (get-text-property (point) 'seriestracker-episode))
+         (start nil)
+         (end nil))
+    (cond ((region-active-p)
+           (setq start (region-beginning)
+                 end (region-end)))
+          (episode
+           (setq start (previous-single-property-change (1+ (point)) 'seriestracker-episode)
+                 end (next-single-property-change (point) 'seriestracker-episode nil (point-max))))
+          (season
+           (setq start (next-single-property-change (1+ (point)) 'seriestracker-episode nil (point-max))
+                 end (next-single-property-change start 'seriestracker-season nil (point-max))))
+          (t
+           (setq start (next-single-property-change (1+ (point)) 'seriestracker-episode nil (point-max))
+                 end (next-single-property-change start 'seriestracker-series nil (point-max)))))
+    (seriestracker-watch-region start end watch)
+    (forward-line)))
 
 ;;;;; Region
 
@@ -982,34 +974,6 @@ The element under the cursor is used to decide whether to watch or unwatch."
         (end-episode (get-text-property end 'seriestracker-episode)))
     (seriestracker--watch-region start-series start-season start-episode end-series end-season end-episode watch)
     (seriestracker--update-watched-region start end watch)))
-
-;;;;; Episode
-
-(defun seriestracker-watch-episode (watch)
-  "WATCH the episode at point."
-  (let ((start (previous-single-property-change (1+ (point)) 'seriestracker-episode))
-        (end (next-single-property-change (point) 'seriestracker-episode nil (point-max))))
-    (seriestracker-watch-region start end watch)))
-
-;;;;; Season
-
-(defun seriestracker-watch-season (id seasonN watch)
-  "WATCH SEASONN of series ID."
-  (let* ((start-season (previous-single-property-change (1+ (point)) 'seriestracker-season))
-         (start (next-single-property-change (1+ (point)) 'seriestracker-episode nil (point-max)))
-         (end (next-single-property-change start 'seriestracker-season nil (point-max))))
-    (seriestracker--watch-season id seasonN watch)
-    (seriestracker--update-watched-region start-season end watch)))
-
-;;;;; Series
-
-(defun seriestracker-watch-series (id watch)
-  "WATCH all episodes in series ID."
-  (let* ((start-series (previous-single-property-change (1+ (point)) 'seriestracker-series))
-         (start (next-single-property-change (1+ (point)) 'seriestracker-episode nil (point-max)))
-         (end (next-single-property-change start 'seriestracker-series nil (point-max))))
-    (seriestracker--watch-series id watch)
-    (seriestracker--update-watched-region start-series end watch)))
 
 ;;;;; Up
 
