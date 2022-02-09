@@ -91,16 +91,6 @@ returns '(1 3)"
     (move-beginning-of-line 1)
     (json-read-object)))
 
-;;;; seriestracker--each-when
-
-;; Most operations are conditional each, so we define an adequate macro
-;; We use each for its side-effects, mainly being able to setf
-
-(defmacro seriestracker--each-when (list cond &rest body)
-  "`--each', but check a COND before executing BODY on an element of the LIST."
-  `(--each ,list
-     (when ,cond ,@body)))
-
 ;;; episodate.com API
 
 ;; The episodate.com API exposes two functions useful to us: search and show-details
@@ -239,11 +229,11 @@ Adding an already existing series resets it."
 ;; Call update-series on all running series
 
 (defun seriestracker--update ()
-  "Update all non-finished series."
-  (seriestracker--each-when
-   seriestracker--data
+  "Update all non-ended series."
+  (--map-when
    (string-equal "Running" (alist-get 'status it))
-   (seriestracker--update-series it)))
+   (seriestracker--update-series it)
+   seriestracker--data))
 
 ;; To update a series, it is first reset, then the watch status and notes are propagated by indices
 
