@@ -860,7 +860,8 @@ The selected sorting strategy is applied after adding the new series."
                           (alist-get 'name))))
     (when (y-or-n-p (concat "Are you sure you want to delete " seriesname "? "))
       (seriestracker--remove series)
-      (delete-region start end))))
+      (delete-region start end)
+      (seriestracker--move 'next))))
 
 ;;;; (un)Watch episodes
 
