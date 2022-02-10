@@ -662,14 +662,17 @@ and ANY to go to any header even if hidden."
     ("l" "Load database" seriestracker-load)
     ("f" seriestracker--infix-savefile)]])
 
+;;;;; Classes
+
+;; Define classes for setable variables and multichoice variables
+
+;;;;;; Variable
+
+;; The object has a value (inherited from transient-variable)
+;; but we also get and set the value of the linked variable
+
 (defclass seriestracker--transient-variable (transient-variable)
   ((variable :initarg :variable)))
-
-(defclass seriestracker--transient-variable-choice (seriestracker--transient-variable)
-  ((name :initarg :name)
-   (choices :initarg :choices)
-   (default :initarg :default)
-   (action :initarg :action)))
 
 (cl-defmethod transient-init-value ((obj seriestracker--transient-variable))
   "Method to initialise the value of an `seriestracker--transient-variable' OBJ."
@@ -679,24 +682,10 @@ and ANY to go to any header even if hidden."
   "Method to read a new value for an `seriestracker--transient-variable' OBJ."
   (read-from-minibuffer (concat (oref obj description) ": ") (oref obj value)))
 
-(cl-defmethod transient-infix-read ((obj seriestracker--transient-variable-choice))
-  "Method to read a new value for an `seriestracker--transient-variable-choice' OBJ."
-  (let ((choices (oref obj choices)))
-    (if-let* ((value (oref obj value))
-              (notlast (cadr (member value choices))))
-        (cadr (member value choices))
-      (car choices))))
-
 (cl-defmethod transient-infix-set ((obj seriestracker--transient-variable) value)
   "Method to set VALUE for an `seriestracker--transient-variable' OBJ."
   (oset obj value value)
   (set (oref obj variable) value))
-
-(cl-defmethod transient-infix-set ((obj seriestracker--transient-variable-choice) value)
-  "Method to set VALUE for an `seriestracker--transient-variable-choice' OBJ."
-  (oset obj value value)
-  (set (oref obj variable) value)
-  (funcall (oref obj action)))
 
 (cl-defmethod transient-format-value ((obj seriestracker--transient-variable))
   "Method to format the value of an `seriestracker--transient-variable' OBJ."
@@ -705,6 +694,32 @@ and ANY to go to any header even if hidden."
      (propertize "(" 'face 'transient-inactive-value)
      (propertize value 'face 'transient-value)
      (propertize ")" 'face 'transient-inactive-value))))
+
+;;;;;; Multichoice variable
+
+;; Multi-choice inherits from simple variable and adds choices, a default value, and a triggered action
+;; "reading" the value is getting the next one in the list of choices or cycling
+;; setting also calls the action
+
+(defclass seriestracker--transient-variable-choice (seriestracker--transient-variable)
+  ((name :initarg :name)
+   (choices :initarg :choices)
+   (default :initarg :default)
+   (action :initarg :action)))
+
+(cl-defmethod transient-infix-read ((obj seriestracker--transient-variable-choice))
+  "Method to read a new value for an `seriestracker--transient-variable-choice' OBJ."
+  (let ((choices (oref obj choices)))
+    (if-let* ((value (oref obj value))
+              (notlast (cadr (member value choices))))
+        (cadr (member value choices))
+      (car choices))))
+
+(cl-defmethod transient-infix-set ((obj seriestracker--transient-variable-choice) value)
+  "Method to set VALUE for an `seriestracker--transient-variable-choice' OBJ."
+  (oset obj value value)
+  (set (oref obj variable) value)
+  (funcall (oref obj action)))
 
 (cl-defmethod transient-format-value ((obj seriestracker--transient-variable-choice))
   "Method to form the value of an `seriestracker--transient-variable-choice' OBJ."
@@ -723,6 +738,15 @@ and ANY to go to any header even if hidden."
                   choices)
                 (propertize "|" 'face 'transient-inactive-value))
      (propertize "]" 'face 'transient-inactive-value))))
+
+;;;;; Instances
+
+;; Instances for save file (variable), display watched (show/hide), and sorting (alpha/next)
+
+(transient-define-infix seriestracker--infix-savefile ()
+  :class 'seriestracker--transient-variable
+  :variable 'seriestracker-file
+  :description "Save file")
 
 (transient-define-infix seriestracker--infix-watched ()
   :class 'seriestracker--transient-variable-choice
@@ -751,11 +775,6 @@ and ANY to go to any header even if hidden."
   (cond ((string-equal seriestracker-sorting-type "alpha") (seriestracker-sort-alpha))
         ((string-equal seriestracker-sorting-type "next") (seriestracker-sort-next)))
   (seriestracker--refresh))
-
-(transient-define-infix seriestracker--infix-savefile ()
-  :class 'seriestracker--transient-variable
-  :variable 'seriestracker-file
-  :description "Save file")
 
 ;;;; Toggle displaying watched
 
