@@ -764,10 +764,9 @@ and ANY to go to any header even if hidden."
   (interactive)
   (seriestracker--inbuffer)
   (if (string-equal seriestracker-show-watched "show")
-      (progn (setq seriestracker-show-watched "hide")
-             (add-to-invisibility-spec 'seriestracker-watched))
-    (setq seriestracker-show-watched "show")
-    (remove-from-invisibility-spec 'seriestracker-watched)))
+      (setq seriestracker-show-watched "hide")
+    (setq seriestracker-show-watched "show"))
+  (seriestracker--apply-watched))
 
 ;;;; Load/save data
 
