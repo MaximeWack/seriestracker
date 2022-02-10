@@ -677,7 +677,7 @@ and ANY to go to any header even if hidden."
 
 (cl-defmethod transient-infix-read ((obj seriestracker--transient-variable))
   "Method to read a new value for an `seriestracker--transient-variable' OBJ."
-  (read-from-minibuffer "Save file: " (oref obj value)))
+  (read-from-minibuffer (concat (oref obj description) ": ") (oref obj value)))
 
 (cl-defmethod transient-infix-read ((obj seriestracker--transient-variable-choice))
   "Method to read a new value for an `seriestracker--transient-variable-choice' OBJ."
