@@ -1014,9 +1014,15 @@ The element under the cursor is used to decide whether to watch or unwatch."
          (season (get-text-property (point) 'seriestracker-season))
          (episode (get-text-property (point) 'seriestracker-episode))
          (watch (get-text-property (point) 'invisible))
+         (oldnote (->> seriestracker--data
+                         (--find (= series (alist-get 'id it)))
+                         (alist-get 'episodes)
+                         (--find (and (= season (alist-get 'season it))
+                                      (= episode (alist-get 'episode it))))
+                         (alist-get 'note)))
          (start (progn (move-beginning-of-line nil) (point)))
          (end (progn (forward-line 1) (point)))
-         (note (read-from-minibuffer "Note: "))
+         (note (read-from-minibuffer "Note: " oldnote))
          (note (if (string-equal "" note) nil note))
          (seriestracker-date-face `(:inherit ,(if watch
                                                   'seriestracker-watched
