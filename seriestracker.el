@@ -485,7 +485,9 @@ and ANY to go to any header even if hidden."
   (setq disable-point-adjustment t)
   (let* ((season (get-text-property (point) 'seriestracker-season))
          (episode (get-text-property (point) 'seriestracker-episode))
-         (level (if (and same (not (or season episode))) 'seriestracker-series 'seriestracker-season))
+         (level (if (and same (not (or season episode)))
+                    'seriestracker-series
+                  'seriestracker-season))
          (dest (if (eq dir 'prev)
                    (previous-single-property-change (point) level nil (point-min))
                  (next-single-property-change (point) level nil (point-max)))))
