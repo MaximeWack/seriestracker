@@ -448,7 +448,7 @@ If first episode of a season, print the season number."
   (while (and (invisible-p (point))
               (> (point) 1))
     (forward-line -1))
-  (when (and (= 1 (point))
+  (when (and (bobp)
              (invisible-p 1))
     (seriestracker--move 'next))
   (seriestracker--display-note))
@@ -493,7 +493,7 @@ and ANY to go to any header even if hidden."
                  (next-single-property-change (point) level nil (point-max)))))
     (goto-char dest))
   (when (eq dir 'prev)
-    (when (and (= 1 (point))
+    (when (and (bobp)
                (invisible-p 1))
       (seriestracker--move 'next)))
   (unless any
