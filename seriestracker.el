@@ -225,12 +225,12 @@ Adding an already existing series resets it."
 
 ;;;; Query updates
 
-;; Call update-series on all running series
+;; Call update-series on all non-ended series
 
 (defun seriestracker--update ()
   "Update all non-ended series."
   (--map-when
-   (string-equal "Running" (alist-get 'status it))
+   (not (string-equal "Ended" (alist-get 'status it)))
    (seriestracker--update-series it)
    seriestracker--data))
 
