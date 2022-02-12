@@ -1002,7 +1002,7 @@ The element under the cursor is used to decide whether to watch or unwatch."
   (interactive)
   (seriestracker--inbuffer)
   (let* ((inhibit-read-only t)
-         (start-series (previous-single-property-change (1+ (point)) 'seriestracker-series))
+         (start-series (previous-single-property-change (1+ (point)) 'seriestracker-series nil (point-min)))
          (start-season (next-single-property-change start-series 'seriestracker-season nil (point-max)))
          (start (next-single-property-change start-season 'seriestracker-episode nil (point-max)))
          (end (next-single-property-change (1+ (point)) 'seriestracker-episode nil (point-max))))
