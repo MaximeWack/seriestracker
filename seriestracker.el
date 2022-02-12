@@ -222,7 +222,7 @@ Adding an already existing series resets it."
                                          (< (alist-get 'episode it) (or end-episode 0)))))))
                   (progn
                     (when (time-less-p (date-to-time (alist-get 'air_date it)) (current-time))
-                        (setf (alist-get 'watched it) watch))
+                        (setf (alist-get 'watched it nil t) watch))
                     it)
                   (alist-get 'episodes it)))))))
 
@@ -255,7 +255,7 @@ Adding an already existing series resets it."
                                         it)
                                     it))
                    (--map-indexed (progn
-                                    (setf (alist-get 'note it) (alist-get it-index notes))
+                                    (setf (alist-get 'note it nil t) (alist-get it-index notes))
                                     it)))))
     (when (string-equal status "Ended") (setf (alist-get 'status series) "Ended"))
     (setf (alist-get 'episodes series) newEps)
@@ -1037,7 +1037,7 @@ The element under the cursor is used to decide whether to watch or unwatch."
                                                                             'seriestracker-series)
                                                                          :weight ,(when note 'normal)))
                            (put-text-property start end 'help-echo note))
-                  (setf (alist-get 'note episode) note)
+                  (setf (alist-get 'note episode nil t) note)
                   (--each seriestracker--data
                     (when (= id (alist-get 'id it))
                       (setf (alist-get 'episodes it)
