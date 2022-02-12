@@ -17,7 +17,7 @@
 
 ;; Author: Maxime Wack <contact at maximewack dot com>
 ;; Version: 1.2.0
-;; Package-Requires: ((dash "2.12.1") (transient "0.3.2") (emacs "26.1"))
+;; Package-Requires: ((dash "2.12.1") (transient "0.3.2") (emacs "27.1"))
 ;; Keywords: multimedia
 ;; URL: https://www.github.com/MaximeWack/seriesTracker
 
@@ -57,8 +57,8 @@ This is done by constructing a new alist containing only these elements.
 alist-select '(a c) '((a .1) (b , \"b\") (c . c)
 returns '((a . 1) (c . c))"
   (->> fields
-    reverse
-    (--reduce-from (cons (cons it (alist-get it alist)) acc) nil)))
+       reverse
+       (--reduce-from (cons (cons it (alist-get it alist)) acc) nil)))
 
 ;;;; array-select
 
@@ -96,7 +96,7 @@ returns '(1 3)"
 ;; Macro to get episode, season and series from text properties at point
 ;; provide the series and episode objects from the data
 
-(defmacro with-episode (lets &rest body)
+(defmacro seriestracker--with-episode (lets &rest body)
   "Provide a let* environment with EPISODEN, SEASONN and ID (series) filled, as well as the SERIES and EPISODE themselves.
 LETS is a list of bindings to insert in the let* form.
 BODY is the body of the let* form."
@@ -150,10 +150,10 @@ Recursively get page PAGE, carrying results in ACC."
   "Get series ID info."
   (->> (let ((url-request-method "GET"))
          (url-retrieve-synchronously (concat "https://www.episodate.com/api/show-details?q=" (int-to-string id))))
-    seriestracker--getJSON
-    car
-    (seriestracker--utils-alist-select '(id name start_date status episodes))
-    seriestracker--episodes))
+       seriestracker--getJSON
+       car
+       (seriestracker--utils-alist-select '(id name start_date status episodes))
+       seriestracker--episodes))
 
 ;;; Internal API
 
@@ -185,7 +185,7 @@ episodes props are season, episode, name, and air_date.")
 Adding an already existing series resets it."
   (seriestracker--remove id)
   (setq seriestracker--data
-          (cons (seriestracker--series id) seriestracker--data)))
+        (cons (seriestracker--series id) seriestracker--data)))
 
 ;;;;; Remove series
 
@@ -208,23 +208,23 @@ Adding an already existing series resets it."
     (--each
         seriestracker--data
       (let ((series-index it-index))
-           (setf (alist-get 'episodes it)
-                 (--map-when
-                  (and (or (> series-index series1)
-                           (and (= series-index series1)
-                                (or (> (alist-get 'season it) start-season)
-                                    (and (= (alist-get 'season it) start-season)
-                                         (>= (alist-get 'episode it) start-episode)))))
-                       (or (< series-index series2)
-                           (and (= series-index series2)
-                                (or (< (alist-get 'season it) (or end-season 0))
-                                    (and (= (alist-get 'season it) (or end-season 0))
-                                         (< (alist-get 'episode it) (or end-episode 0)))))))
-                  (progn
-                    (when (time-less-p (date-to-time (alist-get 'air_date it)) (current-time))
-                        (setf (alist-get 'watched it nil t) watch))
-                    it)
-                  (alist-get 'episodes it)))))))
+        (setf (alist-get 'episodes it)
+              (--map-when
+               (and (or (> series-index series1)
+                        (and (= series-index series1)
+                             (or (> (alist-get 'season it) start-season)
+                                 (and (= (alist-get 'season it) start-season)
+                                      (>= (alist-get 'episode it) start-episode)))))
+                    (or (< series-index series2)
+                        (and (= series-index series2)
+                             (or (< (alist-get 'season it) (or end-season 0))
+                                 (and (= (alist-get 'season it) (or end-season 0))
+                                      (< (alist-get 'episode it) (or end-episode 0)))))))
+               (progn
+                 (when (time-less-p (date-to-time (alist-get 'air_date it)) (current-time))
+                   (setf (alist-get 'watched it nil t) watch))
+                 it)
+               (alist-get 'episodes it)))))))
 
 ;;;; Query updates
 
@@ -249,14 +249,14 @@ Adding an already existing series resets it."
          (notes (-zip noted
                       (seriestracker--utils-array-pull 'note (-select-by-indices noted (alist-get 'episodes series)))))
          (newEps (->> newEp
-                   (--map-indexed (if (-contains? watched it-index)
-                                      (progn
-                                        (setf (alist-get 'watched it) t)
-                                        it)
-                                    it))
-                   (--map-indexed (progn
-                                    (setf (alist-get 'note it nil t) (alist-get it-index notes))
-                                    it)))))
+                      (--map-indexed (if (-contains? watched it-index)
+                                         (progn
+                                           (setf (alist-get 'watched it) t)
+                                           it)
+                                       it))
+                      (--map-indexed (progn
+                                       (setf (alist-get 'note it nil t) (alist-get it-index notes))
+                                       it)))))
     (when (string-equal status "Ended") (setf (alist-get 'status series) "Ended"))
     (setf (alist-get 'episodes series) newEps)
     series))
@@ -342,15 +342,15 @@ Can be 'seriestracker-all-folded, 'seriestracker-series-folded, or 'seriestracke
 
 (defun seriestracker--refresh ()
   "Refresh the seriestracker buffer."
-  (with-episode ()
-                (seriestracker--draw-buffer)
-                (seriestracker-move-to id seasonN episodeN)
-                (cond ((eq seriestracker--fold-cycle 'seriestracker-all-folded)
-                       (seriestracker--fold-all))
-                      ((eq seriestracker--fold-cycle 'seriestracker-all-unfolded)
-                       (seriestracker--unfold-all))
-                      ((eq seriestracker--fold-cycle 'seriestracker-series-folded)
-                       (seriestracker--unfold-all-series)))))
+  (seriestracker--with-episode ()
+                               (seriestracker--draw-buffer)
+                               (seriestracker-move-to id seasonN episodeN)
+                               (cond ((eq seriestracker--fold-cycle 'seriestracker-all-folded)
+                                      (seriestracker--fold-all))
+                                     ((eq seriestracker--fold-cycle 'seriestracker-all-unfolded)
+                                      (seriestracker--unfold-all))
+                                     ((eq seriestracker--fold-cycle 'seriestracker-series-folded)
+                                      (seriestracker--unfold-all-series)))))
 
 ;; Erase the buffer and draw every series
 
@@ -475,9 +475,9 @@ If first episode of a season, print the season number."
   "Move up in the hierarchy."
   (interactive)
   (seriestracker--inbuffer)
-  (with-episode ()
-                (cond (episodeN (goto-char (previous-single-property-change (point) 'seriestracker-season nil (point-min))))
-                      (seasonN (goto-char (previous-single-property-change (point) 'seriestracker-series nil (point-min)))))))
+  (seriestracker--with-episode ()
+                               (cond (episodeN (goto-char (previous-single-property-change (point) 'seriestracker-season nil (point-min))))
+                                     (seasonN (goto-char (previous-single-property-change (point) 'seriestracker-series nil (point-min)))))))
 
 ;; Generic function to move semantically in the hierarchy
 
@@ -487,13 +487,13 @@ Use SAME to navigate between same-level headers,
 and ANY to go to any header even if hidden."
   (seriestracker--inbuffer)
   (setq disable-point-adjustment t)
-  (with-episode ((level (if (and same (not (or seasonN episodeN)))
-                            'seriestracker-series
-                          'seriestracker-season))
-                 (dest (if (eq dir 'prev)
-                           (previous-single-property-change (point) level nil (point-min))
-                         (next-single-property-change (point) level nil (point-max)))))
-                (goto-char dest))
+  (seriestracker--with-episode ((level (if (and same (not (or seasonN episodeN)))
+                                           'seriestracker-series
+                                         'seriestracker-season))
+                                (dest (if (eq dir 'prev)
+                                          (previous-single-property-change (point) level nil (point-min))
+                                        (next-single-property-change (point) level nil (point-max)))))
+                               (goto-char dest))
   (when (eq dir 'prev)
     (when (and (bobp)
                (invisible-p 1))
@@ -557,10 +557,10 @@ and ANY to go to any header even if hidden."
   "Fold or UNFOLD the section at point."
   (interactive)
   (seriestracker--inbuffer)
-  (with-episode ()
-                (cond (episodeN (seriestracker--fold-episodes unfold))
-                      (seasonN (seriestracker--fold-season unfold))
-                      (t (seriestracker--fold-series unfold)))))
+  (seriestracker--with-episode ()
+                               (cond (episodeN (seriestracker--fold-episodes unfold))
+                                     (seasonN (seriestracker--fold-season unfold))
+                                     (t (seriestracker--fold-series unfold)))))
 
 (defun seriestracker-unfold-at-point ()
   "Unfold the section at point."
@@ -867,14 +867,14 @@ The selected sorting strategy is applied after adding the new series."
   "Remove series at point."
   (interactive)
   (seriestracker--inbuffer)
-  (with-episode ((inhibit-read-only t)
-                 (name (alist-get 'name series))
-                 (start (previous-single-property-change (1+ (point)) 'seriestracker-series nil (point-min)))
-                 (end (next-single-property-change (point) 'seriestracker-series nil (point-max))))
-                (when (y-or-n-p (concat "Are you sure you want to delete " name "? "))
-                  (seriestracker--remove id)
-                  (delete-region start end)
-                  (seriestracker--move 'next))))
+  (seriestracker--with-episode ((inhibit-read-only t)
+                                (name (alist-get 'name series))
+                                (start (previous-single-property-change (1+ (point)) 'seriestracker-series nil (point-min)))
+                                (end (next-single-property-change (point) 'seriestracker-series nil (point-max))))
+                               (when (y-or-n-p (concat "Are you sure you want to delete " name "? "))
+                                 (seriestracker--remove id)
+                                 (delete-region start end)
+                                 (seriestracker--move 'next))))
 
 ;;;; (un)Watch episodes
 
@@ -900,43 +900,43 @@ The selected sorting strategy is applied after adding the new series."
   "Update a single line LINUM for WATCH status."
   (goto-char (point-min))
   (forward-line (1- linum))
-  (with-episode ((onseries (not seasonN))
-                 (note (if onseries
-                           (alist-get 'note series)
-                         (alist-get 'note episode)))
-                 (airdate (when episodeN (date-to-time (alist-get 'air_date episode))))
-                 (watch (when episodeN (alist-get 'watched episode)))
-                 (start (progn (move-beginning-of-line nil) (point)))
-                 (end (progn (forward-line 1) (point)))
-                 (released (when episodeN (time-less-p airdate (current-time))))
-                 (seriestracker-date-face `(:inherit ,(cond (watch 'seriestracker-watched)
-                                                              (released 'success)
-                                                              (t 'error))
-                                                       :weight ,note))
-                 (seriestracker-text-face `(:inherit ,(if watch
-                                                          'seriestracker-watched
-                                                        'default)
-                                                     :weight ,note)))
-                (cond ((and episodeN released)
-                       (if watch
-                           (put-text-property start end 'invisible 'seriestracker-watched)
-                         (put-text-property start end 'invisible nil))
-                       (put-text-property start end 'face seriestracker-text-face)
-                       (put-text-property start (+ start 19) 'face seriestracker-date-face))
-                      (seasonN
-                       (if (--all? (alist-get 'watched it)
-                                   (->> seriestracker--data
-                                        (--find (= id (alist-get 'id it)))
-                                        (alist-get 'episodes)
-                                        (--filter (= seasonN (alist-get 'season it)))))
-                           (put-text-property start end 'invisible 'seriestracker-watched)
-                         (put-text-property start end 'invisible nil)))
-                      (id
-                       (if (--all? (alist-get 'watched it)
-                                   (alist-get 'episodes (--find (= id (alist-get 'id it))
-                                                                seriestracker--data)))
-                           (put-text-property start end 'invisible 'seriestracker-watched)
-                         (put-text-property start end 'invisible nil))))))
+  (seriestracker--with-episode ((onseries (not seasonN))
+                                (note (if onseries
+                                          (alist-get 'note series)
+                                        (alist-get 'note episode)))
+                                (airdate (when episodeN (date-to-time (alist-get 'air_date episode))))
+                                (watch (when episodeN (alist-get 'watched episode)))
+                                (start (progn (move-beginning-of-line nil) (point)))
+                                (end (progn (forward-line 1) (point)))
+                                (released (when episodeN (time-less-p airdate (current-time))))
+                                (seriestracker-date-face `(:inherit ,(cond (watch 'seriestracker-watched)
+                                                                           (released 'success)
+                                                                           (t 'error))
+                                                                    :weight ,note))
+                                (seriestracker-text-face `(:inherit ,(if watch
+                                                                         'seriestracker-watched
+                                                                       'default)
+                                                                    :weight ,note)))
+                               (cond ((and episodeN released)
+                                      (if watch
+                                          (put-text-property start end 'invisible 'seriestracker-watched)
+                                        (put-text-property start end 'invisible nil))
+                                      (put-text-property start end 'face seriestracker-text-face)
+                                      (put-text-property start (+ start 19) 'face seriestracker-date-face))
+                                     (seasonN
+                                      (if (--all? (alist-get 'watched it)
+                                                  (->> seriestracker--data
+                                                       (--find (= id (alist-get 'id it)))
+                                                       (alist-get 'episodes)
+                                                       (--filter (= seasonN (alist-get 'season it)))))
+                                          (put-text-property start end 'invisible 'seriestracker-watched)
+                                        (put-text-property start end 'invisible nil)))
+                                     (id
+                                      (if (--all? (alist-get 'watched it)
+                                                  (alist-get 'episodes (--find (= id (alist-get 'id it))
+                                                                               seriestracker--data)))
+                                          (put-text-property start end 'invisible 'seriestracker-watched)
+                                        (put-text-property start end 'invisible nil))))))
 
 ;;;;; Toggle watch
 
@@ -958,22 +958,22 @@ The element under the cursor is used to decide whether to watch or unwatch."
 
 (defun seriestracker-watch (watch)
   "WATCH at point."
-  (with-episode ((inhibit-read-only t))
-                (cond ((region-active-p) (seriestracker-watch-region (region-beginning)
-                                                                     (region-end)
-                                                                     watch))
-                      (episodeN (seriestracker-watch-region (previous-single-property-change (1+ (point)) 'seriestracker-episode nil (point-min))
-                                                            (next-single-property-change (point) 'seriestracker-episode nil (point-max))
-                                                            watch))
-                      (seasonN (let ((start (next-single-property-change (1+ (point)) 'seriestracker-episode nil (point-max))))
-                                 (seriestracker-watch-region start
-                                                             (next-single-property-change start 'seriestracker-season nil (point-max))
-                                                             watch)))
-                      (t (let ((start (next-single-property-change (1+ (point)) 'seriestracker-episode nil (point-max))))
-                           (seriestracker-watch-region start
-                                                       (next-single-property-change start 'seriestracker-series nil (point-max))
-                                                       watch))))
-                (forward-line)))
+  (seriestracker--with-episode ((inhibit-read-only t))
+                               (cond ((region-active-p) (seriestracker-watch-region (region-beginning)
+                                                                                    (region-end)
+                                                                                    watch))
+                                     (episodeN (seriestracker-watch-region (previous-single-property-change (1+ (point)) 'seriestracker-episode nil (point-min))
+                                                                           (next-single-property-change (point) 'seriestracker-episode nil (point-max))
+                                                                           watch))
+                                     (seasonN (let ((start (next-single-property-change (1+ (point)) 'seriestracker-episode nil (point-max))))
+                                                (seriestracker-watch-region start
+                                                                            (next-single-property-change start 'seriestracker-season nil (point-max))
+                                                                            watch)))
+                                     (t (let ((start (next-single-property-change (1+ (point)) 'seriestracker-episode nil (point-max))))
+                                          (seriestracker-watch-region start
+                                                                      (next-single-property-change start 'seriestracker-series nil (point-max))
+                                                                      watch))))
+                               (forward-line)))
 
 ;;;;; Region
 
@@ -1021,54 +1021,54 @@ The element under the cursor is used to decide whether to watch or unwatch."
   (unless (or (not (get-text-property (point) 'seriestracker-season))
               (get-text-property (point) 'seriestracker-episode))
     (error "Cannot put a note on a season"))
-  (with-episode ((onseries (not seasonN))
-                 (watch (unless onseries (alist-get 'watched episode)))
-                 (airdate (unless onseries (date-to-time (alist-get 'air_date episode))))
-                 (start (progn (move-beginning-of-line nil) (point)))
-                 (end (progn (forward-line 1) (point)))
-                 (note (read-from-minibuffer "Note: " (if onseries
-                                                          (alist-get 'note series)
-                                                        (alist-get 'note episode))))
-                 (note (if (string-equal "" note) nil note))
-                 (seriestracker-date-face `(:inherit ,(cond (watch 'seriestracker-watched)
-                                                            ((time-less-p airdate (current-time)) 'success)
-                                                            (t 'error))
-                                                     :weight ,(if note 'bold 'normal)))
-                 (seriestracker-text-face `(:inherit ,(if watch
-                                                          'seriestracker-watched
-                                                        'default)
-                                                     :weight ,(if note 'bold 'normal)))
-                 (inhibit-read-only t))
-                (if onseries
-                    (progn (setf (alist-get 'note series nil t) note)
-                           (setq seriestracker--data (--map-when (= id (alist-get 'id it))
-                                                                 series
-                                                                 seriestracker--data))
-                           (put-text-property start end 'face `(:inherit ,(if (string-equal "Ended" (alist-get 'status series))
-                                                                              'seriestracker-finished-series
-                                                                            'seriestracker-series)
-                                                                         :weight ,(when note 'normal)))
-                           (put-text-property start end 'help-echo note))
-                  (setf (alist-get 'note episode nil t) note)
-                  (--each seriestracker--data
-                    (when (= id (alist-get 'id it))
-                      (setf (alist-get 'episodes it)
-                            (--map-when (and (= seasonN (alist-get 'season it))
-                                             (= episodeN (alist-get 'episode it)))
-                                        episode
-                                        (alist-get 'episodes it)))))
-                  (put-text-property start end 'face seriestracker-text-face)
-                  (put-text-property start (+ start 19) 'face seriestracker-date-face)
-                  (put-text-property start end 'help-echo note))))
+  (seriestracker--with-episode ((onseries (not seasonN))
+                                (watch (unless onseries (alist-get 'watched episode)))
+                                (airdate (unless onseries (date-to-time (alist-get 'air_date episode))))
+                                (start (progn (move-beginning-of-line nil) (point)))
+                                (end (progn (forward-line 1) (point)))
+                                (note (read-from-minibuffer "Note: " (if onseries
+                                                                         (alist-get 'note series)
+                                                                       (alist-get 'note episode))))
+                                (note (if (string-equal "" note) nil note))
+                                (seriestracker-date-face `(:inherit ,(cond (watch 'seriestracker-watched)
+                                                                           ((time-less-p airdate (current-time)) 'success)
+                                                                           (t 'error))
+                                                                    :weight ,(if note 'bold 'normal)))
+                                (seriestracker-text-face `(:inherit ,(if watch
+                                                                         'seriestracker-watched
+                                                                       'default)
+                                                                    :weight ,(if note 'bold 'normal)))
+                                (inhibit-read-only t))
+                               (if onseries
+                                   (progn (setf (alist-get 'note series nil t) note)
+                                          (setq seriestracker--data (--map-when (= id (alist-get 'id it))
+                                                                                series
+                                                                                seriestracker--data))
+                                          (put-text-property start end 'face `(:inherit ,(if (string-equal "Ended" (alist-get 'status series))
+                                                                                             'seriestracker-finished-series
+                                                                                           'seriestracker-series)
+                                                                                        :weight ,(when note 'normal)))
+                                          (put-text-property start end 'help-echo note))
+                                 (setf (alist-get 'note episode nil t) note)
+                                 (--each seriestracker--data
+                                   (when (= id (alist-get 'id it))
+                                     (setf (alist-get 'episodes it)
+                                           (--map-when (and (= seasonN (alist-get 'season it))
+                                                            (= episodeN (alist-get 'episode it)))
+                                                       episode
+                                                       (alist-get 'episodes it)))))
+                                 (put-text-property start end 'face seriestracker-text-face)
+                                 (put-text-property start (+ start 19) 'face seriestracker-date-face)
+                                 (put-text-property start end 'help-echo note))))
 
 ;; Display the note at point, if existing, in the minibuffer
 
 (defun seriestracker--display-note ()
   "Display the note at point, if existing, in the minibuffer."
-  (with-episode ((onseries (not seasonN)))
-                (message (if onseries
-                             (alist-get 'note series)
-                             (alist-get 'note episode)))))
+  (seriestracker--with-episode ((onseries (not seasonN)))
+                               (message (if onseries
+                                            (alist-get 'note series)
+                                          (alist-get 'note episode)))))
 
 ;;;; Sort series
 
@@ -1080,22 +1080,22 @@ The element under the cursor is used to decide whether to watch or unwatch."
 
 (defun seriestracker--first-next-date (series)
   "Helper function to find the date for the next episode in SERIES."
-    (let ((dates (->> series
-                   (alist-get 'episodes)
-                   (--filter (not (alist-get 'watched it))))))
-      (if dates
-          (->> dates
-            (seriestracker--utils-array-pull 'air_date)
-            (--map (car (date-to-time it)))
-            -min)
-        0)))
+  (let ((dates (->> series
+                    (alist-get 'episodes)
+                    (--filter (not (alist-get 'watched it))))))
+    (if dates
+        (->> dates
+             (seriestracker--utils-array-pull 'air_date)
+             (--map (car (date-to-time it)))
+             -min)
+      0)))
 
 ;; Compare two series by their first next airing date
 
 (defun seriestracker--comp-date (a b)
   "Helper function to compare dates A and B."
-    (< (seriestracker--first-next-date a)
-       (seriestracker--first-next-date b)))
+  (< (seriestracker--first-next-date a)
+     (seriestracker--first-next-date b)))
 
 ;; Sort series by first next airing date
 
@@ -1111,8 +1111,8 @@ The element under the cursor is used to decide whether to watch or unwatch."
 
 (defun seriestracker--comp-name (a b)
   "Helper function to compare names A and B."
-    (string< (alist-get 'name a)
-             (alist-get 'name b)))
+  (string< (alist-get 'name a)
+           (alist-get 'name b)))
 
 ;; Sort series by name
 
