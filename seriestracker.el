@@ -273,13 +273,18 @@ Adding an already existing series resets it."
 
 (defun seriestracker--save ()
   "Save the database to `seriestracker-file'."
-  (with-temp-file seriestracker-file
-    (let ((print-level nil)
-          (print-length nil))
-      (prin1 seriestracker--data (current-buffer))
-      (replace-string ")) " "))\n" nil 0 (point-max))
-      (replace-string " (episodes" "\n(episodes" nil 0 (point-max))
-      (lisp-indent-region 0 (point-max)))))
+  (save-excursion
+    (with-temp-file seriestracker-file
+      (let ((print-level nil)
+            (print-length nil))
+        (prin1 seriestracker--data (current-buffer))
+        (goto-char 1)
+        (while (search-forward ")) " nil t)
+          (replace-match "))\n" nil t))
+        (goto-char 1)
+        (while (search-forward " (episodes" nil t)
+          (replace-match "\n(episodes" nil t))
+        (lisp-indent-region 0 (point-max))))))
 
 ;; Load by READing from the content of the file in a temporary buffer
 
