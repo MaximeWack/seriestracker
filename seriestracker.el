@@ -534,6 +534,18 @@ and ANY to go to any header even if hidden."
   (seriestracker--inbuffer)
   (seriestracker--move 'next t))
 
+;; Move to an arbitrary series ID, SEASON and EPISODE
+
+(defun seriestracker-move-to (id &optional season episode)
+  "Move point to the series ID, SEASON, EPISODE."
+  (interactive)
+  (goto-char (point-max))
+  (text-property-search-backward 'seriestracker-series id t)
+  (when season (text-property-search-forward 'seriestracker-season season t)
+        (if episode
+            (text-property-search-backward 'seriestracker-episode episode t t)
+          (text-property-search-backward 'seriestracker-episode nil t))))
+
 ;;;; Folding
 
 ;; Folding uses the 'invisible overlay with two values:
