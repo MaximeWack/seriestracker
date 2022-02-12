@@ -882,21 +882,21 @@ The selected sorting strategy is applied after adding the new series."
 
 ;; Update all the watched lines in the updated region
 
-(defun seriestracker--update-watched-region (start end &optional watch)
+(defun seriestracker--update-watched-region (start end)
   "Update the buffer for change in WATCH between START and END."
   (let* ((startline (line-number-at-pos start))
          (endline (1- (line-number-at-pos end))))
     (save-excursion
       (--each
           (number-sequence startline endline)
-        (seriestracker--update-watched-line it watch)))))
+        (seriestracker--update-watched-line it)))))
 
 ;; Update a line:
 ;; - update all the faces combinations for text and date
 ;; - update watched face
 ;; - compute if series or season all watched
 
-(defun seriestracker--update-watched-line (linum watch)
+(defun seriestracker--update-watched-line (linum)
   "Update a single line LINUM for WATCH status."
   (goto-char (point-min))
   (forward-line (1- linum))
@@ -905,6 +905,7 @@ The selected sorting strategy is applied after adding the new series."
                            (alist-get 'note series)
                          (alist-get 'note episode)))
                  (airdate (when episodeN (date-to-time (alist-get 'air_date episode))))
+                 (watch (when episodeN (alist-get 'watched episode)))
                  (start (progn (move-beginning-of-line nil) (point)))
                  (end (progn (forward-line 1) (point)))
                  (released (when episodeN (time-less-p airdate (current-time))))
@@ -989,7 +990,8 @@ The element under the cursor is used to decide whether to watch or unwatch."
         (end-season (get-text-property end 'seriestracker-season))
         (end-episode (get-text-property end 'seriestracker-episode)))
     (seriestracker--watch-region start-series start-season start-episode end-series end-season end-episode watch)
-    (seriestracker--update-watched-region start end watch)))
+    (seriestracker--update-watched-region (previous-single-property-change (1+ start) 'seriestracker-series nil (point-min))
+                                          (next-single-property-change end 'seriestracker-series nil (point-max)))))
 
 ;;;;; Up
 
