@@ -900,44 +900,42 @@ The selected sorting strategy is applied after adding the new series."
   "Update a single line LINUM for WATCH status."
   (goto-char (point-min))
   (forward-line (1- linum))
-  (let* ((episode (get-text-property (point) 'seriestracker-episode))
-         (season (get-text-property (point) 'seriestracker-season))
-         (series (get-text-property (point) 'seriestracker-series))
-         (note (plist-get
-                (get-text-property (point) 'face)
-                :weight))
-         (start (progn (move-beginning-of-line nil) (point)))
-         (end (progn (forward-line 1) (point)))
-         (released (when episode (time-less-p (date-to-time (buffer-substring start (+ start 19))) (current-time))))
-         (seriestracker-date-face (when episode
-                                    `(:inherit ,(cond (watch 'seriestracker-watched)
-                                                      (released 'success)
-                                                      (t 'error))
-                                               :weight ,note)))
-         (seriestracker-text-face `(:inherit ,(if watch
-                                                  'seriestracker-watched
-                                                'default)
-                                             :weight ,note)))
-    (cond ((and episode released)
-           (if watch
-               (put-text-property start end 'invisible 'seriestracker-watched)
-             (put-text-property start end 'invisible nil))
-           (put-text-property start end 'face seriestracker-text-face)
-           (put-text-property start (+ start 19) 'face seriestracker-date-face))
-          (season
-           (if (--all? (alist-get 'watched it)
-                       (->> seriestracker--data
-                         (--find (= series (alist-get 'id it)))
-                         (alist-get 'episodes)
-                         (--filter (= season (alist-get 'season it)))))
-               (put-text-property start end 'invisible 'seriestracker-watched)
-             (put-text-property start end 'invisible nil)))
-          (series
-           (if (--all? (alist-get 'watched it)
-                       (alist-get 'episodes (--find (= series (alist-get 'id it))
-                                                    seriestracker--data)))
-               (put-text-property start end 'invisible 'seriestracker-watched)
-             (put-text-property start end 'invisible nil))))))
+  (with-episode ((onseries (not seasonN))
+                 (note (if onseries
+                           (alist-get 'note series)
+                         (alist-get 'note episode)))
+                 (airdate (when episodeN (date-to-time (alist-get 'air_date episode))))
+                 (start (progn (move-beginning-of-line nil) (point)))
+                 (end (progn (forward-line 1) (point)))
+                 (released (when episodeN (time-less-p airdate (current-time))))
+                 (seriestracker-date-face `(:inherit ,(cond (watch 'seriestracker-watched)
+                                                              (released 'success)
+                                                              (t 'error))
+                                                       :weight ,note))
+                 (seriestracker-text-face `(:inherit ,(if watch
+                                                          'seriestracker-watched
+                                                        'default)
+                                                     :weight ,note)))
+                (cond ((and episodeN released)
+                       (if watch
+                           (put-text-property start end 'invisible 'seriestracker-watched)
+                         (put-text-property start end 'invisible nil))
+                       (put-text-property start end 'face seriestracker-text-face)
+                       (put-text-property start (+ start 19) 'face seriestracker-date-face))
+                      (seasonN
+                       (if (--all? (alist-get 'watched it)
+                                   (->> seriestracker--data
+                                        (--find (= id (alist-get 'id it)))
+                                        (alist-get 'episodes)
+                                        (--filter (= seasonN (alist-get 'season it)))))
+                           (put-text-property start end 'invisible 'seriestracker-watched)
+                         (put-text-property start end 'invisible nil)))
+                      (id
+                       (if (--all? (alist-get 'watched it)
+                                   (alist-get 'episodes (--find (= id (alist-get 'id it))
+                                                                seriestracker--data)))
+                           (put-text-property start end 'invisible 'seriestracker-watched)
+                         (put-text-property start end 'invisible nil))))))
 
 ;;;;; Toggle watch
 
