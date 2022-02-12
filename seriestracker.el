@@ -97,7 +97,8 @@ returns '(1 3)"
 ;; provide the series and episode objects from the data
 
 (defmacro seriestracker--with-episode (lets &rest body)
-  "Provide a let* environment with EPISODEN, SEASONN and ID (series) filled, as well as the SERIES and EPISODE themselves.
+  "Provide a let* environment with EPISODEN, SEASONN and ID (series) filled.
+Populate SERIES and EPISODE themselves as well.
 LETS is a list of bindings to insert in the let* form.
 BODY is the body of the let* form."
 
