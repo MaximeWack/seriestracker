@@ -961,17 +961,17 @@ The element under the cursor is used to decide whether to watch or unwatch."
                 (cond ((region-active-p) (seriestracker-watch-region (region-beginning)
                                                                      (region-end)
                                                                      watch))
-                      (episodeN (seriestracker-watch-region (previous-single-property-change (1+ (point)) 'seriestracker-episode)
+                      (episodeN (seriestracker-watch-region (previous-single-property-change (1+ (point)) 'seriestracker-episode nil (point-min))
                                                             (next-single-property-change (point) 'seriestracker-episode nil (point-max))
                                                             watch))
-                      (seasonN (setq start (next-single-property-change (1+ (point)) 'seriestracker-episode nil (point-max)))
-                               (seriestracker-watch-region start
-                                                           (next-single-property-change start 'seriestracker-season nil (point-max))
-                                                           watch))
-                      (t (setq start (next-single-property-change (1+ (point)) 'seriestracker-episode nil (point-max)))
-                         (seriestracker-watch-region start
-                                                     (next-single-property-change start 'seriestracker-series nil (point-max))
-                                                     watch)))
+                      (seasonN (let ((start (next-single-property-change (1+ (point)) 'seriestracker-episode nil (point-max))))
+                                 (seriestracker-watch-region start
+                                                             (next-single-property-change start 'seriestracker-season nil (point-max))
+                                                             watch)))
+                      (t (let ((start (next-single-property-change (1+ (point)) 'seriestracker-episode nil (point-max))))
+                           (seriestracker-watch-region start
+                                                       (next-single-property-change start 'seriestracker-series nil (point-max))
+                                                       watch))))
                 (forward-line)))
 
 ;;;;; Region
