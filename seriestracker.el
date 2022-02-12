@@ -342,16 +342,15 @@ Can be 'seriestracker-all-folded, 'seriestracker-series-folded, or 'seriestracke
 
 (defun seriestracker--refresh ()
   "Refresh the seriestracker buffer."
-  (let ((linum (line-number-at-pos)))
-    (seriestracker--draw-buffer)
-    (goto-char (point-min))
-    (forward-line (1- linum)))
-  (cond ((eq seriestracker--fold-cycle 'seriestracker-all-folded)
-         (seriestracker--fold-all))
-        ((eq seriestracker--fold-cycle 'seriestracker-all-unfolded)
-         (seriestracker--unfold-all))
-        ((eq seriestracker--fold-cycle 'seriestracker-series-folded)
-         (seriestracker--unfold-all-series))))
+  (with-episode ()
+                (seriestracker--draw-buffer)
+                (seriestracker-move-to id seasonN episodeN)
+                (cond ((eq seriestracker--fold-cycle 'seriestracker-all-folded)
+                       (seriestracker--fold-all))
+                      ((eq seriestracker--fold-cycle 'seriestracker-all-unfolded)
+                       (seriestracker--unfold-all))
+                      ((eq seriestracker--fold-cycle 'seriestracker-series-folded)
+                       (seriestracker--unfold-all-series)))))
 
 ;; Erase the buffer and draw every series
 
@@ -854,7 +853,8 @@ The selected sorting strategy is applied after adding the new series."
                                 (string-equal nametoadd (alist-get 'permalink it))
                                 series-list))))
     (seriestracker--add toadd)
-    (seriestracker--apply-sort)))
+    (seriestracker--apply-sort)
+    (seriestracker-move-to toadd)))
 
 ;;;; Remove series
 
@@ -1184,7 +1184,8 @@ The element under the cursor is used to decide whether to watch or unwatch."
   (seriestracker--load)
   (seriestracker--update)
   (seriestracker--refresh)
-  (seriestracker--apply-watched))
+  (seriestracker--apply-watched)
+  (goto-char 1))
 
 (provide 'seriestracker)
 
