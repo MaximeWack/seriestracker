@@ -1,6 +1,6 @@
 ;;; seriestracker.el --- Series tracker -*- lexical-binding: t; -*-
 
-;; Copyright 2021 Maxime Wack
+;; Copyright 2022 Maxime Wack
 
 ;; This program is free software: you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -16,7 +16,7 @@
 ;; along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 ;; Author: Maxime Wack <contact at maximewack dot com>
-;; Version: 1.2.0
+;; Version: 1.3.0
 ;; Package-Requires: ((dash "2.12.1") (transient "0.3.2") (emacs "27.1"))
 ;; Keywords: multimedia
 ;; URL: https://www.github.com/MaximeWack/seriesTracker
