@@ -1,0 +1,31 @@
+* 1.3.0
+
+- track changes in NEWS.org
+- it is now impossible to "watch" unreleased episodes
+- the series search now fetches all pages of results (instead of the first one only)
+- the saved file is now formatted with one line per episode
+- more comments and documentation
+- the name of the series to be removed is shown in the prompt
+- pre-fill note prompt with current note content
+- allow notes on series names
+- bugfixes
+  - remove empty (watched) and (note) in the data file
+  - update all non-"Ended" series instead of only "Running" ones
+  - better buffer updates when watching something
+  - better position tracking when modifying the buffer
+  - go to a newly added series
+
+* 1.2.0
+
+- add the possibility to add notes to episodes
+  - the note is displayed in the modeline when the cursor is on the episode
+  - an episode with a note appears in bold face
+
+* 1.1.0
+
+- submission to MELPA
+
+* 1.0.0
+
+- first release
+
