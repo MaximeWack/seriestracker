@@ -370,10 +370,12 @@ Erase first then redraw the whole buffer."
   "Print the SERIES id and name."
   (let* ((id (alist-get 'id series))
          (name (alist-get 'name series))
+         (note (alist-get 'note series))
          (episodes (alist-get 'episodes series))
-         (seriestracker-face (if (string-equal "Ended" (alist-get 'status series))
-                                 'seriestracker-finished-series
-                               'seriestracker-series))
+         (seriestracker-face `(:inherit ,(if (string-equal "Ended" (alist-get 'status series))
+                                             'seriestracker-finished-series
+                                           'seriestracker-series)
+                                        :weight ,(when note 'normal)))
          (seriestracker-watched (if (--all? (alist-get 'watched it)
                                             episodes)
                                     'seriestracker-watched
@@ -383,6 +385,7 @@ Erase first then redraw the whole buffer."
                         'seriestracker-season nil
                         'seriestracker-episode nil
                         'face seriestracker-face
+                        'help-echo note
                         'invisible seriestracker-watched))
     (--each episodes (seriestracker--draw-episode series it))))
 
@@ -1003,13 +1006,17 @@ The element under the cursor is used to decide whether to watch or unwatch."
   "Add a note on the episode at point."
   (interactive)
   (seriestracker--inbuffer)
-  (unless (get-text-property (point) 'seriestracker-episode)
-    (error "Cannot put a note on a series or season!"))
-  (with-episode ((watch (alist-get 'watched episode))
-                 (airdate (date-to-time (alist-get 'air_date episode)))
+  (unless (or (not (get-text-property (point) 'seriestracker-season))
+              (get-text-property (point) 'seriestracker-episode))
+    (error "Cannot put a note on a season"))
+  (with-episode ((onseries (not seasonN))
+                 (watch (unless onseries (alist-get 'watched episode)))
+                 (airdate (unless onseries (date-to-time (alist-get 'air_date episode))))
                  (start (progn (move-beginning-of-line nil) (point)))
                  (end (progn (forward-line 1) (point)))
-                 (note (read-from-minibuffer "Note: " (alist-get 'note episode)))
+                 (note (read-from-minibuffer "Note: " (if onseries
+                                                          (alist-get 'note series)
+                                                        (alist-get 'note episode))))
                  (note (if (string-equal "" note) nil note))
                  (seriestracker-date-face `(:inherit ,(cond (watch 'seriestracker-watched)
                                                             ((time-less-p airdate (current-time)) 'success)
@@ -1020,24 +1027,36 @@ The element under the cursor is used to decide whether to watch or unwatch."
                                                         'default)
                                                      :weight ,(if note 'bold 'normal)))
                  (inhibit-read-only t))
-                (setf (alist-get 'note episode) note)
-                (--each seriestracker--data
-                  (when (= id (alist-get 'id it))
-                    (setf (alist-get 'episodes it)
-                          (--map-when (and (= seasonN (alist-get 'season it))
-                                           (= episodeN (alist-get 'episode it)))
-                                      episode
-                                      (alist-get 'episodes it)))))
-                (put-text-property start end 'face seriestracker-text-face)
-                (put-text-property start (+ start 19) 'face seriestracker-date-face)
-                (put-text-property start end 'help-echo note)))
+                (if onseries
+                    (progn (setf (alist-get 'note series nil t) note)
+                           (setq seriestracker--data (--map-when (= id (alist-get 'id it))
+                                                                 series
+                                                                 seriestracker--data))
+                           (put-text-property start end 'face `(:inherit ,(if (string-equal "Ended" (alist-get 'status series))
+                                                                              'seriestracker-finished-series
+                                                                            'seriestracker-series)
+                                                                         :weight ,(when note 'normal)))
+                           (put-text-property start end 'help-echo note))
+                  (setf (alist-get 'note episode) note)
+                  (--each seriestracker--data
+                    (when (= id (alist-get 'id it))
+                      (setf (alist-get 'episodes it)
+                            (--map-when (and (= seasonN (alist-get 'season it))
+                                             (= episodeN (alist-get 'episode it)))
+                                        episode
+                                        (alist-get 'episodes it)))))
+                  (put-text-property start end 'face seriestracker-text-face)
+                  (put-text-property start (+ start 19) 'face seriestracker-date-face)
+                  (put-text-property start end 'help-echo note))))
 
 ;; Display the note at point, if existing, in the minibuffer
 
 (defun seriestracker--display-note ()
   "Display the note at point, if existing, in the minibuffer."
-  (with-episode ()
-                (message (alist-get 'note episode))))
+  (with-episode ((onseries (not seasonN)))
+                (message (if onseries
+                             (alist-get 'note series)
+                             (alist-get 'note episode)))))
 
 ;;;; Sort series
 
