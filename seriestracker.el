@@ -837,6 +837,28 @@ and ANY to go to any header even if hidden."
   (setq seriestracker--data nil)
   (kill-buffer-and-window))
 
+
+;;;;; Episode Information
+(defun seriestracker--json-fetch (url)
+  "Fetch and parse JSON from url.
+Based on https://stackoverflow.com/questions/15118304/."
+  (with-current-buffer (url-retrieve-synchronously url)
+    (goto-char url-http-end-of-headers)
+    (forward-line)
+    (delete-region (point-min) (point))
+    (json-read)))
+
+(defun seriestracker--tvmaze-episode-data ()
+  (let* ((line (seriestracker--with-episode () (list 'name (alist-get 'name series) 'season seasonN 'episode episodeN)))
+         (data (seriestracker--json-fetch (concat "https://api.tvmaze.com/search/shows?q=" (downcase (plist-get line 'name)))))
+         (id (alist-get 'id (cdr (assoc 'show (aref data 0)))))
+         (ep-data (seriestracker--json-fetch (format "https://api.tvmaze.com/shows/%d/episodebynumber?season=%d&number=%d"
+                                      id (plist-get line 'season) (plist-get line 'episode))))
+         (summary (replace-regexp-in-string "\\(<[^>]+>\\|&[^;]+;\\)" "" (alist-get 'summary ep-data)))
+         (image-url (alist-get 'original (alist-get 'image ep-data))))
+    (list 'plot summary 'image image-url)))
+
+
 ;;;; Add series
 
 ;; To add series:
