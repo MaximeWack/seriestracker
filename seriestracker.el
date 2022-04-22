@@ -848,7 +848,7 @@ Based on https://stackoverflow.com/questions/15118304/."
     (delete-region (point-min) (point))
     (json-read)))
 
-(defun seriestracker--tvmaze-episode-data ()
+(defun seriestracker--tvmaze-episode-data (key)
   (let* ((line (seriestracker--with-episode () (list 'name (alist-get 'name series) 'season seasonN 'episode episodeN)))
          (data (seriestracker--json-fetch (concat "https://api.tvmaze.com/search/shows?q=" (downcase (plist-get line 'name)))))
          (id (alist-get 'id (cdr (assoc 'show (aref data 0)))))
@@ -856,8 +856,14 @@ Based on https://stackoverflow.com/questions/15118304/."
                                       id (plist-get line 'season) (plist-get line 'episode))))
          (summary (replace-regexp-in-string "\\(<[^>]+>\\|&[^;]+;\\)" "" (alist-get 'summary ep-data)))
          (image-url (alist-get 'original (alist-get 'image ep-data))))
-    (list 'plot summary 'image image-url)))
+    (plist-get (list 'plot summary 'image image-url) key)))
 
+(transient-define-prefix seriestracker-episode-info ()
+  "Episode information"
+  ["Episode Information"
+   :if-mode seriestracker-mode
+   [("p" "Show plot" (lambda () (interactive) (message (seriestracker--tvmaze-episode-data 'plot))))
+    ("i" "Show image" (lambda () (interactive) (eww-browse-url (seriestracker--tvmaze-episode-data 'image))))]])
 
 ;;;; Add series
 
@@ -1183,6 +1189,7 @@ The element under the cursor is used to decide whether to watch or unwatch."
     (define-key map "u" 'seriestracker-watch-up)
     (define-key map "W" 'seriestracker-toggle-display-watched)
     (define-key map "N" 'seriestracker-add-note)
+    (define-key map "i" 'seriestracker-episode-info)
     (define-key map "q" 'seriestracker-quit)
     (define-key map [tab] 'seriestracker-cycle)
     map)
