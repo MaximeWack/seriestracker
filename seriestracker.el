@@ -82,14 +82,16 @@ returns '(1 3)"
 
 ;;;; getJSON
 
-;; Extract and parse the JSON from the returned url buffer
+;; Extract and parse the JSON from a given URL
 
-(defun seriestracker--getJSON (url-buffer)
-  "Parse the JSON in the URL-BUFFER returned by url."
-  (with-current-buffer url-buffer
-    (goto-char (point-max))
-    (move-beginning-of-line 1)
-    (json-read-object)))
+(defun seriestracker--json-fetch (url)
+  "Fetch and parse JSON from url.
+Based on https://stackoverflow.com/questions/15118304/."
+  (with-current-buffer (url-retrieve-synchronously url)
+    (goto-char url-http-end-of-headers)
+    (forward-line)
+    (delete-region (point-min) (point))
+    (json-read)))
 
 ;;;; with-episode
 
@@ -125,9 +127,7 @@ BODY is the body of the let* form."
   "Search episodate.com db for NAME.
 Recursively get page PAGE, carrying results in ACC."
   (let* ((page (or page 1))
-         (url-request-method "GET")
-         (res (url-retrieve-synchronously (concat "https://www.episodate.com/api/search?q=" name "&page=" (int-to-string page))))
-         (json (seriestracker--getJSON res))
+         (json (seriestracker--json-fetch (concat "https://www.episodate.com/api/search?q=" name "&page=" (int-to-string page))))
          (numpages (alist-get 'pages json))
          (content (seriestracker--utils-array-select '(id permalink) (cdar (seriestracker--utils-alist-select '(tv_shows) json)))))
     (message (concat "Fetching page " (int-to-string page) "/" (int-to-string numpages)))
@@ -149,12 +149,12 @@ Recursively get page PAGE, carrying results in ACC."
 
 (defun seriestracker--series (id)
   "Get series ID info."
-  (->> (let ((url-request-method "GET"))
-         (url-retrieve-synchronously (concat "https://www.episodate.com/api/show-details?q=" (int-to-string id))))
-       seriestracker--getJSON
-       car
-       (seriestracker--utils-alist-select '(id name start_date status episodes))
-       seriestracker--episodes))
+  (->>
+   (concat "https://www.episodate.com/api/show-details?q=" (int-to-string id))
+   seriestracker--json-fetch
+   car
+   (seriestracker--utils-alist-select '(id name start_date status episodes))
+   seriestracker--episodes))
 
 ;;; Internal API
 
@@ -839,15 +839,6 @@ and ANY to go to any header even if hidden."
 
 
 ;;;;; Episode Information
-(defun seriestracker--json-fetch (url)
-  "Fetch and parse JSON from url.
-Based on https://stackoverflow.com/questions/15118304/."
-  (with-current-buffer (url-retrieve-synchronously url)
-    (goto-char url-http-end-of-headers)
-    (forward-line)
-    (delete-region (point-min) (point))
-    (json-read)))
-
 (defun seriestracker--tvmaze-episode-data (key)
   (let* ((line (seriestracker--with-episode () (list 'name (alist-get 'name series) 'season seasonN 'episode episodeN)))
          (data (seriestracker--json-fetch (concat "https://api.tvmaze.com/search/shows?q=" (downcase (plist-get line 'name)))))
