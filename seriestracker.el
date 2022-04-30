@@ -840,21 +840,32 @@ and ANY to go to any header even if hidden."
 
 ;;;;; Episode Information
 (defun seriestracker--tvmaze-episode-data (key)
-  (let* ((line (seriestracker--with-episode () (list 'name (alist-get 'name series) 'season seasonN 'episode episodeN)))
-         (data (seriestracker--json-fetch (concat "https://api.tvmaze.com/search/shows?q=" (downcase (plist-get line 'name)))))
-         (id (alist-get 'id (cdr (assoc 'show (aref data 0)))))
-         (ep-data (seriestracker--json-fetch (format "https://api.tvmaze.com/shows/%d/episodebynumber?season=%d&number=%d"
-                                      id (plist-get line 'season) (plist-get line 'episode))))
-         (summary (replace-regexp-in-string "\\(<[^>]+>\\|&[^;]+;\\)" "" (alist-get 'summary ep-data)))
-         (image-url (alist-get 'original (alist-get 'image ep-data))))
-    (plist-get (list 'plot summary 'image image-url) key)))
+  (seriestracker--with-episode
+   ((name (downcase (alist-get 'name series)))
+    (season seasonN)
+    (episode episodeN)
+    (data (seriestracker--json-fetch (concat "https://api.tvmaze.com/search/shows?q=" name)))
+    (id (alist-get 'id (cdr (assoc 'show (aref data 0)))))
+    (ep-data (seriestracker--json-fetch (format "https://api.tvmaze.com/shows/%d/episodebynumber?season=%d&number=%d"
+                                                id season episode)))
+    (summary (replace-regexp-in-string "\\(<[^>]+>\\|&[^;]+;\\)" "" (alist-get 'summary ep-data)))
+    (image-url (alist-get 'original (alist-get 'image ep-data))))
+   (plist-get (list 'plot summary 'image image-url) key)))
+
+(defun seriestracker--episode-plot ()
+  "Return the episode's at point plot summary as string."
+  (seriestracker--tvmaze-episode-data 'plot))
+
+(defun seriestracker--episode-image ()
+  "Return the episode's at point snapshot as a URL."
+  (seriestracker--tvmaze-episode-data 'image))
 
 (transient-define-prefix seriestracker-episode-info ()
   "Episode information"
   ["Episode Information"
    :if-mode seriestracker-mode
-   [("p" "Show plot" (lambda () (interactive) (message (seriestracker--tvmaze-episode-data 'plot))))
-    ("i" "Show image" (lambda () (interactive) (eww-browse-url (seriestracker--tvmaze-episode-data 'image))))]])
+   [("p" "Show plot" (lambda () (interactive) (message (seriestracker--episode-plot))))
+    ("i" "Show image" (lambda () (interactive) (eww-browse-url (seriestracker--episode-image))))]])
 
 ;;;; Add series
 
