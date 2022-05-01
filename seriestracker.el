@@ -839,7 +839,10 @@ and ANY to go to any header even if hidden."
 
 
 ;;;;; Episode Information
-(defun seriestracker--tvmaze-episode-data (key)
+
+(defun seriestracker--tvmaze-episode-data ()
+  "Returns episode plot and image for episode at point as plist.
+Data from tvmaze.com API."
   (seriestracker--with-episode
    ((name (downcase (alist-get 'name series)))
     (season seasonN)
@@ -850,22 +853,29 @@ and ANY to go to any header even if hidden."
                                                 id season episode)))
     (summary (replace-regexp-in-string "\\(<[^>]+>\\|&[^;]+;\\)" "" (alist-get 'summary ep-data)))
     (image-url (alist-get 'original (alist-get 'image ep-data))))
-   (plist-get (list 'plot summary 'image image-url) key)))
+   (list 'plot summary 'image image-url)))
 
-(defun seriestracker--episode-plot ()
-  "Return the episode's at point plot summary as string."
-  (seriestracker--tvmaze-episode-data 'plot))
-
-(defun seriestracker--episode-image ()
-  "Return the episode's at point snapshot as a URL."
-  (seriestracker--tvmaze-episode-data 'image))
-
-(transient-define-prefix seriestracker-episode-info ()
-  "Episode information"
-  ["Episode Information"
-   :if-mode seriestracker-mode
-   [("p" "Show plot" (lambda () (interactive) (message (seriestracker--episode-plot))))
-    ("i" "Show image" (lambda () (interactive) (eww-browse-url (seriestracker--episode-image))))]])
+(defun seriestracker-episode-info ()
+  "Open a read-only buffer with episode plot and image."
+  (interactive)
+  (let* ((info (seriestracker--tvmaze-episode-data))
+         (buffer (get-buffer-create "*seriestracker-episode*")))
+    (with-current-buffer buffer
+      (view-mode -1)
+      (erase-buffer)
+      (text-mode)
+      (let ((img-buffer (url-retrieve-synchronously (plist-get info 'image))))
+        (unwind-protect
+            (let ((data (with-current-buffer img-buffer
+                          (goto-char (point-min))
+                          (search-forward "\n\n")
+                          (buffer-substring (point) (point-max)))))
+              (insert-image (create-image data nil t :max-width 400)))))
+      (insert "\n\n")
+      (insert (plist-get info 'plot))
+      (insert "\n")
+      (view-mode)
+      (display-buffer buffer))))
 
 ;;;; Add series
 
