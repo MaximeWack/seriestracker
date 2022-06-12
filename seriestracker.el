@@ -1137,7 +1137,7 @@ The element under the cursor is used to decide whether to watch or unwatch."
   (interactive)
   (seriestracker--inbuffer)
   (seriestracker--update)
-  (seriestracker--refresh))
+  (seriestracker--apply-sort))
 
 ;;;; Keymap
 
