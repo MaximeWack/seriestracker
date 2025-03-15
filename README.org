@@ -19,7 +19,7 @@ The package is on MELPA, but you can still install the development version by cl
 (use-package seriestracker
   :demand                                                   ;;To force loading seriestracker
   :config                                                   ;;These are the default
-  (setq seriestracker-file (concat user-emacs-directory "seriestracker.el"
+  (setq seriestracker-file (concat user-emacs-directory "seriestracker.el")
         seriestracker--fold-cycle 'seriestracker-all-folded ;; can also be 'seriestracker-all-unfolded or 'seriestracker-series-folded. Will deternine the folding at startup
         seriestracker-show-watched "hide"                   ;; whether to hide or "show" the watched episodes
         seriestracker-sorting-type "next"))                 ;; or "alpha" for alphabetic sort
