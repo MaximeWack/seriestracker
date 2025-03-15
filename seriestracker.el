@@ -149,12 +149,15 @@ Recursively get page PAGE, carrying results in ACC."
 
 (defun seriestracker--series (id)
   "Get series ID info."
-  (->> (let ((url-request-method "GET"))
-         (url-retrieve-synchronously (concat "https://www.episodate.com/api/show-details?q=" (int-to-string id))))
-       seriestracker--getJSON
-       car
-       (seriestracker--utils-alist-select '(id name start_date status episodes))
-       seriestracker--episodes))
+  (let ((url-request-method "GET")
+        (res (seriestracker--getJSON (url-retrieve-synchronously (concat "https://www.episodate.com/api/show-details?q=" (int-to-string id))
+                                                                 nil nil 5))))
+    (if (= 0 (length (alist-get 'tvShow res)))
+        nil
+      (->> res
+           car
+           (seriestracker--utils-alist-select '(id name start_date status episodes))
+           seriestracker--episodes))))
 
 ;;; Internal API
 
@@ -234,7 +237,8 @@ Adding an already existing series resets it."
 (defun seriestracker--update ()
   "Update all non-ended series."
   (--map-when
-   (not (string-equal "Ended" (alist-get 'status it)))
+   (not (or (string-equal "Ended" (alist-get 'status it))
+            (string-equal "Removed" (alist-get 'status it))))
    (seriestracker--update-series it)
    seriestracker--data))
 
@@ -242,25 +246,30 @@ Adding an already existing series resets it."
 
 (defun seriestracker--update-series (series)
   "Update the SERIES."
-  (let* ((new (seriestracker--series (alist-get 'id series)))
-         (newEp (alist-get 'episodes new))
-         (status (alist-get 'status new))
-         (watched (--find-indices (alist-get 'watched it) (alist-get 'episodes series)))
-         (noted (--find-indices (alist-get 'note it) (alist-get 'episodes series)))
-         (notes (-zip noted
-                      (seriestracker--utils-array-pull 'note (-select-by-indices noted (alist-get 'episodes series)))))
-         (newEps (->> newEp
-                      (--map-indexed (if (-contains? watched it-index)
-                                         (progn
-                                           (setf (alist-get 'watched it) t)
-                                           it)
-                                       it))
-                      (--map-indexed (progn
-                                       (setf (alist-get 'note it nil t) (alist-get it-index notes))
-                                       it)))))
-    (when (string-equal status "Ended") (setf (alist-get 'status series) "Ended"))
-    (setf (alist-get 'episodes series) newEps)
-    series))
+  (let ((new (seriestracker--series (alist-get 'id series))))
+    (if (not new)
+        (cl-case (read-char (concat (alist-get 'name series) " seems to have been deleted from the episodate database. (D)elete, (F)lag, or ignore with any key"))
+          (?D (seriestracker--remove (alist-get 'id series)))
+          (?F (setf (alist-get 'status series) "Removed"))
+          (t series))
+      (let* ((newEp (alist-get 'episodes new))
+             (status (alist-get 'status new))
+             (watched (--find-indices (alist-get 'watched it) (alist-get 'episodes series)))
+             (noted (--find-indices (alist-get 'note it) (alist-get 'episodes series)))
+             (notes (-zip noted
+                          (seriestracker--utils-array-pull 'note (-select-by-indices noted (alist-get 'episodes series)))))
+             (newEps (->> newEp
+                          (--map-indexed (if (-contains? watched it-index)
+                                             (progn
+                                               (setf (alist-get 'watched it) t)
+                                               it)
+                                           it))
+                          (--map-indexed (progn
+                                           (setf (alist-get 'note it nil t) (alist-get it-index notes))
+                                           it)))))
+        (when (string-equal status "Ended") (setf (alist-get 'status series) "Ended"))
+        (setf (alist-get 'episodes series) newEps)
+        series))))
 
 ;;;; Load/save data
 
